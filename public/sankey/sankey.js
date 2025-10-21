@@ -2665,7 +2665,7 @@ function updateSankey(dimension) {
 
             // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
             // Utiliser directement la transformation depuis transformations_appliquees
-            const poids = link.value || d.lot.total; // Utiliser le lot d'entrée de la transformation
+            const poids = link.inputLot.total; // Utiliser le lot d'entrée de la transformation
             const poidsFormate = poids.toFixed(2);
             tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
             // Ajouter les informations de la tech si elle existe
@@ -4071,6 +4071,9 @@ function applyScenario(
         source: parentNodeId,
         target: nodeId,
         value: targetLot.total,
+        inputLot: JSON.parse(JSON.stringify(resteLot)), // Le lot avant transformation
+        targetLot: JSON.parse(JSON.stringify(targetLot)), // Le reste après cette transformation
+        outputLot: JSON.parse(JSON.stringify(coProductLot)), // Le lot après transformation
         transformation: transfo, // La transformation qui part du parent vers ce nœud (annotée)
       });
       totalChildren += targetLot.total;
@@ -4098,7 +4101,7 @@ function applyScenario(
         );
       }
       // On retire cette part du reste global
-      resteLot = coProductLot;
+      resteLot = JSON.parse(JSON.stringify(coProductLot));
     }
   );
 
