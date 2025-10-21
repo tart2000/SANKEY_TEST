@@ -154,7 +154,11 @@ function calculatePathForNewTransformation(parentNode, actionType, scenario) {
     return [...parentNodeInfo._path, 'coproduct_scenario', 'transformations'];
   } else {
     // Ajouter dans le sous-scénario de la transformation sur laquelle on a cliqué
-    return [...parentNodeInfo._path, 'scenario', 'transformations'];
+    if (parentNodeInfo._path.slice(-1).toString() === 'transformations') {
+      return [...parentNodeInfo._path];
+    } else {
+      return [...parentNodeInfo._path, 'scenario', 'transformations'];
+    }
   }
 }
 
