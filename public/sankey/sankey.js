@@ -2641,6 +2641,8 @@ function updateSankey(dimension) {
               : type;
             let tableRows = '';
 
+            console.log(transfo.scenario);
+
             if (transfo._displayNames && transfo._displayNames.length > 0) {
               // Utiliser les noms d'affichage français
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo._displayNames.join(', ')}</span></td></tr>`;
@@ -2663,10 +2665,9 @@ function updateSankey(dimension) {
 
             // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
             // Utiliser directement la transformation depuis transformations_appliquees
-            const poids = transfo.entryLot?.total || d.lot.total; // Utiliser le lot d'entrée de la transformation
+            const poids = link.value || d.lot.total; // Utiliser le lot d'entrée de la transformation
             const poidsFormate = poids.toFixed(2);
             tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
-
             // Ajouter les informations de la tech si elle existe
             if (transfo.tech) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('tool')}</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
