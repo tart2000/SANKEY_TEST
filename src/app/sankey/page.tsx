@@ -91,7 +91,7 @@ export default function SankeyPage() {
   }, []);
 
   // Construire l'URL de l'iframe avec tous les paramètres (sans dimension)
-  const iframeSrc = `/sankey/index.html?lang=${selectedLanguage}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
+  const iframeSrc = `/sankey/index.html?lang=${selectedLanguage}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
   return (
     <div className="min-h-screen bg-gray-50">

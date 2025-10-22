@@ -258,7 +258,7 @@
           lotId: urlParams.get('lotId') || '',
           teamId: urlParams.get('teamId') || '',
           isLive: urlParams.get('isLive') === 'true',
-          isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
+          isEditable: urlParams.get('isEditable') === 'true', // false par défaut
         };
       }
 
@@ -434,9 +434,12 @@
         var saveBtnContainer = document.getElementById('save-btn-container');
 
         if (saveBtnContainer) {
-          // Forcer l'affichage du bouton pour debug
-          saveBtnContainer.style.display = 'flex';
-          saveBtnContainer.style.height = '50px'; // Pour voir le container
+          if (params.isEditable) {
+            saveBtnContainer.style.display = 'flex';
+            saveBtnContainer.style.height = '50px';
+          } else {
+            saveBtnContainer.style.display = 'none';
+          }
         }
 
         // Gestion du clic sur le bouton Enregistrer

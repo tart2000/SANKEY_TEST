@@ -710,8 +710,8 @@ function getUrlParams() {
     // Supprimer scenarioIdx car il n'est pas nécessaire en mode iframe
     // scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
     lotId: urlParams.get('lotId') || '',
-    // Harmoniser avec index.html : true par défaut, false seulement si explicitement 'false'
-    isEditable: urlParams.get('isEditable') !== 'false',
+    // Par défaut en lecture seule, seulement si explicitement 'true'
+    isEditable: urlParams.get('isEditable') === 'true',
     scenarioId: urlParams.get('scenarioId') || '',
     teamId: urlParams.get('teamId') || '',
     // Utiliser isLive pour tout, pas besoin de scenarioIsLive séparé
@@ -2135,35 +2135,44 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
+
+      // Masquer le bouton si on n'est pas en mode éditable
+      if (!window.isEditable) {
+        div.style.display = 'none';
+      }
+
       fo.node().appendChild(div);
 
-      // Utiliser la fonction utilitaire pour créer le dropdown
-      const dropdownOptions = [
-        {
-          icon: 'plus',
-          label: i18next.t('addTransfo'),
-          onClick: () => {
-            console.log('🔍 BOUTON + SCÉNARIO VIDE CLICKED');
-            // Contexte scénario vide: utiliser explicitement le nœud courant (nodes[0])
-            const currentNode = nodes && nodes.length ? nodes[0] : null;
-            if (!currentNode) {
-              console.error(
-                'Aucun nœud disponible pour ajouter une transformation'
-              );
-              return;
-            }
-            // Utiliser le nouveau gestionnaire pour le nœud racine
-            handleAddTransformationClick(currentNode);
+      // Vérifier si on est en mode éditable avant de créer le dropdown
+      if (window.isEditable) {
+        // Utiliser la fonction utilitaire pour créer le dropdown
+        const dropdownOptions = [
+          {
+            icon: 'plus',
+            label: i18next.t('addTransfo'),
+            onClick: () => {
+              console.log('🔍 BOUTON + SCÉNARIO VIDE CLICKED');
+              // Contexte scénario vide: utiliser explicitement le nœud courant (nodes[0])
+              const currentNode = nodes && nodes.length ? nodes[0] : null;
+              if (!currentNode) {
+                console.error(
+                  'Aucun nœud disponible pour ajouter une transformation'
+                );
+                return;
+              }
+              // Utiliser le nouveau gestionnaire pour le nœud racine
+              handleAddTransformationClick(currentNode);
+            },
           },
-        },
-        {
-          icon: 'sign-out',
-          label: i18next.t('link'),
-          disabled: true,
-        },
-      ];
+          {
+            icon: 'sign-out',
+            label: i18next.t('link'),
+            disabled: true,
+          },
+        ];
 
-      div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+        div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+      }
 
       return; // On ne fait rien d'autre
     }
@@ -2837,6 +2846,14 @@ function updateSankey(dimension) {
             }
             return;
           }
+          // Vérifier si on est en mode éditable
+          if (!window.isEditable) {
+            console.log(
+              '🔍 Mode lecture seule - dropdown transformation désactivé'
+            );
+            return;
+          }
+
           // Toggle dropdown
           console.log('🔍 CRÉATION DROPDOWN - isFork:', isFork);
           if (dropdownOpen) {
@@ -3175,62 +3192,89 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
+
+      // Masquer le bouton si on n'est pas en mode éditable
+      if (!window.isEditable) {
+        div.style.display = 'none';
+      }
+
       fo.node().appendChild(div);
 
-      // Utiliser la fonction utilitaire pour créer le dropdown
-      const dropdownOptions = [
-        {
-          icon: 'plus',
-          label: i18next.t('addTransfo'),
-          onClick: () => {
-            console.log(
-              '🔍 BOUTON + NŒUD CLICKED - Node:',
-              d.name,
-              'NodeId:',
-              d.id,
-              'isCoproduct:',
-              d.isCoproduct
-            );
-            // Vérifier si c'est un coproduit
-            if (d.isCoproduct) {
-              console.log('🔍 → Appel handleAddCoproductTransformationClick');
-              handleAddCoproductTransformationClick(d);
-            } else {
-              console.log('🔍 → Appel handleAddTransformationClick');
-              handleAddTransformationClick(d);
-            }
+      // Vérifier si on est en mode éditable avant de créer le dropdown
+      if (window.isEditable) {
+        // Utiliser la fonction utilitaire pour créer le dropdown
+        const dropdownOptions = [
+          {
+            icon: 'plus',
+            label: i18next.t('addTransfo'),
+            onClick: () => {
+              console.log(
+                '🔍 BOUTON + NŒUD CLICKED - Node:',
+                d.name,
+                'NodeId:',
+                d.id,
+                'isCoproduct:',
+                d.isCoproduct
+              );
+              // Vérifier si c'est un coproduit
+              if (d.isCoproduct) {
+                console.log('🔍 → Appel handleAddCoproductTransformationClick');
+                handleAddCoproductTransformationClick(d);
+              } else {
+                console.log('🔍 → Appel handleAddTransformationClick');
+                handleAddTransformationClick(d);
+              }
+            },
           },
-        },
-        {
-          icon: 'eye',
-          label: i18next.t('viewLot'),
-          onClick: () => {
-            // Utiliser le lot du nœud qui représente le lot après toutes les transformations
-            const lotToShow = d.lot;
-            const lotJson = JSON.stringify(lotToShow, null, 2);
-            window.parent.postMessage(
-              {
-                id: 'sankey-lot-visualization',
-                type: 'showLotDetails',
-                payload: {
-                  nodeId: d.id,
-                  nodeName: d.name,
-                  lotData: lotJson,
+          {
+            icon: 'eye',
+            label: i18next.t('viewLot'),
+            onClick: () => {
+              // Utiliser le lot du nœud qui représente le lot après toutes les transformations
+              const lotToShow = d.lot;
+              const lotJson = JSON.stringify(lotToShow, null, 2);
+              window.parent.postMessage(
+                {
+                  id: 'sankey-lot-visualization',
+                  type: 'showLotDetails',
+                  payload: {
+                    nodeId: d.id,
+                    nodeName: d.name,
+                    lotData: lotJson,
+                  },
                 },
-              },
-              '*'
-            );
+                '*'
+              );
+            },
           },
-        },
-        {
-          icon: 'sign-out',
-          label: i18next.t('link'),
-          disabled: true,
-        },
-      ];
+          {
+            icon: 'sign-out',
+            label: i18next.t('link'),
+            disabled: true,
+          },
+        ];
 
-      // Utiliser le même positionnement que les icônes de transformation
-      div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+        // Utiliser le même positionnement que les icônes de transformation
+        div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+      } else {
+        // En mode lecture seule, on peut toujours voir le lot
+        div.addEventListener('click', () => {
+          const lotToShow = d.lot;
+          const lotJson = JSON.stringify(lotToShow, null, 2);
+          window.parent.postMessage(
+            {
+              id: 'sankey-lot-visualization',
+              type: 'showLotDetails',
+              payload: {
+                nodeId: d.id,
+                nodeName: d.name,
+                lotData: lotJson,
+              },
+            },
+            '*'
+          );
+        });
+      }
     });
 
     // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
@@ -3250,62 +3294,89 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
+
+      // Masquer le bouton si on n'est pas en mode éditable
+      if (!window.isEditable) {
+        div.style.display = 'none';
+      }
+
       fo.node().appendChild(div);
 
-      // Utiliser la fonction utilitaire pour créer le dropdown
-      const dropdownOptions = [
-        {
-          icon: 'plus',
-          label: i18next.t('addTransfo'),
-          onClick: () => {
-            console.log(
-              '🔍 BOUTON + NŒUD CLICKED - Node:',
-              d.name,
-              'NodeId:',
-              d.id,
-              'isCoproduct:',
-              d.isCoproduct
-            );
-            // Vérifier si c'est un coproduit
-            if (d.isCoproduct) {
-              console.log('🔍 → Appel handleAddCoproductTransformationClick');
-              handleAddCoproductTransformationClick(d);
-            } else {
-              console.log('🔍 → Appel handleAddTransformationClick');
-              handleAddTransformationClick(d);
-            }
+      // Vérifier si on est en mode éditable avant de créer le dropdown
+      if (window.isEditable) {
+        // Utiliser la fonction utilitaire pour créer le dropdown
+        const dropdownOptions = [
+          {
+            icon: 'plus',
+            label: i18next.t('addTransfo'),
+            onClick: () => {
+              console.log(
+                '🔍 BOUTON + NŒUD CLICKED - Node:',
+                d.name,
+                'NodeId:',
+                d.id,
+                'isCoproduct:',
+                d.isCoproduct
+              );
+              // Vérifier si c'est un coproduit
+              if (d.isCoproduct) {
+                console.log('🔍 → Appel handleAddCoproductTransformationClick');
+                handleAddCoproductTransformationClick(d);
+              } else {
+                console.log('🔍 → Appel handleAddTransformationClick');
+                handleAddTransformationClick(d);
+              }
+            },
           },
-        },
-        {
-          icon: 'eye',
-          label: i18next.t('viewLot'),
-          onClick: () => {
-            // Utiliser le lot du nœud qui représente le lot après toutes les transformations
-            const lotToShow = d.lot;
-            const lotJson = JSON.stringify(lotToShow, null, 2);
-            window.parent.postMessage(
-              {
-                id: 'sankey-lot-visualization',
-                type: 'showLotDetails',
-                payload: {
-                  nodeId: d.id,
-                  nodeName: d.name,
-                  lotData: lotJson,
+          {
+            icon: 'eye',
+            label: i18next.t('viewLot'),
+            onClick: () => {
+              // Utiliser le lot du nœud qui représente le lot après toutes les transformations
+              const lotToShow = d.lot;
+              const lotJson = JSON.stringify(lotToShow, null, 2);
+              window.parent.postMessage(
+                {
+                  id: 'sankey-lot-visualization',
+                  type: 'showLotDetails',
+                  payload: {
+                    nodeId: d.id,
+                    nodeName: d.name,
+                    lotData: lotJson,
+                  },
                 },
-              },
-              '*'
-            );
+                '*'
+              );
+            },
           },
-        },
-        {
-          icon: 'sign-out',
-          label: i18next.t('link'),
-          disabled: true,
-        },
-      ];
+          {
+            icon: 'sign-out',
+            label: i18next.t('link'),
+            disabled: true,
+          },
+        ];
 
-      // Utiliser le même positionnement que les icônes de transformation
-      div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+        // Utiliser le même positionnement que les icônes de transformation
+        div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
+      } else {
+        // En mode lecture seule, on peut toujours voir le lot
+        div.addEventListener('click', () => {
+          const lotToShow = d.lot;
+          const lotJson = JSON.stringify(lotToShow, null, 2);
+          window.parent.postMessage(
+            {
+              id: 'sankey-lot-visualization',
+              type: 'showLotDetails',
+              payload: {
+                nodeId: d.id,
+                nodeName: d.name,
+                lotData: lotJson,
+              },
+            },
+            '*'
+          );
+        });
+      }
     }
 
     // 4. Icône check sur les nœuds valorisés ou agglomérés (isTarget)
@@ -4385,6 +4456,12 @@ function createDropdown(button, options, positionOffset = 0) {
   const toggleDropdown = event => {
     console.log('🔍 createDropdown toggleDropdown called!');
     event.stopPropagation();
+
+    // Vérifier si on est en mode éditable
+    if (!window.isEditable) {
+      console.log('🔍 Mode lecture seule - dropdown désactivé');
+      return;
+    }
 
     // Toggle dropdown
     if (dropdownOpen) {
