@@ -1152,7 +1152,7 @@ function createStackbarSegments(
               fullObject
             )
           : '';
-        tooltip.transition().duration(200).style('opacity', 0.9);
+        tooltip.transition().duration(200).style('opacity', 0.95);
         // ===== TOOLTIP DES ÉLÉMENTS DE STACKBAR (NON-TRANSFO) - VRAI =====
         // Forcer la largeur à 180px directement
         tooltip.classed('narrow', true);
@@ -2400,7 +2400,7 @@ function updateSankey(dimension) {
         const component = stackbarComponents[dimension];
         // Vérifier si c'est un nœud target
         if (d.isTarget) {
-          tooltip.transition().duration(200).style('opacity', 0.9);
+          tooltip.transition().duration(200).style('opacity', 0.95);
           tooltip
             .html(
               `
@@ -2475,7 +2475,7 @@ function updateSankey(dimension) {
             }
           }
 
-          tooltip.transition().duration(200).style('opacity', 0.9);
+          tooltip.transition().duration(200).style('opacity', 0.95);
           // ===== TOOLTIP DE LA BARRE GRISE (NON-TRANSFO) =====
           // Retirer toutes les classes et appliquer narrow pour la largeur de 180px
           tooltip.classed('narrow', true);
@@ -2621,7 +2621,7 @@ function updateSankey(dimension) {
 
         div.addEventListener('mouseover', function (event) {
           // ===== TOOLTIP DES ICÔNES DE TRANSFORMATION (TRANSFO) =====
-          tooltip.transition().duration(200).style('opacity', 0.9);
+          tooltip.transition().duration(200).style('opacity', 0.95);
           // Retirer toutes les classes pour avoir la largeur par défaut (280px)
           tooltip.classed('narrow', false);
           let tooltipContent = '';
@@ -3323,7 +3323,7 @@ function updateSankey(dimension) {
       fo.node().appendChild(div);
       div.addEventListener('mouseover', function (event) {
         // ===== TOOLTIP DES NŒUDS TARGET (NON-TRANSFO) =====
-        tooltip.transition().duration(200).style('opacity', 0.9);
+        tooltip.transition().duration(200).style('opacity', 0.95);
         // Retirer toutes les classes et appliquer narrow pour la largeur de 180px
         tooltip.classed('narrow', true);
         // Tooltip riche comme avant

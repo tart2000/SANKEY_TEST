@@ -1,0 +1,164 @@
+{
+    "transformations": [
+      {
+        "type": [
+          "selectByProprete"
+        ],
+        "keys": [
+          "1751363442461x877620753752916000",
+          "1751363454187x882723774064230400"
+        ],
+        "_displayNames": [
+          [
+            "Fortement souilé",
+            "Contaminé"
+          ]
+        ],
+        "_nodeId": "25460814",
+        "_index": 0,
+        "scenario": {
+          "transformations": [
+            {
+              "type": [
+                "selectByType"
+              ],
+              "keys": [
+                "1751457278848x979760538551320600",
+                "1751457764929x125732767948865540",
+                "1751458445724x379977643476910100"
+              ],
+              "_displayNames": [
+                [
+                  "Autres pantalons, shorts et jupes",
+                  "Hauts type T-shirt",
+                  "Hauts type chemise"
+                ]
+              ],
+              "_nodeId": "59796842",
+              "_index": 0
+            }
+          ],
+          "coproduct_scenario": {
+            "transformations": [
+              {
+                "type": [
+                  "selectByFormat"
+                ],
+                "keys": [
+                  "1751469074296x112795809242677250"
+                ],
+                "_displayNames": [
+                  [
+                    "Linges et rideaux"
+                  ]
+                ],
+                "_nodeId": "10015710",
+                "_index": 0
+              }
+            ]
+          }
+        },
+        "coproduct_scenario": {
+          "transformations": [
+            {
+              "type": [
+                "selectByType"
+              ],
+              "keys": [
+                "1751467621251x705231044544036900",
+                "1751457278848x979760538551320600"
+              ],
+              "_displayNames": [
+                [
+                  "Vêtements bébé",
+                  "Autres pantalons, shorts et jupes"
+                ]
+              ],
+              "_nodeId": "56262527",
+              "_index": 0
+            }
+          ]
+        }
+      },
+      {
+        "type": [
+          "selectByFormat"
+        ],
+        "keys": [
+          "1751469145607x169183982159134720",
+          "1751469351762x787187675308752900"
+        ],
+        "_displayNames": [
+          [
+            "Chaussures et bottes",
+            "Non TLC"
+          ]
+        ],
+        "_nodeId": "15899738",
+        "_index": 1,
+        "scenario": {
+          "transformations": [
+            {
+              "type": [
+                "selectByType"
+              ],
+              "keys": [
+                "1751468508440x887755237040586800",
+                "1751468495422x272408594498453500",
+                "1751468523104x255939833737773060"
+              ],
+              "_displayNames": [
+                [
+                  "Baskets",
+                  "Chaussures basses",
+                  "Chaussures d'été"
+                ]
+              ],
+              "_nodeId": "70862103",
+              "_index": 0
+            }
+          ]
+        }
+      }
+    ],
+    "_migrated": true,
+    "coproduct_scenario": {
+      "transformations": [
+        {
+          "type": [
+            "selectByFormat"
+          ],
+          "keys": [
+            "1751468853922x899805336822612000"
+          ],
+          "_displayNames": [
+            [
+              "Vêtements"
+            ]
+          ],
+          "_nodeId": "60609505",
+          "_index": 0,
+          "scenario": {
+            "transformations": [
+              {
+                "type": [
+                  "selectByType"
+                ],
+                "keys": [
+                  "1751457764929x125732767948865540",
+                  "1751457278848x979760538551320600"
+                ],
+                "_displayNames": [
+                  [
+                    "Hauts type T-shirt",
+                    "Autres pantalons, shorts et jupes"
+                  ]
+                ],
+                "_nodeId": "81415623"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
