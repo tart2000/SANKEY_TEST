@@ -2686,7 +2686,7 @@ function updateSankey(dimension) {
                 // Utiliser la fonction de calcul des coûts avec les données stockées
                 const transformationWithVolume = {
                   ...transfo,
-                  lot_input_volume: transfo.entryLot?.total || d.lot.total, // Utiliser le lot d'entrée réel de la transformation
+                  lot_input_volume: link.inputLot.total, // Utiliser le lot d'entrée du lien
                 };
 
                 const couts = calculateTransformationCosts(
