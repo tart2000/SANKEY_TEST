@@ -2135,13 +2135,15 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
-
-      // Masquer le bouton si on n'est pas en mode éditable
-      if (!window.isEditable) {
-        div.style.display = 'none';
-      }
-
       fo.node().appendChild(div);
+
+      // Conditionner la position et les comportements
+      if (window.isEditable) {
+        // Mode éditable : bouton visible et fonctionnel
+      } else {
+        // Mode lecture seule : positionner le bouton hors de l'écran
+        fo.attr('x', -1000).attr('y', -1000);
+      }
 
       // Vérifier si on est en mode éditable avant de créer le dropdown
       if (window.isEditable) {
@@ -3192,13 +3194,15 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
-
-      // Masquer le bouton si on n'est pas en mode éditable
-      if (!window.isEditable) {
-        div.style.display = 'none';
-      }
-
       fo.node().appendChild(div);
+
+      // Conditionner la position et les comportements
+      if (window.isEditable) {
+        // Mode éditable : bouton visible et fonctionnel
+      } else {
+        // Mode lecture seule : positionner le bouton hors de l'écran
+        fo.attr('x', -1000).attr('y', -1000);
+      }
 
       // Vérifier si on est en mode éditable avant de créer le dropdown
       if (window.isEditable) {
@@ -3294,13 +3298,15 @@ function updateSankey(dimension) {
         'plus',
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
-
-      // Masquer le bouton si on n'est pas en mode éditable
-      if (!window.isEditable) {
-        div.style.display = 'none';
-      }
-
       fo.node().appendChild(div);
+
+      // Conditionner la position et les comportements
+      if (window.isEditable) {
+        // Mode éditable : bouton visible et fonctionnel
+      } else {
+        // Mode lecture seule : positionner le bouton hors de l'écran
+        fo.attr('x', -1000).attr('y', -1000);
+      }
 
       // Vérifier si on est en mode éditable avant de créer le dropdown
       if (window.isEditable) {
