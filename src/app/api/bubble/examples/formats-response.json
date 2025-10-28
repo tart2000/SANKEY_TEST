@@ -1,0 +1,52 @@
+{
+  "Vêtements": {
+    "color": "#27c52f",
+    "en_gb": "Clothes",
+    "bubble_id": "1751468853922x899805336822612000"
+  },
+  "Linges et rideaux": {
+    "color": "#6ce994",
+    "en_gb": "Linen and curtains",
+    "bubble_id": "1751469074296x112795809242677250"
+  },
+  "Chaussures et bottes": {
+    "color": "#60ce48",
+    "en_gb": "Shoes and boots",
+    "bubble_id": "1751469145607x169183982159134720"
+  },
+  "Non TLC": {
+    "color": "#2ae53e",
+    "en_gb": "Non THLF",
+    "bubble_id": "1751469351762x787187675308752900"
+  },
+  "Morceaux de vêtements et d'étoffe": {
+    "color": "#b0f036",
+    "en_gb": "Pieces of clothes",
+    "bubble_id": "1756803454596x394867677485596700"
+  },
+  "Perturbateurs esthétiques": {
+    "color": "#32ca59",
+    "en_gb": "Aesthetic disruptors",
+    "bubble_id": "1756803497585x585658092380749800"
+  },
+  "Perturbateurs fonctionnels": {
+    "color": "#55d159",
+    "en_gb": "Functional disruptors",
+    "bubble_id": "1756803539320x489844428143329300"
+  },
+  "Chiquettes": {
+    "color": "#70c877",
+    "en_gb": "Rags",
+    "bubble_id": "1756818412593x629569448461467600"
+  },
+  "Fibre et bourre": {
+    "color": "#009ef7",
+    "en_gb": "Fiber and stuffing",
+    "bubble_id": "1756818470001x850405871651389400"
+  },
+  "Résidu": {
+    "color": "#009ef7",
+    "en_gb": "Residue",
+    "bubble_id": "1756818495747x785209800865087500"
+  }
+}

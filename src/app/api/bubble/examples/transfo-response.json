@@ -1,0 +1,68 @@
+{
+  "title": "Effilochage fin",
+  "en_gb": "Translation here",
+  "bubble_id": "1756818350195x963851048233205800",
+  "team": "1730809932159x273229509786599420",
+  "step": "preparation",
+  "yield": 85,
+  "version": 7,
+  "dimensions": {
+    "formats": {
+      "input": {
+        "Chiquettes": {
+          "bubble_id": "1756818412593x629569448461467600"
+        }
+      },
+      "target": {
+        "Fibre et bourre": {
+          "bubble_id": "1756818470001x850405871651389400"
+        }
+      },
+      "coproduct": {
+        "Résidu": {
+          "bubble_id": "1756818495747x785209800865087500",
+          "percent": 100
+        }
+      }
+    },
+    "types": {
+      "input": {},
+      "target": {
+        "Bourre fibre <2cm": {
+          "bubble_id": "1756818534495x159085711275065340"
+        }
+      },
+      "coproduct": {}
+    },
+    "matieres": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    },
+    "fibres": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    },
+    "couleurs": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    },
+    "perturbateurs": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    },
+    "proprete": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    },
+    "qualite": {
+      "input": {},
+      "target": {},
+      "coproduct": {}
+    }
+  }
+}

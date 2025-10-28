@@ -1,0 +1,177 @@
+{
+  "Coton / Polyester": {
+    "color": "#464eaa",
+    "en_gb": "Cotton / Polyester",
+    "bubble_id": "1751450054131x810304317708828700"
+  },
+  "100% Coton": {
+    "color": "#414f98",
+    "en_gb": "100% Cotton",
+    "bubble_id": "1751454906060x766426265037307900"
+  },
+  "100% Polyester": {
+    "color": "#434fa1",
+    "en_gb": "100% Polyester",
+    "bubble_id": "1751455023627x746101723417280500"
+  },
+  "Coton / Élasthanne": {
+    "color": "#484db3",
+    "en_gb": "Cotton / Spandex",
+    "bubble_id": "1751455127206x925174622430167000"
+  },
+  "Laine / Acrylique": {
+    "color": "#4e4eb9",
+    "en_gb": "Whool / Acrylic",
+    "bubble_id": "1751455162839x680004334303838200"
+  },
+  "Coton / Acrylique": {
+    "color": "#5955be",
+    "en_gb": "Cotton / Acrylic",
+    "bubble_id": "1751455198044x638752149168980000"
+  },
+  "Coton / Polyester / Élasthanne": {
+    "color": "#645cc2",
+    "en_gb": "Cotton / Polyester / Spandex",
+    "bubble_id": "1751455247755x923451472611901400"
+  },
+  "Coton / Viscose": {
+    "color": "#6f64c6",
+    "en_gb": "Cotton / Viscose",
+    "bubble_id": "1751455281909x535750482161303550"
+  },
+  "Polyester / Élasthanne": {
+    "color": "#7a6bca",
+    "en_gb": "Polyester / Spandex",
+    "bubble_id": "1751455314414x893320458640293900"
+  },
+  "Laine / Polyamide": {
+    "color": "#8573ce",
+    "en_gb": "Whool / Polyamid",
+    "bubble_id": "1751455351491x340921557410906100"
+  },
+  "Viscose / Élasthanne": {
+    "color": "#8f7bd2",
+    "en_gb": "Viscose / Spandex",
+    "bubble_id": "1751455387832x656343798819061800"
+  },
+  "Viscose / Polyamide": {
+    "color": "#5436a3",
+    "en_gb": "Viscose / Polyamid",
+    "bubble_id": "1751455422056x408461161180692500"
+  },
+  "Coton / Polyamide": {
+    "color": "#5d38ac",
+    "en_gb": "Cotton / Polyamid",
+    "bubble_id": "1751455457645x768039159256842200"
+  },
+  "Polyester / Viscose": {
+    "color": "#663ab6",
+    "en_gb": "Polyester / Viscose",
+    "bubble_id": "1751455492134x723624538550304800"
+  },
+  "Polyester / Viscose / Élasthanne": {
+    "color": "#703bc0",
+    "en_gb": "Polyester / Viscose / Spandex",
+    "bubble_id": "1751455562287x366046795965661200"
+  },
+  "Polyester / Laine": {
+    "color": "#7c41c6",
+    "en_gb": "Polyester / Whool",
+    "bubble_id": "1751455594412x681035724251201500"
+  },
+  "Polyester / Acrylique": {
+    "color": "#8749ca",
+    "en_gb": "Polyester / Acrylic",
+    "bubble_id": "1751455644246x751666602483908600"
+  },
+  "Acrylique / Polyamide": {
+    "color": "#9251cd",
+    "en_gb": "Acrylic / Polyamid",
+    "bubble_id": "1751455695064x929781744310943700"
+  },
+  "Coton / Polyamide / Élasthanne": {
+    "color": "#9c59d1",
+    "en_gb": "Cotton / Polyamid / Spandex",
+    "bubble_id": "1751455762075x892549817367265300"
+  },
+  "Ployamide / Élasthanne": {
+    "color": "#a661d4",
+    "en_gb": "Polyamid / Spandex",
+    "bubble_id": "1751455792745x948096930215362600"
+  },
+  "Coton / Laine": {
+    "color": "#b06ad7",
+    "en_gb": "Cotton / Whool",
+    "bubble_id": "1751455852898x619084310261792800"
+  },
+  "Laine / Acrylique / Polyamide": {
+    "color": "#b972db",
+    "en_gb": "Whool / Acrylic / Polyamid",
+    "bubble_id": "1751455892669x735848459174412300"
+  },
+  "Polyester / Polyamide": {
+    "color": "#892bad",
+    "en_gb": "Polyester / Polyamid",
+    "bubble_id": "1751455928348x322726255654862850"
+  },
+  "Coton / Autre": {
+    "color": "#972db8",
+    "en_gb": "Cotton / Other",
+    "bubble_id": "1751455978207x472002925389414400"
+  },
+  "Viscose / Polyamide / Élasthanne": {
+    "color": "#a52ec2",
+    "en_gb": "Viscose / Polyamid / Spandex",
+    "bubble_id": "1751456027950x539289468390080500"
+  },
+  "100% Acrylique": {
+    "color": "#b42fcd",
+    "en_gb": "100% Acrylic",
+    "bubble_id": "1751456428046x551075213237551100"
+  },
+  "100% Laine": {
+    "color": "#ca3dd5",
+    "en_gb": "100% Whool",
+    "bubble_id": "1751456479482x734867785348284400"
+  },
+  "100% Viscose": {
+    "color": "#d346d8",
+    "en_gb": "100% Viscose",
+    "bubble_id": "1751456497785x478007502843150340"
+  },
+  "100% Polyamide": {
+    "color": "#db4fdb",
+    "en_gb": "100% Polyamid",
+    "bubble_id": "1751456518738x927628339924435000"
+  },
+  "100% Soie": {
+    "color": "#984189",
+    "en_gb": "100% Silk",
+    "bubble_id": "1751456589277x188525431329390600"
+  },
+  "Mélange 4 matières": {
+    "color": "#abbaba",
+    "en_gb": "4-material mix",
+    "bubble_id": "1751456614905x433264064863928300"
+  },
+  "Autres compositions": {
+    "color": "#abbaba",
+    "en_gb": "Other compositions",
+    "bubble_id": "1751456634799x271200123618590720"
+  },
+  "Inconnu": {
+    "color": "#abbaba",
+    "en_gb": "Unknown",
+    "bubble_id": "1751456765054x395885769420963840"
+  },
+  "Polyamide / Élasthanne": {
+    "color": "#a661d4",
+    "en_gb": "Polyamid / Spandex",
+    "bubble_id": "1751459007967x332093788518088700"
+  },
+  "Polyester / Polyamide / Élasthanne": {
+    "color": "#7131f0",
+    "en_gb": "Polyester / Polyamid / Spandex",
+    "bubble_id": "1751459104716x211690696007745540"
+  }
+}

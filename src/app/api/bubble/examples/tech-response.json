@@ -1,0 +1,30 @@
+{
+  "title": "Une machine super intéressante",
+  "en_gb": "A truly great machine of the heart",
+  "bubble_id": "1731421834562x920918021539102700",
+  "step": "collecting",
+  "rate": 120,
+  "conso": 0.4,
+  "yield": 0.9,
+  "cost": 1200,
+  "amortization": 32,
+  "consumables": 45,
+  "version": 5,
+  "profils": {
+    "Chef d'atelier": {
+      "pricerate": 20,
+      "timeh": 0.2,
+      "bubble_id": "1752674004466x758392426243031000"
+    },
+    "Opérateur de ligne": {
+      "pricerate": 14,
+      "timeh": 1,
+      "bubble_id": "1752674021593x353734521788825600"
+    },
+    "Tourneur/fraiseur": {
+      "pricerate": 100,
+      "timeh": 1,
+      "bubble_id": "1752674049729x862972045792641000"
+    }
+  }
+}

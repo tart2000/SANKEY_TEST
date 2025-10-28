@@ -1,0 +1,32 @@
+{
+  "Neuf étiqueté": {
+    "color": "#d98e26",
+    "en_gb": "New with tag",
+    "bubble_id": "1751445919103x201801934307328000"
+  },
+  "Parfait état": {
+    "color": "#e6b856",
+    "en_gb": "Perfect condition",
+    "bubble_id": "1751445931826x154361705969745920"
+  },
+  "Bon état": {
+    "color": "#e5be2e",
+    "en_gb": "Good condition",
+    "bubble_id": "1751445942674x468258564829872100"
+  },
+  "Usé": {
+    "color": "#efdf61",
+    "en_gb": "Used",
+    "bubble_id": "1751445952848x969974246432571400"
+  },
+  "Abimé": {
+    "color": "#f0ed38",
+    "en_gb": "Damaged",
+    "bubble_id": "1751445964423x830032916057161700"
+  },
+  "Inutilisable": {
+    "color": "#cad926",
+    "en_gb": "Unusable",
+    "bubble_id": "1751445975968x242660521050898430"
+  }
+}

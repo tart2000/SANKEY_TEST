@@ -1,0 +1,62 @@
+{
+  "Bleu": {
+    "color": "#2980b9",
+    "en_gb": "Blue",
+    "bubble_id": "1751446343725x219271286274916350"
+  },
+  "Noir": {
+    "color": "#000000",
+    "en_gb": "Black",
+    "bubble_id": "1751446357302x688460865695907800"
+  },
+  "Gris": {
+    "color": "#7f8c8d",
+    "en_gb": "Grey",
+    "bubble_id": "1751446367717x707657589608677400"
+  },
+  "Vert": {
+    "color": "#27ae60",
+    "en_gb": "Green",
+    "bubble_id": "1751446378151x435437962458562600"
+  },
+  "Autre": {
+    "color": "#abbaba",
+    "en_gb": "Other",
+    "bubble_id": "1751446391337x282987920229138430"
+  },
+  "Blanc": {
+    "color": "#e8e8e8",
+    "en_gb": "White",
+    "bubble_id": "1751446409161x466100660519829500"
+  },
+  "Multicolore": {
+    "color": "#fd79a8",
+    "en_gb": "Multicoloured",
+    "bubble_id": "1751446421348x948954020154179600"
+  },
+  "Marron": {
+    "color": "#894119",
+    "en_gb": "Brown",
+    "bubble_id": "1751446441483x725745854234755100"
+  },
+  "Orange": {
+    "color": "#e67e22",
+    "en_gb": "Orange",
+    "bubble_id": "1751446451891x909591314851430400"
+  },
+  "Rouge": {
+    "color": "#e74c3c",
+    "en_gb": "Red",
+    "bubble_id": "1751446464596x808481166716829700"
+  },
+  "Jaune": {
+    "color": "#f1c40f",
+    "en_gb": "Yellow",
+    "bubble_id": "1751446473681x668208293920374800"
+  },
+  "Violet": {
+    "color": "#8e44ad",
+    "en_gb": "Purple",
+    "bubble_id": "1751446483190x648683802590183400"
+  }
+}

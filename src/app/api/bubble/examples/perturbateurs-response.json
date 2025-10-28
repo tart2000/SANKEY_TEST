@@ -1,0 +1,17 @@
+{
+  "Monocouche avec perturbateur": {
+    "color": "#b82e39",
+    "en_gb": "Single layer with disruptor",
+    "bubble_id": "1751446296709x138343111690813440"
+  },
+  "Monocouche sans perturbateur": {
+    "color": "#dd573c",
+    "en_gb": "Single layer without disruptor",
+    "bubble_id": "1751446312281x382656910563999740"
+  },
+  "Multicouche": {
+    "color": "#b8672e",
+    "en_gb": "Multi-layered",
+    "bubble_id": "1751446323694x499501351957430300"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "Propre": {
+    "color": "#40bf95",
+    "en_gb": "Clean",
+    "bubble_id": "1751363332290x936743758301757400"
+  },
+  "Légèrement souillé": {
+    "color": "#37c8b8",
+    "en_gb": "Lightly soiled",
+    "bubble_id": "1751363429778x920463720799535100"
+  },
+  "Fortement souilé": {
+    "color": "#2fbed0",
+    "en_gb": "Heavily soiled",
+    "bubble_id": "1751363442461x877620753752916000"
+  },
+  "Contaminé": {
+    "color": "#5c9cc8",
+    "en_gb": "Contaminated",
+    "bubble_id": "1751363454187x882723774064230400"
+  }
+}

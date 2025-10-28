@@ -1,0 +1,42 @@
+{
+  "collecting": {
+    "fr": "Collecte",
+    "en": "Collecting",
+    "icon": "t-shirt"
+  },
+  "sorting": {
+    "fr": "Tri",
+    "en": "Sorting",
+    "icon": "arrows-split"
+  },
+  "preparation": {
+    "fr": "Préparation matière",
+    "en": "Material preparation",
+    "icon": "scissors"
+  },
+  "washing": {
+    "fr": "Nettoyage",
+    "en": "Cleaning",
+    "icon": "broom"
+  },
+  "spinning": {
+    "fr": "Filage",
+    "en": "Spinning",
+    "icon": "gradient"
+  },
+  "transport": {
+    "fr": "Transport",
+    "en": "Transport",
+    "icon": "truck"
+  },
+  "packaging": {
+    "fr": "Conditionnement",
+    "en": "Packaging",
+    "icon": "package"
+  },
+  "chemical treatment": {
+    "fr": "Traitement chimique",
+    "en": "Chemical treatment",
+    "icon": "test-tube"
+  }
+}

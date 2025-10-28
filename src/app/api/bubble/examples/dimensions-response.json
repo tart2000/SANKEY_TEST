@@ -1,0 +1,34 @@
+{
+  "formats": {
+    "fr_fr": "Format",
+    "en_gb": "Format"
+  },
+  "types": {
+    "fr_fr": "Type",
+    "en_gb": "Type"
+  },
+  "matieres": {
+    "fr_fr": "Matières",
+    "en_gb": "Materials"
+  },
+  "fibres": {
+    "fr_fr": "Fibre",
+    "en_gb": "Fibre"
+  },
+  "couleurs": {
+    "fr_fr": "Couleur",
+    "en_gb": "Color"
+  },
+  "perturbateurs": {
+    "fr_fr": "Degré de perturbation",
+    "en_gb": "Disruption level"
+  },
+  "proprete": {
+    "fr_fr": "Propreté",
+    "en_gb": "Cleanliness"
+  },
+  "qualite": {
+    "fr_fr": "Qualité",
+    "en_gb": "Quality"
+  }
+}

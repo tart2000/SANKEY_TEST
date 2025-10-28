@@ -1,0 +1,54 @@
+{
+  "title": "Testchtera ftw",
+  "bubble_id": "1730809932159x273229509786599420",
+  "elec": 0.5,
+  "profils": {
+    "Chef d'atelier": {
+      "pricerate": 20,
+      "bubble_id": "1752674004466x758392426243031000"
+    },
+    "Opérateur de ligne": {
+      "pricerate": 14,
+      "bubble_id": "1752674021593x353734521788825600"
+    },
+    "Tourneur/fraiseur": {
+      "pricerate": 100,
+      "bubble_id": "1752674049729x862972045792641000"
+    },
+    "Équipier": {
+      "pricerate": 15,
+      "bubble_id": "1761121858440x424272124772654200"
+    },
+    "Responsable d'atelier": {
+      "pricerate": 30,
+      "bubble_id": "1761121859050x803348860912835800"
+    },
+    "Technicien de maintenance": {
+      "pricerate": 20,
+      "bubble_id": "1761121859246x991603413352645000"
+    }
+  },
+  "techs": {
+    "Une machine super intéressante": {
+      "rate": 120,
+      "en_gb": "A truly great machine of the heart",
+      "bubble_id": "1731421834562x920918021539102700",
+      "step": "collecting",
+      "version": 5
+    },
+    "Table de tri": {
+      "rate": 12,
+      "en_gb": "Table de tri (en)",
+      "bubble_id": "1753277499159x841848085058682900",
+      "step": "sorting",
+      "version": 2
+    },
+    "Tapis roulant de tri": {
+      "rate": 100,
+      "en_gb": "Tapis roulant de tri (en)",
+      "bubble_id": "1753277557054x291758371680550900",
+      "step": "sorting",
+      "version": 1
+    }
+  }
+}

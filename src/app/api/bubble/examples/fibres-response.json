@@ -1,0 +1,47 @@
+{
+  "Coton": {
+    "color": "#b8452e",
+    "en_gb": "Cotton",
+    "bubble_id": "1751446507179x608280094404771800"
+  },
+  "Polyester": {
+    "color": "#d2603a",
+    "en_gb": "Polyester",
+    "bubble_id": "1751446516682x740262653767450600"
+  },
+  "Élasthanne": {
+    "color": "#db8357",
+    "en_gb": "Spandex",
+    "bubble_id": "1751446528509x125699490513682430"
+  },
+  "Laine": {
+    "color": "#cb6b27",
+    "en_gb": "Whool",
+    "bubble_id": "1751446538100x548858416714743800"
+  },
+  "Acrylique": {
+    "color": "#dd8c3c",
+    "en_gb": "Acrylic",
+    "bubble_id": "1751446550471x639057124617617400"
+  },
+  "Viscose": {
+    "color": "#e5ab5a",
+    "en_gb": "Viscose",
+    "bubble_id": "1751446561198x507637405470162940"
+  },
+  "Polyamide": {
+    "color": "#df9f20",
+    "en_gb": "Polyamid",
+    "bubble_id": "1751446571758x570992263981432800"
+  },
+  "Autre": {
+    "color": "#abbaba",
+    "en_gb": "Other",
+    "bubble_id": "1751446582322x683841410777743400"
+  },
+  "Soie": {
+    "color": "#ff2600",
+    "en_gb": "Silk",
+    "bubble_id": "1751456570321x416046107172274200"
+  }
+}

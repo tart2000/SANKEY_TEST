@@ -1,0 +1,3209 @@
+{
+  "Vêtements": {
+    "color": "#27c52f",
+    "en_gb": "Clothes",
+    "bubble_id": "1751468853922x899805336822612000",
+    "types": {
+      "Autres pantalons, shorts et jupes": {
+        "pourcentage": 16,
+        "color": "#d783ff",
+        "en_gb": "Other pants, shorts and skirts",
+        "bubble_id": "1751457278848x979760538551320600",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 18.4,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 13.8,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 21.1,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 11.8,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 3.9,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Polyester / Élasthanne": {
+            "pourcentage": 3.8,
+            "color": "#645cc2",
+            "en_gb": "Cotton / Polyester / Spandex",
+            "bubble_id": "1751455247755x923451472611901400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 71,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 26,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 3,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Viscose / Élasthanne": {
+            "pourcentage": 3.3,
+            "color": "#703bc0",
+            "en_gb": "Polyester / Viscose / Spandex",
+            "bubble_id": "1751455562287x366046795965661200",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 59,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Viscose": {
+                "pourcentage": 37,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Laine": {
+            "pourcentage": 2.2,
+            "color": "#ca3dd5",
+            "en_gb": "100% Whool",
+            "bubble_id": "1751456479482x734867785348284400",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 100,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Polyester / Laine": {
+            "pourcentage": 2.1,
+            "color": "#7c41c6",
+            "en_gb": "Polyester / Whool",
+            "bubble_id": "1751455594412x681035724251201500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 58,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Laine": {
+                "pourcentage": 42,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Polyester / Viscose": {
+            "pourcentage": 1.8,
+            "color": "#663ab6",
+            "en_gb": "Polyester / Viscose",
+            "bubble_id": "1751455492134x723624538550304800",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 44,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Viscose": {
+                "pourcentage": 56,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 9.8,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 8,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Noir": {
+            "pourcentage": 27,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Gris": {
+            "pourcentage": 17,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Bleu": {
+            "pourcentage": 16,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Marron": {
+            "pourcentage": 9,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Multicolore": {
+            "pourcentage": 12,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Blanc": {
+            "pourcentage": 9,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Vert": {
+            "pourcentage": 5,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Rouge": {
+            "pourcentage": 3,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 2,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 92,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 4,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          },
+          "Multicouche": {
+            "pourcentage": 4,
+            "color": "#b8672e",
+            "en_gb": "Multi-layered",
+            "bubble_id": "1751446323694x499501351957430300"
+          }
+        }
+      },
+      "Hauts type T-shirt": {
+        "pourcentage": 16,
+        "color": "#6a0fc8",
+        "en_gb": "T-shirt-like tops",
+        "bubble_id": "1751457764929x125732767948865540",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 57.6,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 6.8,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 6.5,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Viscose / Élasthanne": {
+            "pourcentage": 5.1,
+            "color": "#8f7bd2",
+            "en_gb": "Viscose / Spandex",
+            "bubble_id": "1751455387832x656343798819061800",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 93,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 3.2,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Viscose": {
+            "pourcentage": 2.4,
+            "color": "#d346d8",
+            "en_gb": "100% Viscose",
+            "bubble_id": "1751456497785x478007502843150340",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 100,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Coton / Viscose": {
+            "pourcentage": 2.2,
+            "color": "#6f64c6",
+            "en_gb": "Cotton / Viscose",
+            "bubble_id": "1751455281909x535750482161303550",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 55,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Viscose": {
+                "pourcentage": 45,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 1.7,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Acrylique": {
+            "pourcentage": 1.2,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Viscose / Polyamide": {
+            "pourcentage": 1,
+            "color": "#5436a3",
+            "en_gb": "Viscose / Polyamid",
+            "bubble_id": "1751455422056x408461161180692500",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 70,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Polyamide": {
+                "pourcentage": 30,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 3.7,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 8.6,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Blanc": {
+            "pourcentage": 34,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Noir": {
+            "pourcentage": 14,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Multicolore": {
+            "pourcentage": 13,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Bleu": {
+            "pourcentage": 10,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Gris": {
+            "pourcentage": 9,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Marron": {
+            "pourcentage": 5,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Rouge": {
+            "pourcentage": 5,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 3,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Vert": {
+            "pourcentage": 3,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Autre": {
+            "pourcentage": 4,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 73,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 27,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          }
+        }
+      },
+      "Hauts type chemise": {
+        "pourcentage": 5,
+        "color": "#6f0fc4",
+        "en_gb": "Shirt-like tops",
+        "bubble_id": "1751458445724x379977643476910100",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 48.6,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 18.8,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 6.8,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Viscose": {
+            "pourcentage": 5.5,
+            "color": "#d346d8",
+            "en_gb": "100% Viscose",
+            "bubble_id": "1751456497785x478007502843150340",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 100,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 3.5,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Viscose": {
+            "pourcentage": 1.6,
+            "color": "#663ab6",
+            "en_gb": "Polyester / Viscose",
+            "bubble_id": "1751455492134x723624538550304800",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 44,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Viscose": {
+                "pourcentage": 56,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "100% Polyamide": {
+            "pourcentage": 1.5,
+            "color": "#db4fdb",
+            "en_gb": "100% Polyamid",
+            "bubble_id": "1751456518738x927628339924435000",
+            "fibres": {
+              "Polyamide": {
+                "pourcentage": 100,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Viscose / Élasthanne": {
+            "pourcentage": 1.3,
+            "color": "#8f7bd2",
+            "en_gb": "Viscose / Spandex",
+            "bubble_id": "1751455387832x656343798819061800",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 93,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 1.2,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Autre": {
+            "pourcentage": 1.2,
+            "color": "#972db8",
+            "en_gb": "Cotton / Other",
+            "bubble_id": "1751455978207x472002925389414400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 60,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Autre": {
+                "pourcentage": 40,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 2.6,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 7.4,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Multicolore": {
+            "pourcentage": 31,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Blanc": {
+            "pourcentage": 27,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Bleu": {
+            "pourcentage": 16,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Gris": {
+            "pourcentage": 7,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Marron": {
+            "pourcentage": 3,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Vert": {
+            "pourcentage": 4,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Noir": {
+            "pourcentage": 4,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Rouge": {
+            "pourcentage": 3,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 3,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Autre": {
+            "pourcentage": 2,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 98,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 2,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          }
+        }
+      },
+      "Hauts type pulls": {
+        "pourcentage": 20,
+        "color": "#8815de",
+        "en_gb": "Sweater-style tops",
+        "bubble_id": "1751458871948x225527464850620400",
+        "matieres": {
+          "100% Acrylique": {
+            "pourcentage": 15.6,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "100% Coton": {
+            "pourcentage": 15.1,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 8.4,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Laine / Acrylique": {
+            "pourcentage": 8.1,
+            "color": "#4e4eb9",
+            "en_gb": "Whool / Acrylic",
+            "bubble_id": "1751455162839x680004334303838200",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 38,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              },
+              "Acrylique": {
+                "pourcentage": 62,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 6.6,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Acrylique": {
+            "pourcentage": 5.4,
+            "color": "#5955be",
+            "en_gb": "Cotton / Acrylic",
+            "bubble_id": "1751455198044x638752149168980000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 45,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Acrylique": {
+                "pourcentage": 55,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "100% Laine": {
+            "pourcentage": 3.1,
+            "color": "#ca3dd5",
+            "en_gb": "100% Whool",
+            "bubble_id": "1751456479482x734867785348284400",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 100,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Viscose / Polyamide": {
+            "pourcentage": 2.7,
+            "color": "#5436a3",
+            "en_gb": "Viscose / Polyamid",
+            "bubble_id": "1751455422056x408461161180692500",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 70,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Polyamide": {
+                "pourcentage": 30,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Laine / Polyamide": {
+            "pourcentage": 2.4,
+            "color": "#8573ce",
+            "en_gb": "Whool / Polyamid",
+            "bubble_id": "1751455351491x340921557410906100",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 65,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              },
+              "Polyamide": {
+                "pourcentage": 35,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Coton / Polyamide": {
+            "pourcentage": 1.9,
+            "color": "#5d38ac",
+            "en_gb": "Cotton / Polyamid",
+            "bubble_id": "1751455457645x768039159256842200",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 69,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyamide": {
+                "pourcentage": 31,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 11.3,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 19.4,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Multicolore": {
+            "pourcentage": 18,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Noir": {
+            "pourcentage": 17,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Gris": {
+            "pourcentage": 15,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Bleu": {
+            "pourcentage": 12,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Blanc": {
+            "pourcentage": 10,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Marron": {
+            "pourcentage": 8,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Rouge": {
+            "pourcentage": 7,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Vert": {
+            "pourcentage": 5,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Violet": {
+            "pourcentage": 4,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Orange": {
+            "pourcentage": 2,
+            "color": "#e67e22",
+            "en_gb": "Orange",
+            "bubble_id": "1751446451891x909591314851430400"
+          },
+          "Autre": {
+            "pourcentage": 2,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 71,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 29,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          }
+        }
+      },
+      "Lingerie": {
+        "pourcentage": 1,
+        "color": "#7501a8",
+        "en_gb": "Lingerie",
+        "bubble_id": "1751459066471x996059025261199400",
+        "matieres": {
+          "Polyamide / Élasthanne": {
+            "pourcentage": 28.4,
+            "color": "#a661d4",
+            "en_gb": "Polyamid / Spandex",
+            "bubble_id": "1751459007967x332093788518088700",
+            "fibres": {
+              "Polyamide": {
+                "pourcentage": 86,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 14,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Polyamide / Élasthanne": {
+            "pourcentage": 9.6,
+            "color": "#7131f0",
+            "en_gb": "Polyester / Polyamid / Spandex",
+            "bubble_id": "1751459104716x211690696007745540",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 70,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Polyamide": {
+                "pourcentage": 20,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 10,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 8.8,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Coton": {
+            "pourcentage": 7.4,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 7.4,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Polyamide": {
+            "pourcentage": 7.3,
+            "color": "#db4fdb",
+            "en_gb": "100% Polyamid",
+            "bubble_id": "1751456518738x927628339924435000",
+            "fibres": {
+              "Polyamide": {
+                "pourcentage": 100,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Coton / Polyamide / Élasthanne": {
+            "pourcentage": 6.1,
+            "color": "#9c59d1",
+            "en_gb": "Cotton / Polyamid / Spandex",
+            "bubble_id": "1751455762075x892549817367265300",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 72,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyamide": {
+                "pourcentage": 24,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 4.7,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Mélange 4 matières": {
+            "pourcentage": 3.2,
+            "color": "#abbaba",
+            "en_gb": "4-material mix",
+            "bubble_id": "1751456614905x433264064863928300",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Viscose / Élasthanne": {
+            "pourcentage": 2,
+            "color": "#8f7bd2",
+            "en_gb": "Viscose / Spandex",
+            "bubble_id": "1751455387832x656343798819061800",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 93,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 5.7,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 9.4,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Blanc": {
+            "pourcentage": 33,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Noir": {
+            "pourcentage": 19,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Multicolore": {
+            "pourcentage": 9,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Gris": {
+            "pourcentage": 9,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Bleu": {
+            "pourcentage": 6,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Rouge": {
+            "pourcentage": 6,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Marron": {
+            "pourcentage": 4,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Vert": {
+            "pourcentage": 2,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Violet": {
+            "pourcentage": 4,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Orange": {
+            "pourcentage": 4,
+            "color": "#e67e22",
+            "en_gb": "Orange",
+            "bubble_id": "1751446451891x909591314851430400"
+          },
+          "Autre": {
+            "pourcentage": 4,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 96,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 2,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          },
+          "Multicouche": {
+            "pourcentage": 2,
+            "color": "#b8672e",
+            "en_gb": "Multi-layered",
+            "bubble_id": "1751446323694x499501351957430300"
+          }
+        }
+      },
+      "Pantalons en jean": {
+        "pourcentage": 9,
+        "color": "#7d03a8",
+        "en_gb": "Jeans trousers",
+        "bubble_id": "1751459729422x197483193410519040",
+        "matieres": {
+          "Coton / Élasthanne": {
+            "pourcentage": 31.2,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Coton": {
+            "pourcentage": 27.3,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester / Élasthanne": {
+            "pourcentage": 20.3,
+            "color": "#645cc2",
+            "en_gb": "Cotton / Polyester / Spandex",
+            "bubble_id": "1751455247755x923451472611901400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 71,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 26,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 3,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 4.8,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Mélange 4 matières": {
+            "pourcentage": 4.2,
+            "color": "#abbaba",
+            "en_gb": "4-material mix",
+            "bubble_id": "1751456614905x433264064863928300",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Coton / Autre": {
+            "pourcentage": 0.7,
+            "color": "#972db8",
+            "en_gb": "Cotton / Other",
+            "bubble_id": "1751455978207x472002925389414400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 60,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Autre": {
+                "pourcentage": 40,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Coton / Viscose": {
+            "pourcentage": 0.2,
+            "color": "#6f64c6",
+            "en_gb": "Cotton / Viscose",
+            "bubble_id": "1751455281909x535750482161303550",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 55,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Viscose": {
+                "pourcentage": 45,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Viscose / Polyamide / Élasthanne": {
+            "pourcentage": 0.1,
+            "color": "#a52ec2",
+            "en_gb": "Viscose / Polyamid / Spandex",
+            "bubble_id": "1751456027950x539289468390080500",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 74,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Polyamide": {
+                "pourcentage": 21,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 5,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 0.5,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 10.7,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Bleu": {
+            "pourcentage": 68,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Noir": {
+            "pourcentage": 14,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Gris": {
+            "pourcentage": 10,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Vert": {
+            "pourcentage": 2,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Autre": {
+            "pourcentage": 6,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 100,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          }
+        }
+      },
+      "Pyjamas et ensembles de sport": {
+        "pourcentage": 3,
+        "color": "#8405a7",
+        "en_gb": "Pyjamas and sports sets",
+        "bubble_id": "1751460427221x364124028495462400",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 37.4,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 20,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 16.3,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 4.8,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Acrylique": {
+            "pourcentage": 2.1,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Polyester / Acrylique": {
+            "pourcentage": 1.7,
+            "color": "#8749ca",
+            "en_gb": "Polyester / Acrylic",
+            "bubble_id": "1751455644246x751666602483908600",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 45,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Acrylique": {
+                "pourcentage": 55,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "100% Viscose": {
+            "pourcentage": 1.4,
+            "color": "#d346d8",
+            "en_gb": "100% Viscose",
+            "bubble_id": "1751456497785x478007502843150340",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 100,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Viscose / Élasthanne": {
+            "pourcentage": 1.4,
+            "color": "#8f7bd2",
+            "en_gb": "Viscose / Spandex",
+            "bubble_id": "1751455387832x656343798819061800",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 93,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Viscose": {
+            "pourcentage": 1.3,
+            "color": "#6f64c6",
+            "en_gb": "Cotton / Viscose",
+            "bubble_id": "1751455281909x535750482161303550",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 55,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Viscose": {
+                "pourcentage": 45,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Coton / Polyester / Élasthanne": {
+            "pourcentage": 1,
+            "color": "#645cc2",
+            "en_gb": "Cotton / Polyester / Spandex",
+            "bubble_id": "1751455247755x923451472611901400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 71,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 26,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 3,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 7,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 5.6,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Multicolore": {
+            "pourcentage": 29,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Bleu": {
+            "pourcentage": 17,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Blanc": {
+            "pourcentage": 11,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Gris": {
+            "pourcentage": 9,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Noir": {
+            "pourcentage": 8,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Rouge": {
+            "pourcentage": 8,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 5,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Marron": {
+            "pourcentage": 4,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Vert": {
+            "pourcentage": 4,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Autre": {
+            "pourcentage": 5,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 88,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 12,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          }
+        }
+      },
+      "Robes": {
+        "pourcentage": 5,
+        "color": "#920fa3",
+        "en_gb": "Dresses",
+        "bubble_id": "1751463011604x997232187903836200",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 11.8,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 11.4,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Acrylique": {
+            "pourcentage": 8.4,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 7,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Viscose": {
+            "pourcentage": 5.8,
+            "color": "#6f64c6",
+            "en_gb": "Cotton / Viscose",
+            "bubble_id": "1751455281909x535750482161303550",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 55,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Viscose": {
+                "pourcentage": 45,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Viscose / Élasthanne": {
+            "pourcentage": 5.6,
+            "color": "#8f7bd2",
+            "en_gb": "Viscose / Spandex",
+            "bubble_id": "1751455387832x656343798819061800",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 93,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyester / Viscose / Élasthanne": {
+            "pourcentage": 3.9,
+            "color": "#703bc0",
+            "en_gb": "Polyester / Viscose / Spandex",
+            "bubble_id": "1751455562287x366046795965661200",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 59,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Viscose": {
+                "pourcentage": 37,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "100% Viscose": {
+            "pourcentage": 3.5,
+            "color": "#d346d8",
+            "en_gb": "100% Viscose",
+            "bubble_id": "1751456497785x478007502843150340",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 100,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 3.4,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 3.2,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 7.4,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 28.6,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Multicolore": {
+            "pourcentage": 30,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Noir": {
+            "pourcentage": 24,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Blanc": {
+            "pourcentage": 11,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Gris": {
+            "pourcentage": 8,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Marron": {
+            "pourcentage": 7,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Bleu": {
+            "pourcentage": 7,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Rouge": {
+            "pourcentage": 5,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 4,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Vert": {
+            "pourcentage": 3,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Autre": {
+            "pourcentage": 1,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 71,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 24,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          },
+          "Multicouche": {
+            "pourcentage": 5,
+            "color": "#b8672e",
+            "en_gb": "Multi-layered",
+            "bubble_id": "1751446323694x499501351957430300"
+          }
+        }
+      },
+      "Sous-vêtements": {
+        "pourcentage": 7,
+        "color": "#8b0aa5",
+        "en_gb": "Underwear",
+        "bubble_id": "1751462732029x997051213409419300",
+        "matieres": {
+          "100% Polyester": {
+            "pourcentage": 9.1,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Coton": {
+            "pourcentage": 16.4,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "100% Acrylique": {
+            "pourcentage": 12.5,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 6.7,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Polyamide / Élasthanne": {
+            "pourcentage": 6.5,
+            "color": "#9c59d1",
+            "en_gb": "Cotton / Polyamid / Spandex",
+            "bubble_id": "1751455762075x892549817367265300",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 72,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyamide": {
+                "pourcentage": 24,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Polyamide / Élasthanne": {
+            "pourcentage": 5,
+            "color": "#a661d4",
+            "en_gb": "Polyamid / Spandex",
+            "bubble_id": "1751459007967x332093788518088700",
+            "fibres": {
+              "Polyamide": {
+                "pourcentage": 86,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              },
+              "Élasthanne": {
+                "pourcentage": 14,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Laine / Acrylique": {
+            "pourcentage": 3,
+            "color": "#4e4eb9",
+            "en_gb": "Whool / Acrylic",
+            "bubble_id": "1751455162839x680004334303838200",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 38,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              },
+              "Acrylique": {
+                "pourcentage": 62,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Coton / Polyester / Élasthanne": {
+            "pourcentage": 2.8,
+            "color": "#645cc2",
+            "en_gb": "Cotton / Polyester / Spandex",
+            "bubble_id": "1751455247755x923451472611901400",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 71,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 26,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 3,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 2.7,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Laine": {
+            "pourcentage": 1.9,
+            "color": "#ca3dd5",
+            "en_gb": "100% Whool",
+            "bubble_id": "1751456479482x734867785348284400",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 100,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 15.1,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 18.3,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Noir": {
+            "pourcentage": 20,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Multicolore": {
+            "pourcentage": 20,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Blanc": {
+            "pourcentage": 17,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Gris": {
+            "pourcentage": 11,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Bleu": {
+            "pourcentage": 10,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Marron": {
+            "pourcentage": 7,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Rouge": {
+            "pourcentage": 5,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 4,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Vert": {
+            "pourcentage": 4,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Autre": {
+            "pourcentage": 2,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 63,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 37,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          }
+        }
+      },
+      "Vestes, manteaux et costumes": {
+        "pourcentage": 14,
+        "color": "#99159f",
+        "en_gb": "Jackets, coats and suits",
+        "bubble_id": "1751463269878x483372285977952260",
+        "matieres": {
+          "100% Polyester": {
+            "pourcentage": 31.1,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Coton": {
+            "pourcentage": 12,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 10.6,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Polyamide": {
+            "pourcentage": 4.7,
+            "color": "#db4fdb",
+            "en_gb": "100% Polyamid",
+            "bubble_id": "1751456518738x927628339924435000",
+            "fibres": {
+              "Polyamide": {
+                "pourcentage": 100,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "100% Viscose": {
+            "pourcentage": 3.1,
+            "color": "#d346d8",
+            "en_gb": "100% Viscose",
+            "bubble_id": "1751456497785x478007502843150340",
+            "fibres": {
+              "Viscose": {
+                "pourcentage": 100,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "100% Laine": {
+            "pourcentage": 3,
+            "color": "#ca3dd5",
+            "en_gb": "100% Whool",
+            "bubble_id": "1751456479482x734867785348284400",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 100,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Polyester / Viscose": {
+            "pourcentage": 2.3,
+            "color": "#663ab6",
+            "en_gb": "Polyester / Viscose",
+            "bubble_id": "1751455492134x723624538550304800",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 44,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Viscose": {
+                "pourcentage": 56,
+                "color": "#e5ab5a",
+                "en_gb": "Viscose",
+                "bubble_id": "1751446561198x507637405470162940"
+              }
+            }
+          },
+          "Polyester / Laine": {
+            "pourcentage": 2.2,
+            "color": "#7c41c6",
+            "en_gb": "Polyester / Whool",
+            "bubble_id": "1751455594412x681035724251201500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 58,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Laine": {
+                "pourcentage": 42,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Laine / Polyamide": {
+            "pourcentage": 1.9,
+            "color": "#8573ce",
+            "en_gb": "Whool / Polyamid",
+            "bubble_id": "1751455351491x340921557410906100",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 65,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              },
+              "Polyamide": {
+                "pourcentage": 35,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "Polyester / Élasthanne": {
+            "pourcentage": 1.8,
+            "color": "#7a6bca",
+            "en_gb": "Polyester / Spandex",
+            "bubble_id": "1751455314414x893320458640293900",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 93,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              },
+              "Élasthanne": {
+                "pourcentage": 7,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 9,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 18.3,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Noir": {
+            "pourcentage": 28,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Bleu": {
+            "pourcentage": 15,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Marron": {
+            "pourcentage": 12,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Blanc": {
+            "pourcentage": 10,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Multicolore": {
+            "pourcentage": 10,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Gris": {
+            "pourcentage": 11,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Vert": {
+            "pourcentage": 6,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Rouge": {
+            "pourcentage": 4,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Violet": {
+            "pourcentage": 2,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Autre": {
+            "pourcentage": 2,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 41,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 57,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          },
+          "Multicouche": {
+            "pourcentage": 2,
+            "color": "#b8672e",
+            "en_gb": "Multi-layered",
+            "bubble_id": "1751446323694x499501351957430300"
+          }
+        }
+      },
+      "Vêtements bébé": {
+        "pourcentage": 4,
+        "color": "#a01a9c",
+        "en_gb": "Baby clothes",
+        "bubble_id": "1751467621251x705231044544036900",
+        "matieres": {
+          "100% Coton": {
+            "pourcentage": 42.4,
+            "color": "#414f98",
+            "en_gb": "100% Cotton",
+            "bubble_id": "1751454906060x766426265037307900",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 100,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              }
+            }
+          },
+          "Coton / Polyester": {
+            "pourcentage": 13.9,
+            "color": "#464eaa",
+            "en_gb": "Cotton / Polyester",
+            "bubble_id": "1751450054131x810304317708828700",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 57,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyester": {
+                "pourcentage": 43,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "100% Acrylique": {
+            "pourcentage": 10.1,
+            "color": "#b42fcd",
+            "en_gb": "100% Acrylic",
+            "bubble_id": "1751456428046x551075213237551100",
+            "fibres": {
+              "Acrylique": {
+                "pourcentage": 100,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "100% Polyester": {
+            "pourcentage": 5.8,
+            "color": "#434fa1",
+            "en_gb": "100% Polyester",
+            "bubble_id": "1751455023627x746101723417280500",
+            "fibres": {
+              "Polyester": {
+                "pourcentage": 100,
+                "color": "#d2603a",
+                "en_gb": "Polyester",
+                "bubble_id": "1751446516682x740262653767450600"
+              }
+            }
+          },
+          "Coton / Élasthanne": {
+            "pourcentage": 4.3,
+            "color": "#484db3",
+            "en_gb": "Cotton / Spandex",
+            "bubble_id": "1751455127206x925174622430167000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 96,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Élasthanne": {
+                "pourcentage": 4,
+                "color": "#db8357",
+                "en_gb": "Spandex",
+                "bubble_id": "1751446528509x125699490513682430"
+              }
+            }
+          },
+          "Coton / Acrylique": {
+            "pourcentage": 3.6,
+            "color": "#5955be",
+            "en_gb": "Cotton / Acrylic",
+            "bubble_id": "1751455198044x638752149168980000",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 45,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Acrylique": {
+                "pourcentage": 55,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Laine / Acrylique": {
+            "pourcentage": 2.2,
+            "color": "#4e4eb9",
+            "en_gb": "Whool / Acrylic",
+            "bubble_id": "1751455162839x680004334303838200",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 38,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              },
+              "Acrylique": {
+                "pourcentage": 62,
+                "color": "#dd8c3c",
+                "en_gb": "Acrylic",
+                "bubble_id": "1751446550471x639057124617617400"
+              }
+            }
+          },
+          "Coton / Polyamide": {
+            "pourcentage": 2,
+            "color": "#5d38ac",
+            "en_gb": "Cotton / Polyamid",
+            "bubble_id": "1751455457645x768039159256842200",
+            "fibres": {
+              "Coton": {
+                "pourcentage": 69,
+                "color": "#b8452e",
+                "en_gb": "Cotton",
+                "bubble_id": "1751446507179x608280094404771800"
+              },
+              "Polyamide": {
+                "pourcentage": 31,
+                "color": "#df9f20",
+                "en_gb": "Polyamid",
+                "bubble_id": "1751446571758x570992263981432800"
+              }
+            }
+          },
+          "100% Laine": {
+            "pourcentage": 1.6,
+            "color": "#ca3dd5",
+            "en_gb": "100% Whool",
+            "bubble_id": "1751456479482x734867785348284400",
+            "fibres": {
+              "Laine": {
+                "pourcentage": 100,
+                "color": "#cb6b27",
+                "en_gb": "Whool",
+                "bubble_id": "1751446538100x548858416714743800"
+              }
+            }
+          },
+          "Mélange 4 matières": {
+            "pourcentage": 1.4,
+            "color": "#abbaba",
+            "en_gb": "4-material mix",
+            "bubble_id": "1751456614905x433264064863928300",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Inconnu": {
+            "pourcentage": 4.2,
+            "color": "#abbaba",
+            "en_gb": "Unknown",
+            "bubble_id": "1751456765054x395885769420963840",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          },
+          "Autres compositions": {
+            "pourcentage": 8.5,
+            "color": "#abbaba",
+            "en_gb": "Other compositions",
+            "bubble_id": "1751456634799x271200123618590720",
+            "fibres": {
+              "Autre": {
+                "pourcentage": 100,
+                "color": "#abbaba",
+                "en_gb": "Other",
+                "bubble_id": "1751446582322x683841410777743400"
+              }
+            }
+          }
+        },
+        "couleurs": {
+          "Multicolore": {
+            "pourcentage": 22,
+            "color": "#fd79a8",
+            "en_gb": "Multicoloured",
+            "bubble_id": "1751446421348x948954020154179600"
+          },
+          "Blanc": {
+            "pourcentage": 19,
+            "color": "#e8e8e8",
+            "en_gb": "White",
+            "bubble_id": "1751446409161x466100660519829500"
+          },
+          "Bleu": {
+            "pourcentage": 17,
+            "color": "#2980b9",
+            "en_gb": "Blue",
+            "bubble_id": "1751446343725x219271286274916350"
+          },
+          "Gris": {
+            "pourcentage": 11,
+            "color": "#7f8c8d",
+            "en_gb": "Grey",
+            "bubble_id": "1751446367717x707657589608677400"
+          },
+          "Marron": {
+            "pourcentage": 7,
+            "color": "#894119",
+            "en_gb": "Brown",
+            "bubble_id": "1751446441483x725745854234755100"
+          },
+          "Violet": {
+            "pourcentage": 7,
+            "color": "#8e44ad",
+            "en_gb": "Purple",
+            "bubble_id": "1751446483190x648683802590183400"
+          },
+          "Rouge": {
+            "pourcentage": 7,
+            "color": "#e74c3c",
+            "en_gb": "Red",
+            "bubble_id": "1751446464596x808481166716829700"
+          },
+          "Noir": {
+            "pourcentage": 3,
+            "color": "#000000",
+            "en_gb": "Black",
+            "bubble_id": "1751446357302x688460865695907800"
+          },
+          "Vert": {
+            "pourcentage": 3,
+            "color": "#27ae60",
+            "en_gb": "Green",
+            "bubble_id": "1751446378151x435437962458562600"
+          },
+          "Jaune": {
+            "pourcentage": 3,
+            "color": "#f1c40f",
+            "en_gb": "Yellow",
+            "bubble_id": "1751446473681x668208293920374800"
+          },
+          "Autre": {
+            "pourcentage": 1,
+            "color": "#abbaba",
+            "en_gb": "Other",
+            "bubble_id": "1751446391337x282987920229138430"
+          }
+        },
+        "perturbateurs": {
+          "Monocouche avec perturbateur": {
+            "pourcentage": 89,
+            "color": "#b82e39",
+            "en_gb": "Single layer with disruptor",
+            "bubble_id": "1751446296709x138343111690813440"
+          },
+          "Monocouche sans perturbateur": {
+            "pourcentage": 7,
+            "color": "#dd573c",
+            "en_gb": "Single layer without disruptor",
+            "bubble_id": "1751446312281x382656910563999740"
+          },
+          "Multicouche": {
+            "pourcentage": 4,
+            "color": "#b8672e",
+            "en_gb": "Multi-layered",
+            "bubble_id": "1751446323694x499501351957430300"
+          }
+        }
+      }
+    }
+  }
+}

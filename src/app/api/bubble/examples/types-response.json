@@ -1,0 +1,197 @@
+{
+  "Autres pantalons, shorts et jupes": {
+    "color": "#d783ff",
+    "en_gb": "Other pants, shorts and skirts",
+    "bubble_id": "1751457278848x979760538551320600"
+  },
+  "Hauts type T-shirt": {
+    "color": "#6a0fc8",
+    "en_gb": "T-shirt-like tops",
+    "bubble_id": "1751457764929x125732767948865540"
+  },
+  "Hauts type chemise": {
+    "color": "#6f0fc4",
+    "en_gb": "Shirt-like tops",
+    "bubble_id": "1751458445724x379977643476910100"
+  },
+  "Hauts type pulls": {
+    "color": "#8815de",
+    "en_gb": "Sweater-style tops",
+    "bubble_id": "1751458871948x225527464850620400"
+  },
+  "Lingerie": {
+    "color": "#7501a8",
+    "en_gb": "Lingerie",
+    "bubble_id": "1751459066471x996059025261199400"
+  },
+  "Pantalons en jean": {
+    "color": "#7d03a8",
+    "en_gb": "Jeans trousers",
+    "bubble_id": "1751459729422x197483193410519040"
+  },
+  "Pyjamas et ensembles de sport": {
+    "color": "#8405a7",
+    "en_gb": "Pyjamas and sports sets",
+    "bubble_id": "1751460427221x364124028495462400"
+  },
+  "Sous-vêtements": {
+    "color": "#8b0aa5",
+    "en_gb": "Underwear",
+    "bubble_id": "1751462732029x997051213409419300"
+  },
+  "Robes": {
+    "color": "#920fa3",
+    "en_gb": "Dresses",
+    "bubble_id": "1751463011604x997232187903836200"
+  },
+  "Vestes, manteaux et costumes": {
+    "color": "#99159f",
+    "en_gb": "Jackets, coats and suits",
+    "bubble_id": "1751463269878x483372285977952260"
+  },
+  "Vêtements bébé": {
+    "color": "#a01a9c",
+    "en_gb": "Baby clothes",
+    "bubble_id": "1751467621251x705231044544036900"
+  },
+  "Linge de bain et toilette": {
+    "color": "#a62098",
+    "en_gb": "Bath and toilet linen",
+    "bubble_id": "1751467898961x204872071271677950"
+  },
+  "Linge de lit": {
+    "color": "#ac2694",
+    "en_gb": "Bed linen",
+    "bubble_id": "1751468171483x644803342235598800"
+  },
+  "Rideaux et voilages": {
+    "color": "#b22b8f",
+    "en_gb": "Curtains and net curtains",
+    "bubble_id": "1751468199432x997849931820564500"
+  },
+  "Autre linge de maison": {
+    "color": "#b7318a",
+    "en_gb": "Other household linen",
+    "bubble_id": "1751468454289x241243914173939700"
+  },
+  "Bottes et bottines": {
+    "color": "#bd3786",
+    "en_gb": "Boots",
+    "bubble_id": "1751468476969x831588532505280500"
+  },
+  "Chaussures basses": {
+    "color": "#c23c81",
+    "en_gb": "Low shoes",
+    "bubble_id": "1751468495422x272408594498453500"
+  },
+  "Baskets": {
+    "color": "#c7427c",
+    "en_gb": "Baskets",
+    "bubble_id": "1751468508440x887755237040586800"
+  },
+  "Chaussures d'été": {
+    "color": "#cc4778",
+    "en_gb": "Summer shoes",
+    "bubble_id": "1751468523104x255939833737773060"
+  },
+  "Chaussures d'intérieur": {
+    "color": "#cf4c74",
+    "en_gb": "Indoor shoes",
+    "bubble_id": "1751468539040x429169164689604600"
+  },
+  "Chaussures de bébé": {
+    "color": "#d45270",
+    "en_gb": "Baby shoes",
+    "bubble_id": "1751468553213x917699905705476100"
+  },
+  "Couettes et oreillers": {
+    "color": "#d8576b",
+    "en_gb": "Pillows and duvets",
+    "bubble_id": "1751468567507x309715919969976300"
+  },
+  "Chutes de tissu": {
+    "color": "#dc5d67",
+    "en_gb": "Fabric scraps",
+    "bubble_id": "1751468591617x632714231782047700"
+  },
+  "Maroquinerie": {
+    "color": "#e06363",
+    "en_gb": "Leather goods",
+    "bubble_id": "1751468604072x281345312188006400"
+  },
+  "Vêtements professionnels": {
+    "color": "#e4695e",
+    "en_gb": "Profesional clothes",
+    "bubble_id": "1751468626292x339534439033077760"
+  },
+  "Livres": {
+    "color": "#e76f5a",
+    "en_gb": "Books",
+    "bubble_id": "1751468636837x102972312764809220"
+  },
+  "Jouets (non électriques)": {
+    "color": "#eb7556",
+    "en_gb": "Games (non electric) ",
+    "bubble_id": "1751468652397x431726352649420800"
+  },
+  "Emballages": {
+    "color": "#ee7b51",
+    "en_gb": "Wraps",
+    "bubble_id": "1751468664282x207429281116061700"
+  },
+  "Sacs en textile": {
+    "color": "#f1814d",
+    "en_gb": "Textile bags",
+    "bubble_id": "1751468703626x356992921702236160"
+  },
+  "Tapis": {
+    "color": "#f48849",
+    "en_gb": "Carpets",
+    "bubble_id": "1751468722520x330428633068601340"
+  },
+  "DEEE": {
+    "color": "#f68f44",
+    "en_gb": "WEEE",
+    "bubble_id": "1751468736869x173809772432195600"
+  },
+  "Bibelots et ustentiles": {
+    "color": "#f89540",
+    "en_gb": "Ornaments and utensils",
+    "bubble_id": "1751468757372x574424870583271400"
+  },
+  "Reste non TLC": {
+    "color": "#fa9c3c",
+    "en_gb": "Non-THLF residue",
+    "bubble_id": "1751468771232x428446296154570750"
+  },
+  "Poussière de textile": {
+    "color": "#fca338",
+    "en_gb": "Textile dust",
+    "bubble_id": "1751468782953x252824994837954560"
+  },
+  "Cônes": {
+    "color": "#fdab33",
+    "en_gb": "Cones",
+    "bubble_id": "1751468796538x772904592231104500"
+  },
+  "Rouleau": {
+    "color": "#fdb22f",
+    "en_gb": "Roll",
+    "bubble_id": "1751468811971x626721187505897500"
+  },
+  "Autre": {
+    "color": "#abbaba",
+    "en_gb": "Other",
+    "bubble_id": "1751469373650x426320510816092200"
+  },
+  "Bourre fibre <2cm": {
+    "color": "#009ef7",
+    "en_gb": "Fibre stuffing <2mm",
+    "bubble_id": "1756818534495x159085711275065340"
+  },
+  "Morceaux": {
+    "color": "#009ef7",
+    "en_gb": "Pieces",
+    "bubble_id": "1756825856501x400683770434551800"
+  }
+}
