@@ -83,6 +83,7 @@ window.i18nConfig = {
         reste: 'Reste',
         viewLot: 'Visualiser le lot',
         transformationDetails: 'Détails de la transformation',
+        generalInfo: 'Informations générales',
         cannotLoadTransformationDetails:
           'Impossible de charger les détails de la transformation',
         errorLoadingTransformationDetails:
@@ -169,6 +170,7 @@ window.i18nConfig = {
         reste: 'Remainder',
         viewLot: 'View lot',
         transformationDetails: 'Transformation details',
+        generalInfo: 'General Information',
         cannotLoadTransformationDetails: 'Cannot load transformation details',
         errorLoadingTransformationDetails:
           'Error loading transformation details',
@@ -255,6 +257,7 @@ window.i18nConfig = {
         reste: 'Resto',
         viewLot: 'Ver lote',
         transformationDetails: 'Detalles de la transformación',
+        generalInfo: 'Información general',
         cannotLoadTransformationDetails:
           'No se pueden cargar los detalles de la transformación',
         errorLoadingTransformationDetails:
@@ -343,6 +346,7 @@ window.i18nConfig = {
         reste: 'Rest',
         viewLot: 'Los anzeigen',
         transformationDetails: 'Transformationsdetails',
+        generalInfo: 'Allgemeine Informationen',
         cannotLoadTransformationDetails:
           'Transformationsdetails können nicht geladen werden',
         errorLoadingTransformationDetails:

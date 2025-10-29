@@ -138,7 +138,7 @@ class TransformationPopup {
     // Création de la modal avec ombre prononcée comme dans /lots
     this.modal = document.createElement('div');
     this.modal.className =
-      'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
+      'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 p-6';
     this.modal.style.boxShadow =
       '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
     this.modal.style.position = 'absolute';
@@ -1264,6 +1264,12 @@ class TransformationPopup {
   async extractTableDataFromTransfo(transfoDetails) {
     const rows = [];
 
+    // Extraire les informations générales (yield, step)
+    const generalInfo = {
+      yield: transfoDetails.yield !== undefined ? transfoDetails.yield : null,
+      step: transfoDetails.step || null,
+    };
+
     // Parcourir toutes les dimensions
     for (const [dimension, config] of Object.entries(
       transfoDetails.dimensions || {}
@@ -1294,7 +1300,10 @@ class TransformationPopup {
       }
     }
 
-    return rows;
+    return {
+      generalInfo,
+      dimensions: rows,
+    };
   }
 
   // Fonction pour afficher le tableau des détails de transformation
@@ -1412,79 +1421,140 @@ class TransformationPopup {
 
   // Fonction pour créer et afficher le tableau HTML
   renderTransfoDetailsTable(data) {
-    if (data.length === 0) {
+    // Vérifier si on a des données (ancien format array ou nouveau format objet)
+    const dimensions = Array.isArray(data) ? data : data.dimensions || [];
+    const generalInfo = data.generalInfo || null;
+
+    if (dimensions.length === 0 && !generalInfo) {
       console.log('Aucune donnée à afficher dans le tableau');
       return;
     }
 
-    // Créer le HTML du tableau (version compacte et élégante avec collapse)
-    const tableHTML = `
-      <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div id="table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
-          <h4 class="text-sm font-medium text-gray-900">${i18next.t('transformationDetails')}</h4>
-          <svg id="collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
+    // Construire la section des informations générales
+    let generalInfoHTML = '';
+    if (generalInfo && (generalInfo.yield !== null || generalInfo.step)) {
+      generalInfoHTML = `
+        <div id="transfo-general-info" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div id="general-info-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+            <h4 class="text-sm font-medium text-gray-900">${i18next.t('generalInfo')}</h4>
+            <svg id="general-info-collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+          <div id="general-info-body" class="px-3 py-2">
+            <div class="space-y-2 text-sm">
+              ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
+              ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
+            </div>
+          </div>
         </div>
-        <div id="table-body" class="overflow-x-auto max-h-64 overflow-y-auto">
-          <table class="min-w-full text-xs">
-            <thead class="bg-white sticky top-0 z-10">
-              <tr>
-                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
-                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
-                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
-                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-100">
-              ${data
-                .map(
-                  row => `
-                <tr class="hover:bg-gray-50">
-                  <td class="px-2 py-1.5 font-medium text-gray-900">${row.dimension}</td>
-                  <td class="px-2 py-1.5 text-gray-700">${row.inputTarget}</td>
-                  <td class="px-2 py-1.5 text-gray-700">${row.targetLot}</td>
-                  <td class="px-2 py-1.5 text-gray-700">${row.coProductLot}</td>
-                </tr>
-              `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
+      `;
+    }
 
-    // Supprimer l'ancien tableau s'il existe
+    // Construire la section des dimensions
+    let dimensionsHTML = '';
+    if (dimensions.length > 0) {
+      dimensionsHTML = `
+        <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div id="table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+            <h4 class="text-sm font-medium text-gray-900">${i18next.t('transformationDetails')}</h4>
+            <svg id="collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+          <div id="table-body" class="overflow-x-auto max-h-64 overflow-y-auto">
+            <table class="min-w-full text-xs">
+              <thead class="bg-white sticky top-0 z-10">
+                <tr>
+                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
+                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
+                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
+                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-100">
+                ${dimensions
+                  .map(
+                    row => `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-2 py-1.5 font-medium text-gray-900">${row.dimension}</td>
+                    <td class="px-2 py-1.5 text-gray-700">${row.inputTarget}</td>
+                    <td class="px-2 py-1.5 text-gray-700">${row.targetLot}</td>
+                    <td class="px-2 py-1.5 text-gray-700">${row.coProductLot}</td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    const combinedHTML = generalInfoHTML + dimensionsHTML;
+
+    // Supprimer l'ancien contenu s'il existe
+    const existingGeneralInfo = this.modal.querySelector(
+      '#transfo-general-info'
+    );
+    if (existingGeneralInfo) {
+      existingGeneralInfo.remove();
+    }
     const existingTable = this.modal.querySelector('#transfo-details-table');
     if (existingTable) {
       existingTable.remove();
     }
 
-    // Ajouter le tableau après le select de type de transformation
+    // Ajouter le nouveau contenu après le select de type de transformation
     const transfoTypeSelect = this.modal.querySelector('#transfo-type');
     if (transfoTypeSelect) {
-      transfoTypeSelect.insertAdjacentHTML('afterend', tableHTML);
+      transfoTypeSelect.insertAdjacentHTML('afterend', combinedHTML);
 
-      // Ajouter le listener pour le collapse/expand
-      const tableHeader = this.modal.querySelector('#table-header');
-      const tableBody = this.modal.querySelector('#table-body');
-      const collapseIcon = this.modal.querySelector('#collapse-icon');
+      // Ajouter les listeners pour le collapse/expand des informations générales
+      if (generalInfoHTML) {
+        const generalInfoHeader = this.modal.querySelector(
+          '#general-info-header'
+        );
+        const generalInfoBody = this.modal.querySelector('#general-info-body');
+        const generalInfoIcon = this.modal.querySelector(
+          '#general-info-collapse-icon'
+        );
 
-      if (tableHeader && tableBody && collapseIcon) {
-        tableHeader.addEventListener('click', () => {
-          const isCollapsed = tableBody.style.display === 'none';
+        if (generalInfoHeader && generalInfoBody && generalInfoIcon) {
+          generalInfoHeader.addEventListener('click', () => {
+            const isCollapsed = generalInfoBody.style.display === 'none';
 
-          if (isCollapsed) {
-            // Expand
-            tableBody.style.display = 'block';
-            collapseIcon.style.transform = 'rotate(0deg)';
-          } else {
-            // Collapse
-            tableBody.style.display = 'none';
-            collapseIcon.style.transform = 'rotate(-90deg)';
-          }
-        });
+            if (isCollapsed) {
+              generalInfoBody.style.display = 'block';
+              generalInfoIcon.style.transform = 'rotate(0deg)';
+            } else {
+              generalInfoBody.style.display = 'none';
+              generalInfoIcon.style.transform = 'rotate(-90deg)';
+            }
+          });
+        }
+      }
+
+      // Ajouter les listeners pour le collapse/expand du tableau des dimensions
+      if (dimensionsHTML) {
+        const tableHeader = this.modal.querySelector('#table-header');
+        const tableBody = this.modal.querySelector('#table-body');
+        const collapseIcon = this.modal.querySelector('#collapse-icon');
+
+        if (tableHeader && tableBody && collapseIcon) {
+          tableHeader.addEventListener('click', () => {
+            const isCollapsed = tableBody.style.display === 'none';
+
+            if (isCollapsed) {
+              tableBody.style.display = 'block';
+              collapseIcon.style.transform = 'rotate(0deg)';
+            } else {
+              tableBody.style.display = 'none';
+              collapseIcon.style.transform = 'rotate(-90deg)';
+            }
+          });
+        }
       }
     } else {
       console.warn(
