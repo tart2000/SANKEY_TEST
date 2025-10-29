@@ -155,6 +155,7 @@ class TechPopup {
 
     // Générer les options du dropdown
     const techOptions = Object.entries(this.techList)
+      .sort(([a], [b]) => a.localeCompare(b)) // Tri alphabétique par nom
       .map(
         ([name, techData]) =>
           `<option value="${techData.bubble_id}" ${existingTech && existingTech.bubble_id === techData.bubble_id ? 'selected' : ''}>${name}</option>`
