@@ -146,6 +146,26 @@ export const bubbleApiCalls = [
     ],
   },
   {
+    name: 'Get 1 Lib item (small)',
+    endpoint: 'item_small?id={id}',
+    method: 'GET',
+    examplePath: '../api/bubble/examples/item_small-response.json',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
+    ],
+  },
+  {
     name: 'Get 1 Lot',
     endpoint: 'lot?id={id}',
     method: 'POST',
