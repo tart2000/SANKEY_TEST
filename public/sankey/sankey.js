@@ -3542,21 +3542,12 @@ function updateSankey(dimension) {
     displayCostsTable(costsData);
   }
 
-  // Notifier le parent de la nouvelle hauteur après le rendu
-  if (window.parent && typeof window.parent.postMessage === 'function') {
-    setTimeout(() => {
-      const body = document.body;
-      const html = document.documentElement;
-      const height = Math.max(
-        body.scrollHeight,
-        body.offsetHeight,
-        html.clientHeight,
-        html.scrollHeight,
-        html.offsetHeight
-      );
-      window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
-    }, 50); // Petit délai pour s'assurer que le DOM est complètement mis à jour
-  }
+  // Demander un redimensionnement via la fonction commune exposée par index.html
+  setTimeout(() => {
+    if (window._resizeIframe && typeof window._resizeIframe === 'function') {
+      window._resizeIframe();
+    }
+  }, 50);
 }
 
 // Gestion du changement de dimension

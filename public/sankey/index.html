@@ -662,24 +662,69 @@
           return fetch(path).then(r => r.json());
         }
 
-        // Fonction pour envoyer la hauteur au parent
+        // Fonction pour envoyer la hauteur au parent (mesure strictement basée sur le contenu SVG)
         function sendHeightToParent() {
-          // Mesurer la hauteur RÉELLE du contenu
-          const body = document.body;
-          const html = document.documentElement;
+          const header = document.querySelector('.bg-white.px-4.py-3');
+          const sankeyContainer = document.getElementById('sankey-container');
+          const saveBtnContainer =
+            document.getElementById('save-btn-container');
 
-          // Prendre le max de toutes les mesures possibles pour être sûr
-          const height = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
+          // Hauteur du header (s'il est présent)
+          const headerHeight = header
+            ? header.getBoundingClientRect
+              ? Math.round(header.getBoundingClientRect().height)
+              : header.offsetHeight || 0
+            : 0;
+
+          // Hauteur du diagramme = distance du haut du container au bas du SVG
+          let diagramHeight = 0;
+          if (sankeyContainer) {
+            const svg = sankeyContainer.querySelector('svg');
+            if (
+              svg &&
+              svg.getBoundingClientRect &&
+              sankeyContainer.getBoundingClientRect
+            ) {
+              const svgRect = svg.getBoundingClientRect();
+              const contRect = sankeyContainer.getBoundingClientRect();
+              diagramHeight = Math.max(
+                0,
+                Math.round(svgRect.top - contRect.top + svgRect.height)
+              );
+            } else {
+              // Fallback si le SVG n'est pas encore présent
+              const rectH = sankeyContainer.getBoundingClientRect
+                ? Math.round(sankeyContainer.getBoundingClientRect().height)
+                : 0;
+              const scrollH = sankeyContainer.scrollHeight || 0;
+              const clientH = sankeyContainer.clientHeight || 0;
+              diagramHeight = Math.max(rectH, scrollH, clientH);
+            }
+          }
+
+          // Hauteur du conteneur du bouton Enregistrer s'il est visible
+          const saveHeight =
+            saveBtnContainer &&
+            getComputedStyle(saveBtnContainer).display !== 'none'
+              ? saveBtnContainer.getBoundingClientRect
+                ? Math.round(saveBtnContainer.getBoundingClientRect().height)
+                : saveBtnContainer.offsetHeight || 0
+              : 0;
+
+          // Marges et bornes pour éviter sous/sur-estimation
+          const SAFETY = 500; // marge généreuse pour éviter toute coupe
+          const MIN_H = 400;
+          const MAX_H = 6000;
+
+          const height = Math.min(
+            MAX_H,
+            Math.max(MIN_H, headerHeight + diagramHeight + saveHeight + SAFETY)
           );
 
-          // Pas de limite arbitraire - laisser le contenu dicter la hauteur
           window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
         }
+        // Exposer la fonction pour que d'autres scripts puissent déclencher un resize (ex: après rendu Sankey)
+        window._resizeIframe = sendHeightToParent;
         window.addEventListener('load', sendHeightToParent);
         window.addEventListener('resize', sendHeightToParent);
 
