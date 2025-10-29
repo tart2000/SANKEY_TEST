@@ -182,49 +182,101 @@ Quand on sélectionne une transfo dans cette liste, il faut faire un call API av
 }
 ```
 
-## Comportement attendu dans le calcul des lots qui en découlent
+## Moteur hiérarchique de transformation
 
-Les transfos dynamiques sont des 'translations' des lots selon différentes dimensions.
+Les transfos dynamiques utilisent un moteur hiérarchique qui traite les dimensions dans leur ordre de dépendance (formats → types → matières → fibres → couleurs → perturbateurs → propreté → qualité).
 
-Les règles sont les suivantes :
+### Principe de "décrochage" hiérarchique
 
-- La somme des volumes des lots cible et lots co-produits doit être égale au volume du lot d'entrée (input)
-- La transfo n'agit que selon une dimension à la fois
-- Le lot cible n'a pas de distribution dans la dimension sélectionnée
-- Il faut comparer les bubble_id dans le lot (et pas les clés)
-- Le lot co-produit peut avoir une distribution (20% de X, 30% de Y et 50% de Z). Cette distribution donnée en entrée doit être respectée
-- Ce qui ne correspond pas à ce qui est demandé en input est passé directement dans le co-produit (ex. une transfo prend 'vêtements' en format d'input. Tout ce qui n'est pas 'vêtements' est passé directement dans le co-produit)
-- Une dimension 'vide' en input veut dire qu'on accepte toutes les clés dans cette dimension.
-- Ensuite, dans ce qui correspond, le rapport entre ce qui est traité dans le lot cible et traité dans le lot co-produit est défini par le yield (rendement). Mais sur le total final, le rapport peut être différent puisque ce qui ne correspond pas aux données d'input aura été passé directement dans le co-produit. Dans un cas extrême, si rien ne correspond aux données d'input (par exemple : 'vêtements'), le lot target sera vide et le lot co-produit sera égal au lot d'input. Le 'yield' final sera donc de 0% (même si le yield de la transfo était de 75% par exemple).
-- Il ne peut y avoir un co-produit défini que dans une seule dimension. C'est dans cette dimension que le yield cible est calculé.
-- Quand deux dimensions parentes sont mentionnées, il faut correspondre à chacune des conditions : d'abord les 'vêtements' (par exemple), puis les 'robes' -> tout le reste, qui ne correspond pas, est passé dans le co-produit.
+**Règle fondamentale** : Si un élément de n'importe quel niveau matche les critères d'input, on le "décroche" jusqu'à la racine et on le range dans le target.
+
+**Exemple** :
 ```
-Lot d'entrée
-├── Formats (1er niveau de filtrage)
-│   ├── Vêtements ✅ → Sélectionné
-│   ├── Linges et rideaux ✅ → Sélectionné
-│   └── Autres formats ❌ → Co-produit
-│
-├── Types (2ème niveau de filtrage)
-│   ├── Dans "Vêtements" :
-│   │   ├── Vestes, manteaux ✅ → Sélectionné
-│   │   ├── Robes ✅ → Sélectionné
-│   │   └── Autres types ❌ → Co-produit
-│   └── Dans "Linges et rideaux" :
-│       ├── Rideaux et voilages ✅ → Sélectionné
-│       └── Autres types ❌ → Co-produit
-│
-└── Dimensions de base (matières, fibres, couleurs, etc.)
-    └── Concaténation des distributions sélectionnées
-```
-- Il faut traiter les dimensions dans l'ordre, en partant du haut vers la bas.
-- Bien sûr, tous les éléments d'une même dimension enfant doivent être concaténés. Par exemple, on mélange des Tshirts et des Pantalons pour en faire des chiquettes. On doit retrouver dans les chiquettes une distribution de matière qui correspond à la convergence des 2 Tshirts et Pantalons.
-- Il faut identifier la dimension 'primaire' -> celle à laquelle va s'appliquer le yield. On la trouve avec :
--- La dimension dans laquelle le co-produit est défini
--- Si pas de co-produit défini, on suit l'ordre de traitement (cf. config/dimensions.js) et on prend la première qui a un target défini.
+Lot initial:
+├── Vêtements (format)
+│   ├── Robes (type) ✅ MATCH
+│   └── Pantalons (type)
+└── Chaussures (format)
+    └── Baskets (type)
 
-Il faut donc parser le lot d'input pour le transformer.
-Identifier la dimension 'primaire'.
+Transfo avec:
+- formats.input: {} (vide = accepte tout)
+- types.input: { "Robes": {...} }
+- formats.target: { "Morceaux": {...} }
+- yield: 60%
+```
+
+**Résultat** :
+```
+Target (60% du poids des Robes):
+├── Morceaux (format) ← décroché jusqu'à la racine
+│   └── [distribution complète des Robes originales]
+
+Co-produit (40% + le reste):
+├── Vêtements (format)
+│   └── Pantalons (type)
+└── Chaussures (format)
+    └── Baskets (type)
+```
+
+### Algorithme de transformation
+
+1. **Identifier la dimension primaire** :
+   - Règle 1 : Dimension avec `coproduct` défini (c'est là qu'on applique le yield)
+   - Règle 2 : Première dimension avec `target` défini selon l'ordre de traitement
+
+2. **Parcourir la hiérarchie** :
+   - Traiter chaque dimension dans l'ordre (formats → types → matières...)
+   - Pour chaque dimension avec des critères d'input, filtrer les éléments qui matchent
+   - Préserver la structure hiérarchique complète des éléments sélectionnés
+
+3. **Décrochage et concaténation** :
+   - Les éléments qui matchent sont "décrochés" jusqu'à la racine
+   - Ils sont concaténés dans le target de la dimension primaire
+   - Toute la hiérarchie des dimensions enfants est préservée
+
+4. **Application du yield** :
+   - Si yield = 100% : tout l'élément décroché → target
+   - Si yield < 100% :
+     - `yield%` de l'élément décroché → target
+     - `(100-yield)%` de l'élément décroché → co-produit avec distribution `coproduct`
+   - Le reste du lot → co-produit
+
+### Gestion des co-produits
+
+- **Distribution respectée** : Les co-produits suivent la distribution définie dans `coproduct` (ex: 30% Perturbateurs esthétiques, 70% Perturbateurs fonctionnels)
+- **Structure complète** : Les co-produits utilisent l'API `/item` complet pour avoir la structure de référence
+- **Hiérarchie préservée** : La structure des dimensions enfants est maintenue
+
+### Utilisation de l'API `/item` complet
+
+**Pour les targets et co-produits** :
+- Charger l'item complet via l'API `/item` pour avoir la structure de référence complète
+- Utiliser cette structure pour remplir le target/co-produit avec toutes les dimensions enfants
+- Appliquer les pourcentages et distributions calculés sur cette structure complète
+
+**Exemple** :
+```javascript
+// Charger l'item complet pour avoir la structure de référence
+const targetItem = await fetchItemComplete(targetBubbleId);
+const coproItem = await fetchItemComplete(coproBubbleId);
+
+// Utiliser cette structure pour remplir le target/co-produit
+const targetWithFullStructure = {
+  ...targetItem,
+  // Appliquer les pourcentages et distributions
+  pourcentage: calculatedPercentage,
+  types: mergedTypesFromOriginal,
+  matieres: mergedMatieresFromOriginal
+};
+```
+
+### Règles de conservation
+
+- **Volumes** : La somme des volumes target + co-produit = volume d'entrée
+- **Hiérarchie** : La structure des dimensions enfants est toujours préservée
+- **Distributions** : Les pourcentages des dimensions enfants sont recalculés pour respecter les totaux
+- **Bubble_id** : Toutes les comparaisons se font par `bubble_id`, pas par les clés d'affichage
 
 ### Exemple facile : lavage
 ```
