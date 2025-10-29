@@ -35,7 +35,23 @@ export async function POST(request: Request) {
     delete paramsSansIsLive.isLive;
 
     // Sécurise l'URL pour éviter les doubles slashs
-    const url = baseUrl + (endpoint || '').replace(/^\//, '');
+    let url = baseUrl + (endpoint || '').replace(/^\//, '');
+
+    // Pour les requêtes GET, ajouter les paramètres dans l'URL
+    if (
+      method === 'GET' &&
+      paramsSansIsLive &&
+      Object.keys(paramsSansIsLive).length > 0
+    ) {
+      const searchParams = new URLSearchParams();
+      Object.entries(paramsSansIsLive).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          searchParams.append(key, String(value));
+        }
+      });
+      url += '?' + searchParams.toString();
+    }
+
     const fetchOptions: RequestInit = {
       method,
       headers: {

@@ -1113,33 +1113,46 @@ let lastLoadedIsLive = null; // Pour tracker le dernier mode chargé
 // Cache global (bubble_id -> color) pour éviter des appels répétés
 window.colorById = window.colorById || new Map();
 
-// Appelle l'endpoint existant 'item?id={id}' pour récupérer la couleur d'un élément
-async function fetchItemColor(bubbleId) {
+// Cache unifié pour les items mini (bubble_id -> {bubble_id, fr_fr, en_gb, color})
+window.itemMiniCache = window.itemMiniCache || new Map();
+
+// Récupère l'item mini complet (bubble_id, fr_fr, en_gb, color)
+async function fetchItemMini(bubbleId) {
   try {
-    if (!bubbleId || window.colorById.has(bubbleId))
-      return window.colorById.get(bubbleId) || null;
+    if (!bubbleId || window.itemMiniCache.has(bubbleId))
+      return window.itemMiniCache.get(bubbleId) || null;
+
     const params = getUrlParams();
     const isLive = params.isLive;
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'item',
+        endpoint: 'item_small',
         params: { id: bubbleId, isLive },
-        method: 'POST',
+        method: 'GET',
       }),
     });
     if (!response.ok) return null;
     const data = await response.json();
+
+    // Stocker dans les deux caches pour compatibilité
+    window.itemMiniCache.set(bubbleId, data);
     if (data && data.color) {
       window.colorById.set(bubbleId, data.color);
-      return data.color;
     }
-    return null;
+
+    return data;
   } catch (e) {
-    console.warn('fetchItemColor failed for', bubbleId, e);
+    console.warn('fetchItemMini failed for', bubbleId, e);
     return null;
   }
+}
+
+// Wrapper pour compatibilité - récupère seulement la couleur
+async function fetchItemColor(bubbleId) {
+  const itemMini = await fetchItemMini(bubbleId);
+  return itemMini?.color || null;
 }
 
 // Charge en masse les couleurs d'une dimension (formats, types, ...)
@@ -1162,13 +1175,20 @@ async function ensureDimensionColorsLoaded(dimension) {
     if (!response.ok) return;
     const data = await response.json();
     Object.values(data || {}).forEach(item => {
-      if (
-        item &&
-        item.bubble_id &&
-        item.color &&
-        !window.colorById.has(item.bubble_id)
-      ) {
-        window.colorById.set(item.bubble_id, item.color);
+      if (item && item.bubble_id) {
+        // Stocker l'item mini complet
+        const itemMini = {
+          bubble_id: item.bubble_id,
+          fr_fr: item.fr_fr || null,
+          en_gb: item.en_gb || null,
+          color: item.color || null,
+        };
+        window.itemMiniCache.set(item.bubble_id, itemMini);
+
+        // Garder colorById pour compatibilité
+        if (item.color && !window.colorById.has(item.bubble_id)) {
+          window.colorById.set(item.bubble_id, item.color);
+        }
       }
     });
   } catch (e) {
@@ -1283,6 +1303,7 @@ function getDynamicTransfo(bubbleId) {
 // Exporter les fonctions globalement
 window.preloadColorsForTransfo = preloadColorsForTransfo;
 window.fetchItemColor = fetchItemColor;
+window.fetchItemMini = fetchItemMini;
 
 // ← NOUVELLE FONCTION : Obtenir les détails complets d'une transformation
 async function getDetailedTransfo(bubbleId, isLive) {

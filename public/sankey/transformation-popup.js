@@ -1162,9 +1162,15 @@ class TransformationPopup {
     }
   }
 
-  // Fonction pour récupérer l'objet complet depuis Bubble (adaptée pour le contexte sankey)
-  async recupererElementComplet(bubbleId) {
+  // Fonction pour récupérer l'objet mini depuis Bubble (adaptée pour le contexte sankey)
+  async recupererElementMini(bubbleId) {
     try {
+      // Utiliser fetchItemMini depuis processes.js
+      if (window.fetchItemMini) {
+        return await window.fetchItemMini(bubbleId);
+      }
+
+      // Fallback si la fonction n'est pas disponible
       const params = getUrlParams();
       const isLive = params.isLive;
 
@@ -1172,24 +1178,17 @@ class TransformationPopup {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          endpoint: 'item',
-          method: 'POST',
-          params: {
-            id: bubbleId,
-            isLive: isLive,
-          },
+          endpoint: 'item_small',
+          method: 'GET',
+          params: { id: bubbleId, isLive },
         }),
       });
 
       if (!response.ok) return null;
       const data = await response.json();
-      console.log('Élément complet récupéré:', data);
       return data;
     } catch (error) {
-      console.error(
-        "Erreur lors de la récupération de l'élément complet:",
-        error
-      );
+      console.error("Erreur lors de la récupération de l'élément mini:", error);
       return null;
     }
   }
@@ -1205,11 +1204,11 @@ class TransformationPopup {
       const percent = obj.percent ? ` (${obj.percent}%)` : '';
 
       try {
-        // Utiliser la fonction existante depuis lot.js (adaptée pour le contexte sankey)
-        const elementComplet = await this.recupererElementComplet(bubbleId);
-        if (elementComplet) {
-          // Utiliser la traduction selon la langue
-          const nomReel = this.getTitreAffiche(key, elementComplet[key]);
+        // Utiliser la nouvelle fonction optimisée
+        const elementMini = await this.recupererElementMini(bubbleId);
+        if (elementMini) {
+          // getTitreAffiche fonctionne déjà avec {fr_fr, en_gb}
+          const nomReel = this.getTitreAffiche(key, elementMini);
           names.push(`${nomReel}${percent}`);
         } else {
           names.push(`${key}${percent}`);
