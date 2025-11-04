@@ -42,8 +42,10 @@ window.i18nConfig = {
         laborCostDetails: 'Détail par profil RH',
         equipmentCosts: 'Coûts équipement',
         equipmentTime: 'Temps équipement',
+        amortization: 'Amortissement',
         otherCosts: 'Autres coûts',
         consumables: 'Consommables',
+        loadingDetails: 'Chargement des détails...',
         confirmDeleteTool:
           'Êtes-vous sûr de vouloir supprimer cet outil du scénario ?',
         addTransformation: 'Ajouter une transformation',
@@ -143,8 +145,10 @@ window.i18nConfig = {
         laborCostDetails: 'Labor cost details',
         equipmentCosts: 'Equipment costs',
         equipmentTime: 'Equipment time',
+        amortization: 'Amortization',
         otherCosts: 'Other costs',
         consumables: 'Consumables',
+        loadingDetails: 'Loading details...',
         confirmDeleteTool:
           'Are you sure you want to delete this tool from the scenario?',
         addTransformation: 'Add transformation',
@@ -241,8 +245,10 @@ window.i18nConfig = {
         laborCostDetails: 'Detalle por perfil RH',
         equipmentCosts: 'Costos de equipamiento',
         equipmentTime: 'Tiempo de equipamiento',
+        amortization: 'Amortización',
         otherCosts: 'Otros costos',
         consumables: 'Consumibles',
+        loadingDetails: 'Cargando detalles...',
         confirmDeleteTool:
           '¿Estás seguro de que quieres eliminar esta herramienta del escenario?',
         addTransformation: 'Añadir transformación',
@@ -342,8 +348,10 @@ window.i18nConfig = {
         laborCostDetails: 'Arbeitskosten nach Profil',
         equipmentCosts: 'Ausrüstungskosten',
         equipmentTime: 'Ausrüstungszeit',
+        amortization: 'Abschreibung',
         otherCosts: 'Sonstige Kosten',
         consumables: 'Verbrauchsmaterialien',
+        loadingDetails: 'Details werden geladen...',
         confirmDeleteTool:
           'Sind Sie sicher, dass Sie dieses Werkzeug aus dem Szenario löschen möchten?',
         addTransformation: 'Transformation hinzufügen',

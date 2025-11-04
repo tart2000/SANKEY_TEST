@@ -44,8 +44,10 @@ export const translations = {
       laborCostDetails: 'Détail par profil RH',
       equipmentCosts: 'Coûts équipement',
       equipmentTime: 'Temps équipement',
+      amortization: 'Amortissement',
       otherCosts: 'Autres coûts',
       consumables: 'Consommables',
+      loadingDetails: 'Chargement des détails...',
       // Popup Tech
       addTool: 'Ajouter un outil',
       editTool: "Modifier l'outil",
@@ -174,8 +176,10 @@ export const translations = {
       laborCostDetails: 'Labor cost details',
       equipmentCosts: 'Equipment costs',
       equipmentTime: 'Equipment time',
+      amortization: 'Amortization',
       otherCosts: 'Other costs',
       consumables: 'Consumables',
+      loadingDetails: 'Loading details...',
       // Popup Tech
       addTool: 'Add tool',
       editTool: 'Edit tool',
@@ -299,8 +303,10 @@ export const translations = {
       laborCostDetails: 'Detalle por perfil RH',
       equipmentCosts: 'Costos de equipamiento',
       equipmentTime: 'Tiempo de equipamiento',
+      amortization: 'Amortización',
       otherCosts: 'Otros costos',
       consumables: 'Consumibles',
+      loadingDetails: 'Cargando detalles...',
       // Popup Tech
       addTool: 'Añadir herramienta',
       editTool: 'Editar herramienta',
@@ -428,8 +434,10 @@ export const translations = {
       laborCostDetails: 'Arbeitskosten nach Profil',
       equipmentCosts: 'Ausrüstungskosten',
       equipmentTime: 'Ausrüstungszeit',
+      amortization: 'Abschreibung',
       otherCosts: 'Sonstige Kosten',
       consumables: 'Verbrauchsmaterialien',
+      loadingDetails: 'Details werden geladen...',
       // Popup Tech
       addTool: 'Werkzeug hinzufügen',
       editTool: 'Werkzeug bearbeiten',

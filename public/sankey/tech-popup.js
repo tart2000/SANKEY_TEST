@@ -204,16 +204,8 @@ class TechPopup {
           </div>
         </div>
       </div>
-      <div id="tech-details" class="mt-4 hidden">
-        <h4 class="text-sm font-medium text-gray-700 mb-2">${i18next.t('toolCharacteristics')}</h4>
-        <div class="bg-gray-50 rounded-lg p-3">
-          <table class="w-full text-sm">
-            <tbody id="tech-details-table">
-              <!-- Les données seront injectées ici -->
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Le spinner, le tableau collapsible et les messages d'erreur seront insérés ici dynamiquement -->
+      <div id="tech-details-container"></div>
       <div class="mt-6 flex justify-between items-center">
         ${
           this.mode === 'edit'
@@ -722,21 +714,77 @@ class TechPopup {
     };
   }
 
+  // Fonction pour afficher les erreurs de chargement
+  showTechDetailsError(message) {
+    const container = this.modal.querySelector('#tech-details-container');
+    if (!container) return;
+
+    // Supprimer le spinner s'il existe
+    const spinner = container.querySelector('#tech-loading-spinner');
+    if (spinner) {
+      spinner.remove();
+    }
+
+    // Supprimer l'ancien message d'erreur s'il existe
+    const existingError = container.querySelector('#tech-error-message');
+    if (existingError) {
+      existingError.remove();
+    }
+
+    // Afficher le message d'erreur
+    const errorHTML = `
+      <div id="tech-error-message" class="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600">${message}</p>
+      </div>
+    `;
+    container.innerHTML = errorHTML;
+  }
+
   async loadAndDisplayTechDetails(techId) {
+    const container = this.modal.querySelector('#tech-details-container');
+    if (!container) return;
+
+    // Supprimer l'ancien contenu
+    container.innerHTML = '';
+
+    // Afficher le spinner pendant le chargement
+    const spinnerHTML = `
+      <div id="tech-loading-spinner" class="mt-3 flex items-center justify-center py-8 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <p class="text-sm text-gray-600">${i18next.t('loadingDetails')}</p>
+        </div>
+      </div>
+    `;
+    container.innerHTML = spinnerHTML;
+
     try {
       const techDetails = await this.loadTechDetails(techId);
-      this.displayTechDetails(techDetails);
+
+      // Supprimer le spinner
+      const spinner = container.querySelector('#tech-loading-spinner');
+      if (spinner) {
+        spinner.remove();
+      }
+
+      // Afficher le tableau collapsible
+      this.renderTechDetailsTable(techDetails);
     } catch (error) {
       console.error(i18next.t('errorLoadingTechDetails'), error);
-      this.hideTechDetails();
+      this.showTechDetailsError(i18next.t('errorLoadingTechDetails'));
     }
   }
 
-  displayTechDetails(techDetails) {
-    const techDetailsContainer = this.modal.querySelector('#tech-details');
-    const techDetailsTable = this.modal.querySelector('#tech-details-table');
+  // Fonction pour créer et afficher le tableau collapsible des détails de la tech
+  renderTechDetailsTable(techDetails) {
+    const container = this.modal.querySelector('#tech-details-container');
+    if (!container) return;
 
-    if (!techDetailsContainer || !techDetailsTable) return;
+    // Supprimer l'ancien tableau s'il existe
+    const existingTable = container.querySelector('#tech-details-table');
+    if (existingTable) {
+      existingTable.remove();
+    }
 
     let tableRows = '';
 
@@ -753,6 +801,28 @@ class TechPopup {
       tableRows += `<tr class="border-b border-gray-200">
         <td class="py-2 font-medium text-gray-700">${i18next.t('electricalConsumption')}</td>
         <td class="py-2 text-gray-600">${techDetails.conso} W</td>
+      </tr>`;
+    }
+
+    // Amortissement (nouveau)
+    if (
+      techDetails.amortization !== undefined &&
+      techDetails.amortization !== null
+    ) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">${i18next.t('amortization')}</td>
+        <td class="py-2 text-gray-600">${techDetails.amortization} €/h</td>
+      </tr>`;
+    }
+
+    // Consommables (nouveau)
+    if (
+      techDetails.consumables !== undefined &&
+      techDetails.consumables !== null
+    ) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">${i18next.t('consumables')}</td>
+        <td class="py-2 text-gray-600">${techDetails.consumables} €/kg</td>
       </tr>`;
     }
 
@@ -790,14 +860,61 @@ class TechPopup {
       </tr>`;
     }
 
-    techDetailsTable.innerHTML = tableRows;
-    techDetailsContainer.classList.remove('hidden');
+    // Si aucune donnée, ne pas afficher le tableau
+    if (!tableRows) {
+      return;
+    }
+
+    // Construire le HTML du tableau collapsible
+    const tableHTML = `
+      <div id="tech-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div id="tech-table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+          <h4 class="text-sm font-medium text-gray-900">${i18next.t('toolCharacteristics')}</h4>
+          <svg id="tech-collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </div>
+        <div id="tech-table-body" class="px-3 py-2">
+          <table class="w-full text-sm">
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', tableHTML);
+
+    // Ajouter les event listeners pour le collapse/expand
+    const tableHeader = container.querySelector('#tech-table-header');
+    const tableBody = container.querySelector('#tech-table-body');
+    const collapseIcon = container.querySelector('#tech-collapse-icon');
+
+    if (tableHeader && tableBody && collapseIcon) {
+      tableHeader.addEventListener('click', () => {
+        const isCollapsed = tableBody.style.display === 'none';
+
+        if (isCollapsed) {
+          tableBody.style.display = 'block';
+          collapseIcon.style.transform = 'rotate(0deg)';
+        } else {
+          tableBody.style.display = 'none';
+          collapseIcon.style.transform = 'rotate(-90deg)';
+        }
+      });
+    }
+  }
+
+  // Fonction de compatibilité (ancienne méthode, maintenant utilise renderTechDetailsTable)
+  displayTechDetails(techDetails) {
+    this.renderTechDetailsTable(techDetails);
   }
 
   hideTechDetails() {
-    const techDetailsContainer = this.modal.querySelector('#tech-details');
-    if (techDetailsContainer) {
-      techDetailsContainer.classList.add('hidden');
+    const container = this.modal.querySelector('#tech-details-container');
+    if (container) {
+      container.innerHTML = '';
     }
   }
 
