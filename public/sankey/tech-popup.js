@@ -344,15 +344,25 @@ class TechPopup {
     }
 
     saveBtn.onclick = async () => {
+      console.log('🖱️ [AJOUT OUTIL] Clic sur le bouton Enregistrer');
+
       const selectedTechId = techSelect.value;
       const quantity = parseInt(quantityInput.value);
 
+      console.log('📋 [AJOUT OUTIL] Données saisies:', {
+        selectedTechId,
+        quantity,
+        currentRef: this.currentRef,
+      });
+
       if (!selectedTechId) {
+        console.warn('⚠️ [AJOUT OUTIL] Aucun outil sélectionné');
         alert(i18next.t('pleaseSelectTool'));
         return;
       }
 
       if (!quantity || quantity < 1) {
+        console.warn('⚠️ [AJOUT OUTIL] Quantité invalide:', quantity);
         alert(i18next.t('quantityMustBeGreaterThanZero'));
         return;
       }
@@ -362,7 +372,16 @@ class TechPopup {
         techSelect.options[techSelect.selectedIndex].text;
       const techData = this.techList[selectedTechName];
 
+      console.log('🔍 [AJOUT OUTIL] Récupération des données de la tech:', {
+        selectedTechName,
+        techDataExists: !!techData,
+        techListKeys: Object.keys(this.techList || {}),
+      });
+
       if (!techData) {
+        console.error(
+          '❌ [AJOUT OUTIL] Données de la tech non trouvées dans techList'
+        );
         alert(i18next.t('errorToolDataNotFound'));
         return;
       }
@@ -370,10 +389,19 @@ class TechPopup {
       // Récupérer les données détaillées de la tech via l'API
       let techDetails = null;
       try {
+        console.log(
+          "🌐 [AJOUT OUTIL] Chargement des détails de la tech depuis l'API..."
+        );
         techDetails = await this.loadTechDetails(selectedTechId);
-        console.log('Données détaillées de la tech récupérées:', techDetails);
+        console.log(
+          '✅ [AJOUT OUTIL] Données détaillées de la tech récupérées:',
+          techDetails
+        );
       } catch (error) {
-        console.error(i18next.t('errorLoadingTechDetails'), error);
+        console.error(
+          '❌ [AJOUT OUTIL] Erreur lors du chargement des détails:',
+          error
+        );
         // Continuer sans les détails si l'API échoue
       }
 
@@ -381,6 +409,11 @@ class TechPopup {
       const stepId = this.getTransformationStep(
         this.currentRef?.transformation
       );
+
+      console.log('🔍 [AJOUT OUTIL] Step de la transformation:', {
+        stepId,
+        transformation: this.currentRef?.transformation,
+      });
 
       // Créer l'objet tech à sauvegarder
       const techToSave = {
@@ -392,9 +425,16 @@ class TechPopup {
         details: techDetails, // Ajouter les détails de la tech
       };
 
+      console.log(
+        '💾 [AJOUT OUTIL] Objet tech préparé pour sauvegarde:',
+        techToSave
+      );
+
       // Sauvegarder dans le scénario
       this.saveTechToScenario(techToSave);
       this.close();
+
+      console.log('✅ [AJOUT OUTIL] Popup fermée après sauvegarde');
     };
 
     // Fermer en cliquant sur le backdrop
@@ -406,17 +446,41 @@ class TechPopup {
   }
 
   saveTechToScenario(techData) {
+    console.log('🛠️ [AJOUT OUTIL] saveTechToScenario appelée avec:', {
+      techData,
+      currentRef: this.currentRef,
+    });
+
     // Sauvegarder la tech dans le scénario
     const scenarioIdx = window.currentScenarioIdx;
     const scenario = window.scenarios[scenarioIdx]?.scenario;
 
     if (!scenario) {
-      console.error('Scénario non trouvé');
+      console.error('❌ [AJOUT OUTIL] Scénario non trouvé', {
+        scenarioIdx,
+        scenariosExists: !!window.scenarios,
+      });
       return;
     }
 
+    console.log('✅ [AJOUT OUTIL] Scénario trouvé:', {
+      scenarioIdx,
+      hasScenario: !!scenario,
+    });
+
     // Trouver le nœud dans le scénario et mettre à jour sa tech
-    this.updateNodeTechInScenario(scenario, this.currentRef.nodeId, techData);
+    const updateResult = this.updateNodeTechInScenario(
+      scenario,
+      this.currentRef.nodeId,
+      techData
+    );
+
+    if (!updateResult) {
+      console.error('❌ [AJOUT OUTIL] Échec de la mise à jour du nœud');
+      return;
+    }
+
+    console.log('✅ [AJOUT OUTIL] Nœud mis à jour avec succès');
 
     // Publier le scénario après ajout/édition d'outil
     window.publishScenario(scenario, 'AJOUT/ÉDITION OUTIL');
@@ -424,6 +488,14 @@ class TechPopup {
     // Relancer le Sankey
     const lot = window.lotType;
     const dimension = window.currentDimension;
+
+    console.log('🔄 [AJOUT OUTIL] Relance du Sankey:', {
+      hasLot: !!lot,
+      hasScenario: !!scenario,
+      dimension,
+      runSankeyExists: typeof runSankey === 'function',
+    });
+
     if (typeof runSankey === 'function') {
       runSankey({
         lot,
@@ -431,28 +503,137 @@ class TechPopup {
         containerId: 'sankey-container',
         dimension,
       });
+      console.log('✅ [AJOUT OUTIL] Sankey relancé avec succès');
+    } else {
+      console.error('❌ [AJOUT OUTIL] runSankey non disponible');
     }
 
     // Activer le bouton Enregistrer
     if (typeof setScenarioModifie === 'function') {
       setScenarioModifie(true);
+      console.log('✅ [AJOUT OUTIL] Bouton Enregistrer activé');
+    } else {
+      console.warn('⚠️ [AJOUT OUTIL] setScenarioModifie non disponible');
     }
   }
 
   updateNodeTechInScenario(scenario, nodeId, techData) {
+    console.log('🔍 [AJOUT OUTIL] updateNodeTechInScenario appelée:', {
+      nodeId,
+      nodeIdType: typeof nodeId,
+      techData,
+      currentRef: this.currentRef,
+      transformationFromRef: this.currentRef?.transformation,
+      transformationNodeIdFromRef: this.currentRef?.transformation?._nodeId,
+      scenarioExists: !!scenario,
+      scenarioKeys: scenario ? Object.keys(scenario) : [],
+    });
+
+    // Vérifier que le nodeId correspond bien à celui de la transformation dans currentRef
+    if (this.currentRef?.transformation?._nodeId) {
+      const refNodeId = this.currentRef.transformation._nodeId;
+      if (String(refNodeId) !== String(nodeId)) {
+        console.warn('⚠️ [AJOUT OUTIL] Incohérence de nodeId:', {
+          nodeIdRecu: nodeId,
+          nodeIdFromRef: refNodeId,
+          'Ils correspondent?': String(refNodeId) === String(nodeId),
+        });
+      } else {
+        console.log('✅ [AJOUT OUTIL] NodeId correspond bien au ref:', {
+          nodeId,
+          refNodeId,
+        });
+      }
+    }
+
+    // Afficher la structure complète du scénario pour debug
+    console.log('📊 [AJOUT OUTIL] Structure du scénario avant recherche:', {
+      scenarioType: typeof scenario,
+      scenarioKeys: scenario ? Object.keys(scenario) : [],
+      hasMain: !!(scenario && scenario.main),
+      hasTransformations: !!(scenario && scenario.transformations),
+      hasCoproductScenario: !!(scenario && scenario.coproduct_scenario),
+      hasCoproductTransformations: !!(
+        scenario &&
+        scenario.coproduct_scenario &&
+        scenario.coproduct_scenario.transformations
+      ),
+      mainTransformationsLength:
+        scenario && scenario.main && scenario.main.transformations
+          ? scenario.main.transformations.length
+          : 0,
+      transformationsLength:
+        scenario && scenario.transformations
+          ? scenario.transformations.length
+          : 0,
+      coproductTransformationsLength:
+        scenario &&
+        scenario.coproduct_scenario &&
+        scenario.coproduct_scenario.transformations
+          ? scenario.coproduct_scenario.transformations.length
+          : 0,
+      mainTransformationsNodeIds:
+        scenario && scenario.main && scenario.main.transformations
+          ? scenario.main.transformations.map(t => ({
+              _nodeId: t._nodeId,
+              _nodeIdType: typeof t._nodeId,
+              type: t.type,
+            }))
+          : [],
+      transformationsNodeIds:
+        scenario && scenario.transformations
+          ? scenario.transformations.map(t => ({
+              _nodeId: t._nodeId,
+              _nodeIdType: typeof t._nodeId,
+              type: t.type,
+            }))
+          : [],
+      coproductTransformationsNodeIds:
+        scenario &&
+        scenario.coproduct_scenario &&
+        scenario.coproduct_scenario.transformations
+          ? scenario.coproduct_scenario.transformations.map(t => ({
+              _nodeId: t._nodeId,
+              _nodeIdType: typeof t._nodeId,
+              type: t.type,
+            }))
+          : [],
+    });
+
     // Trouver la transformation par son _nodeId
     const nodeInfo = findTransformationByNodeId(scenario, nodeId);
 
     if (!nodeInfo) {
-      console.error('Transformation non trouvée pour nodeId:', nodeId);
-      return;
+      console.error(
+        '❌ [AJOUT OUTIL] Transformation non trouvée pour nodeId:',
+        {
+          nodeId,
+          nodeIdType: typeof nodeId,
+          scenario: !!scenario,
+          suggestion:
+            'Vérifiez que le nodeId correspond bien à un _nodeId présent dans le scénario (voir les logs ci-dessus)',
+        }
+      );
+      return false;
     }
+
+    console.log('✅ [AJOUT OUTIL] Transformation trouvée:', {
+      nodeId,
+      transformationType: nodeInfo.transformation?.type,
+      hasExistingTech: !!nodeInfo.transformation?.tech,
+      path: nodeInfo.path,
+    });
 
     // Créer la nouvelle transformation avec la tech ajoutée
     const updatedTransformation = {
       ...nodeInfo.transformation,
       tech: techData,
     };
+
+    console.log('📝 [AJOUT OUTIL] Transformation mise à jour préparée:', {
+      originalTech: nodeInfo.transformation?.tech,
+      newTech: techData,
+    });
 
     // Utiliser updateTransformationByNodeId avec le nodeId
     if (typeof window.updateTransformationByNodeId === 'function') {
@@ -463,11 +644,21 @@ class TechPopup {
       );
 
       if (!success) {
-        console.error('Erreur lors de la mise à jour de la tech');
-        return;
+        console.error(
+          '❌ [AJOUT OUTIL] Erreur lors de la mise à jour de la tech'
+        );
+        return false;
       }
+
+      console.log(
+        '✅ [AJOUT OUTIL] Transformation mise à jour dans le scénario'
+      );
+      return true;
     } else {
-      console.error('updateTransformationByNodeId non disponible');
+      console.error(
+        '❌ [AJOUT OUTIL] updateTransformationByNodeId non disponible'
+      );
+      return false;
     }
   }
 

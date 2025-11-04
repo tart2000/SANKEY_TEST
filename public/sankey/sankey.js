@@ -80,20 +80,58 @@ function generateStableNodeId() {
 
 // Fonction pour trouver une transformation par son _nodeId et retourner son path
 function findTransformationByNodeId(scenario, nodeId) {
-  console.log('🔍 findTransformationByNodeId called:', { nodeId, scenario });
+  // Normaliser le nodeId en string pour éviter les problèmes de type
+  const normalizedNodeId = nodeId != null ? String(nodeId) : null;
+
+  console.log('🔍 [RECHERCHE] findTransformationByNodeId appelée:', {
+    nodeId,
+    nodeIdType: typeof nodeId,
+    normalizedNodeId,
+    normalizedNodeIdType: typeof normalizedNodeId,
+    scenarioExists: !!scenario,
+    scenarioKeys: scenario ? Object.keys(scenario) : [],
+  });
+
+  const foundNodeIds = [];
+
   function searchRecursive(obj, currentPath = []) {
     if (obj && typeof obj === 'object') {
       if (Array.isArray(obj)) {
         for (let i = 0; i < obj.length; i++) {
-          if (obj[i]._nodeId === nodeId) {
-            return {
-              transformation: obj[i],
-              path: [...currentPath, i],
-              index: i,
-            };
+          const item = obj[i];
+          if (item && typeof item === 'object') {
+            // Collecter tous les nodeIds trouvés pour debug
+            if (item._nodeId !== undefined) {
+              foundNodeIds.push({
+                nodeId: item._nodeId,
+                nodeIdType: typeof item._nodeId,
+                path: [...currentPath, i],
+                type: item.type,
+              });
+            }
+
+            // Normaliser les deux côtés en string pour comparaison
+            const itemNodeId =
+              item._nodeId != null ? String(item._nodeId) : null;
+            // Comparaison normalisée (toujours en string)
+            if (itemNodeId === normalizedNodeId) {
+              console.log('✅ [RECHERCHE] Transformation trouvée !', {
+                nodeIdRecherche: nodeId,
+                normalizedNodeId,
+                foundNodeId: item._nodeId,
+                foundNodeIdNormalized: itemNodeId,
+                path: [...currentPath, i],
+                transformation: item,
+              });
+              return {
+                transformation: item,
+                path: [...currentPath, i],
+                index: i,
+              };
+            }
           }
           // Chercher dans les sous-scénarios
-          if (obj[i].scenario) {
+          if (obj[i] && obj[i].scenario) {
             const result = searchRecursive(obj[i].scenario, [
               ...currentPath,
               i,
@@ -101,7 +139,7 @@ function findTransformationByNodeId(scenario, nodeId) {
             ]);
             if (result) return result;
           }
-          if (obj[i].scenario?.coproduct_scenario) {
+          if (obj[i] && obj[i].scenario?.coproduct_scenario) {
             const result = searchRecursive(obj[i].scenario.coproduct_scenario, [
               ...currentPath,
               i,
@@ -112,8 +150,9 @@ function findTransformationByNodeId(scenario, nodeId) {
           }
         }
       } else {
+        // Parcourir toutes les propriétés récursivement
         for (const [key, value] of Object.entries(obj)) {
-          if (key === 'transformations' && Array.isArray(value)) {
+          if (value && typeof value === 'object') {
             const result = searchRecursive(value, [...currentPath, key]);
             if (result) return result;
           }
@@ -123,7 +162,47 @@ function findTransformationByNodeId(scenario, nodeId) {
     return null;
   }
 
-  return searchRecursive(scenario);
+  const result = searchRecursive(scenario);
+
+  if (!result) {
+    console.error('❌ [RECHERCHE] Transformation NON trouvée !', {
+      nodeIdRecherche: nodeId,
+      nodeIdRechercheType: typeof nodeId,
+      normalizedNodeId,
+      nodeIdsTrouves: foundNodeIds,
+      scenarioStructure: {
+        hasMain: !!(scenario && scenario.main),
+        hasTransformations: !!(scenario && scenario.transformations),
+        hasMainTransformations: !!(
+          scenario &&
+          scenario.main &&
+          scenario.main.transformations
+        ),
+        hasCoproductScenario: !!(scenario && scenario.coproduct_scenario),
+        hasCoproductTransformations: !!(
+          scenario &&
+          scenario.coproduct_scenario &&
+          scenario.coproduct_scenario.transformations
+        ),
+        mainTransformationsLength:
+          scenario && scenario.main && scenario.main.transformations
+            ? scenario.main.transformations.length
+            : 0,
+        transformationsLength:
+          scenario && scenario.transformations
+            ? scenario.transformations.length
+            : 0,
+        coproductTransformationsLength:
+          scenario &&
+          scenario.coproduct_scenario &&
+          scenario.coproduct_scenario.transformations
+            ? scenario.coproduct_scenario.transformations.length
+            : 0,
+      },
+    });
+  }
+
+  return result;
 }
 
 // Fonction pour obtenir le path d'un nœud par son _nodeId
@@ -394,12 +473,17 @@ function moveTransformationDownByNodeId(scenario, nodeId) {
 
 // Fonction pour mettre à jour une transformation par son _nodeId
 function updateTransformationByNodeId(scenario, nodeId, newTransformation) {
+  // Normaliser le nodeId en string
+  const normalizedNodeId = nodeId != null ? String(nodeId) : null;
+
   console.log('✏️ updateTransformationByNodeId called:', {
     nodeId,
+    nodeIdType: typeof nodeId,
+    normalizedNodeId,
     newTransformation,
   });
 
-  if (!nodeId) {
+  if (!normalizedNodeId) {
     console.error('NodeId manquant pour la mise à jour');
     return false;
   }
@@ -411,7 +495,10 @@ function updateTransformationByNodeId(scenario, nodeId, newTransformation) {
     // Si c'est un tableau de transformations
     if (Array.isArray(obj)) {
       for (let i = 0; i < obj.length; i++) {
-        if (obj[i] && obj[i]._nodeId === nodeId) {
+        // Normaliser et comparer
+        const itemNodeId =
+          obj[i]?._nodeId != null ? String(obj[i]._nodeId) : null;
+        if (itemNodeId === normalizedNodeId) {
           console.log("🔍 Transformation trouvée et mise à jour à l'index:", i);
 
           // Préserver le _nodeId et _index existants
@@ -2656,7 +2743,9 @@ function updateSankey(dimension) {
               : type;
             let tableRows = '';
 
-            console.log(transfo.scenario);
+            if (transfo.scenario) {
+              console.log('📋 Tooltip - transfo.scenario:', transfo.scenario);
+            }
 
             if (transfo._displayNames && transfo._displayNames.length > 0) {
               // Utiliser les noms d'affichage français
@@ -4398,17 +4487,34 @@ function getPathForNewTransformation_OBSOLETE(node) {
 
 // Fonction pour afficher la popup "transfo tech"
 function showTransfoTechPopup(nodeId, transformation) {
+  console.log('🔧 [POPUP TECH] showTransfoTechPopup appelée:', {
+    nodeId,
+    nodeIdType: typeof nodeId,
+    transformation,
+    transformationNodeId: transformation?._nodeId,
+    transformationNodeIdType: typeof transformation?._nodeId,
+    transformationKeys: transformation ? Object.keys(transformation) : [],
+  });
+
   // Utiliser la nouvelle popup des techs
   if (window.showTechPopup) {
     // Trouver le _nodeId de la transformation
     let transformationNodeId = transformation && transformation._nodeId;
 
     if (!transformationNodeId) {
-      console.error('_nodeId manquant pour la popup tech');
+      console.error('❌ [POPUP TECH] _nodeId manquant pour la popup tech', {
+        transformation,
+        hasTransformation: !!transformation,
+        transformationKeys: transformation ? Object.keys(transformation) : [],
+      });
       return;
     }
 
-    console.log('🔧 Ouverture popup tech avec nodeId:', transformationNodeId);
+    console.log('✅ [POPUP TECH] Ouverture popup tech avec nodeId:', {
+      transformationNodeId,
+      transformationNodeIdType: typeof transformationNodeId,
+      transformation,
+    });
 
     // Créer un ref avec le _nodeId de la transformation
     const ref = {
@@ -4420,9 +4526,15 @@ function showTransfoTechPopup(nodeId, transformation) {
     const hasExistingTech = transformation?.tech;
     const mode = hasExistingTech ? 'edit' : 'add';
 
+    console.log('🔧 [POPUP TECH] Création ref pour showTechPopup:', {
+      ref,
+      mode,
+      hasExistingTech,
+    });
+
     window.showTechPopup(ref, mode);
   } else {
-    console.error('TechPopup non disponible');
+    console.error('❌ [POPUP TECH] TechPopup non disponible');
   }
 }
 
