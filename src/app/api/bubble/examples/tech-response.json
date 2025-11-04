@@ -6,7 +6,6 @@
   "rate": 120,
   "conso": 0.4,
   "yield": 0.9,
-  "cost": 1200,
   "amortization": 32,
   "consumables": 45,
   "version": 5,
