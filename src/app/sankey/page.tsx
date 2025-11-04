@@ -208,7 +208,7 @@ export default function SankeyPage() {
         </div>
 
         {/* Iframe Sankey */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <iframe
             key={iframeKey}
             src={iframeSrc}
@@ -217,7 +217,7 @@ export default function SankeyPage() {
               minHeight: 400,
               height: iframeHeight,
               display: 'block',
-              overflow: 'hidden',
+              overflow: 'hidden', // Pas de scrollbar interne - la hauteur est calculée précisément
             }}
             title="Visualisation Sankey"
           />

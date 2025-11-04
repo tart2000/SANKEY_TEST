@@ -3906,7 +3906,15 @@ function runSankey({ lot, scenario, dimension = 'format' }) {
   window.sankeyScenario = sankeyScenario;
 
   // Vérifier et mettre à jour les versions des techs si la team est chargée
-  if (window.teamData && window.checkAndUpdateTechVersionsGlobal) {
+  // Ne le faire qu'une seule fois pour éviter les boucles
+  if (
+    window.teamData &&
+    window.checkAndUpdateTechVersionsGlobal &&
+    !window._techVersionsCheckInProgress &&
+    !window._techVersionsChecked
+  ) {
+    window._techVersionsCheckInProgress = true;
+
     // Afficher notification de mise à jour
     const updatingNotification = showNotification(
       i18next.t('updatingTechs'),
@@ -3916,6 +3924,9 @@ function runSankey({ lot, scenario, dimension = 'format' }) {
     // Effectuer la vérification de manière asynchrone
     checkAndUpdateTechVersionsGlobal()
       .then(result => {
+        window._techVersionsCheckInProgress = false;
+        window._techVersionsChecked = true;
+
         // Fermer la notification de mise à jour
         if (updatingNotification && updatingNotification.parentNode) {
           updatingNotification.style.opacity = '0';
@@ -3947,6 +3958,9 @@ function runSankey({ lot, scenario, dimension = 'format' }) {
         }
       })
       .catch(error => {
+        window._techVersionsCheckInProgress = false;
+        window._techVersionsChecked = true;
+
         console.error('Erreur lors de la vérification des versions:', error);
         // Afficher notification d'erreur
         showNotification(i18next.t('errorUpdatingTechs'), 3000);
@@ -4985,13 +4999,6 @@ function calculateCosts(nodes, links) {
             ...transformation,
             lot_input_volume: transformation.entryLot?.total || 0,
           };
-
-          console.log('💰 Calcul coûts pour transformation:', {
-            nodeId: transformation._nodeId,
-            entryLotVolume: transformation.entryLot?.total,
-            transformationType: transformation.type,
-            volumeUtilise: transformationWithVolume.lot_input_volume,
-          });
 
           // Calculer les coûts pour cette transformation
           const costs = calculateTransformationCosts(

@@ -4,15 +4,18 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible; /* Permettre au contenu de s'afficher - la hauteur est gérée par l'iframe */
+}
+
 body {
   height: auto;
   margin: 0;
   padding: 0;
-  overflow: visible;
-}
-
-body {
+  overflow: visible; /* Permettre au contenu de s'afficher - la hauteur est gérée par l'iframe */
   font-family: Arial, sans-serif;
 }
 
@@ -23,8 +26,8 @@ body {
   padding: 0;
   border-radius: 0;
   box-sizing: border-box;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow-x: auto; /* Scrollbar horizontale OK si le diagramme est large */
+  overflow-y: visible !important; /* Pas de scrollbar verticale ici */
 }
 
 #sankey-container svg {
