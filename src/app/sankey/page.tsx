@@ -33,7 +33,7 @@ export default function SankeyPage() {
   const [selectedTeam, setSelectedTeam] = useState<(typeof teams)[0] | null>(
     teams[0]
   );
-  const [isEditable, setIsEditable] = useState(false);
+  const [isEditable, setIsEditable] = useState(true);
   const [selectedLanguage, setSelectedLanguage] =
     useState<LanguageCode>('fr_fr');
   const [iframeKey, setIframeKey] = useState(0);
