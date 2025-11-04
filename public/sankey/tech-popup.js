@@ -112,6 +112,12 @@ class TechPopup {
 
   // Nouvelle fonction pour charger les détails d'une tech
   async loadTechDetails(techId) {
+    // Utiliser la fonction globale si disponible
+    if (window.loadTechDetailsGlobal) {
+      return window.loadTechDetailsGlobal(techId);
+    }
+
+    // Fallback vers l'implémentation locale si la fonction globale n'est pas disponible
     const params = getUrlParams();
     const isLive = params.isLive;
 
@@ -796,15 +802,42 @@ class TechPopup {
   }
 
   async checkAndUpdateTechVersions() {
+    // Utiliser la fonction globale si disponible
+    if (window.checkAndUpdateTechVersionsGlobal) {
+      const result = await window.checkAndUpdateTechVersionsGlobal();
+
+      // Si des mises à jour ont été effectuées, relancer le Sankey
+      if (result.hasUpdates) {
+        const scenarioIdx = window.currentScenarioIdx;
+        const scenario = window.scenarios[scenarioIdx]?.scenario;
+        setTimeout(() => {
+          const lot = window.lotType;
+          const dimension = window.currentDimension;
+          if (typeof runSankey === 'function') {
+            runSankey({
+              lot,
+              scenario,
+              containerId: 'sankey-container',
+              dimension,
+            });
+          }
+          console.log('Sankey relancé après mise à jour des versions');
+        }, 500);
+      }
+
+      return;
+    }
+
+    // Fallback vers l'implémentation locale si la fonction globale n'est pas disponible
     const scenarioIdx = window.currentScenarioIdx;
     const scenario = window.scenarios[scenarioIdx]?.scenario;
 
     if (!scenario) {
-      console.log(i18next.t('noScenarioAvailableForVersionCheck'));
+      console.log('No scenario available for version check');
       return;
     }
 
-    console.log(i18next.t('checkingTechVersions'));
+    console.log('Checking tech versions...');
     let hasUpdates = false;
 
     // Fonction récursive pour parcourir le scénario
@@ -822,11 +855,7 @@ class TechPopup {
 
                 if (currentVersion !== apiVersion) {
                   console.log(
-                    i18next.t('techVersionUpdated', {
-                      techName: transfo.tech.name,
-                      currentVersion: currentVersion,
-                      apiVersion: apiVersion,
-                    })
+                    `Tech version updated: ${transfo.tech.name} (${currentVersion} -> ${apiVersion})`
                   );
 
                   // Mettre à jour les détails de la tech
@@ -837,9 +866,7 @@ class TechPopup {
             })
             .catch(error => {
               console.error(
-                i18next.t('errorCheckingTechVersion', {
-                  techName: transfo.tech.name,
-                }),
+                `Error checking tech version for ${transfo.tech.name}:`,
                 error
               );
             });
@@ -885,13 +912,18 @@ class TechPopup {
             dimension,
           });
         }
-        console.log(i18next.t('sankeyRelaunchedAfterVersionUpdate'));
+        console.log('Sankey relancé après mise à jour des versions');
       }, 1000); // Attendre un peu pour que toutes les vérifications soient terminées
     }
   }
 
   updateTechDetails(transformation, techDetails) {
-    // Mettre à jour les détails de la tech dans la transformation
+    // Utiliser la fonction globale si disponible
+    if (window.updateTechDetailsGlobal) {
+      return window.updateTechDetailsGlobal(transformation, techDetails);
+    }
+
+    // Fallback vers l'implémentation locale si la fonction globale n'est pas disponible
     if (transformation.tech) {
       transformation.tech = {
         ...transformation.tech,

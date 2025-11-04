@@ -952,6 +952,206 @@ function loadTeamData() {
   }
 }
 
+// Fonction globale pour charger les détails d'une tech
+async function loadTechDetailsGlobal(techId) {
+  const params = getUrlParams();
+  const isLive = params.isLive;
+
+  const response = await fetch('/api/bubble', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      endpoint: 'tech',
+      params: {
+        id: techId,
+        isLive,
+      },
+      method: 'POST',
+    }),
+  });
+
+  if (!response.ok)
+    throw new Error(i18next.t('apiError', { status: response.status }));
+  return await response.json();
+}
+
+// Exposer la fonction globalement
+window.loadTechDetailsGlobal = loadTechDetailsGlobal;
+
+// Fonction globale pour mettre à jour les détails d'une tech dans une transformation
+function updateTechDetailsGlobal(transformation, techDetails) {
+  // Mettre à jour les détails de la tech dans la transformation
+  if (transformation.tech) {
+    transformation.tech = {
+      ...transformation.tech,
+      details: techDetails,
+      version: techDetails.version || '1.0',
+      rate: techDetails.rate,
+      conso: techDetails.conso,
+      step: techDetails.step,
+      profils: techDetails.profils,
+    };
+
+    console.log(
+      i18next.t('techUpdated', {
+        techName: transformation.tech.name,
+        version: techDetails.version,
+      })
+    );
+  }
+}
+
+// Exposer la fonction globalement
+window.updateTechDetailsGlobal = updateTechDetailsGlobal;
+
+// Fonction globale pour vérifier et mettre à jour les versions des techs
+async function checkAndUpdateTechVersionsGlobal() {
+  const scenarioIdx = window.currentScenarioIdx;
+  const scenario = window.scenarios[scenarioIdx]?.scenario;
+
+  if (!scenario) {
+    console.log('No scenario available for version check');
+    return { hasUpdates: false, updatedCount: 0 };
+  }
+
+  console.log('Checking tech versions...');
+  let updatedCount = 0;
+  const updatePromises = [];
+
+  // Fonction récursive pour parcourir le scénario
+  const checkTransformations = transformations => {
+    if (!Array.isArray(transformations)) return;
+
+    transformations.forEach((transfo, index) => {
+      if (transfo.tech && transfo.tech.bubble_id) {
+        // Créer une promesse pour chaque vérification
+        const updatePromise = loadTechDetailsGlobal(transfo.tech.bubble_id)
+          .then(techDetails => {
+            if (techDetails && techDetails.version) {
+              const currentVersion = transfo.tech.version || '1.0';
+              const apiVersion = techDetails.version;
+
+              if (currentVersion !== apiVersion) {
+                console.log(
+                  `Tech version updated: ${transfo.tech.name} (${currentVersion} -> ${apiVersion})`
+                );
+
+                // Mettre à jour les détails de la tech
+                updateTechDetailsGlobal(transfo, techDetails);
+                updatedCount++;
+              }
+            }
+          })
+          .catch(error => {
+            console.error(
+              `Error checking tech version for ${transfo.tech.name}:`,
+              error
+            );
+          });
+        updatePromises.push(updatePromise);
+      }
+
+      // Vérifier les sous-scénarios récursivement
+      if (transfo.scenario && transfo.scenario.transformations) {
+        checkTransformations(transfo.scenario.transformations);
+      }
+      if (
+        transfo.scenario &&
+        transfo.scenario.coproduct_scenario &&
+        transfo.scenario.coproduct_scenario.transformations
+      ) {
+        checkTransformations(
+          transfo.scenario.coproduct_scenario.transformations
+        );
+      }
+    });
+  };
+
+  // Vérifier les transformations principales
+  if (scenario.transformations) {
+    checkTransformations(scenario.transformations);
+  }
+  if (
+    scenario.coproduct_scenario &&
+    scenario.coproduct_scenario.transformations
+  ) {
+    checkTransformations(scenario.coproduct_scenario.transformations);
+  }
+
+  // Attendre que toutes les vérifications soient terminées
+  await Promise.allSettled(updatePromises);
+
+  return {
+    hasUpdates: updatedCount > 0,
+    updatedCount: updatedCount,
+  };
+}
+
+// Exposer la fonction globalement
+window.checkAndUpdateTechVersionsGlobal = checkAndUpdateTechVersionsGlobal;
+
+// Fonction pour afficher une notification toast
+function showNotification(message, duration = 3000) {
+  // Créer le conteneur de notifications s'il n'existe pas
+  let notificationContainer = document.getElementById('notification-container');
+  if (!notificationContainer) {
+    notificationContainer = document.createElement('div');
+    notificationContainer.id = 'notification-container';
+    notificationContainer.className =
+      'fixed top-4 right-4 z-50 flex flex-col gap-2';
+    document.body.appendChild(notificationContainer);
+  }
+
+  // Créer l'élément de notification
+  const notification = document.createElement('div');
+  notification.className =
+    'bg-white border border-gray-200 rounded-lg shadow-lg px-6 py-4 min-w-[300px] max-w-[500px]';
+  notification.style.opacity = '0';
+  notification.style.transform = 'translateX(100%)';
+  notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
+  notification.innerHTML = `
+    <div class="flex items-center justify-between">
+      <span class="text-gray-800 font-medium">${message}</span>
+    </div>
+  `;
+
+  notificationContainer.appendChild(notification);
+
+  // Animation d'apparition
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    });
+  });
+
+  // Disparition automatique
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+      // Supprimer le conteneur s'il est vide
+      if (
+        notificationContainer &&
+        notificationContainer.children.length === 0
+      ) {
+        if (notificationContainer.parentNode) {
+          notificationContainer.parentNode.removeChild(notificationContainer);
+        }
+      }
+    }, 300); // Attendre la fin de l'animation
+  }, duration);
+
+  return notification;
+}
+
+// Exposer la fonction globalement
+window.showNotification = showNotification;
+
 // Fonction réutilisable pour calculer les coûts d'une transformation
 function calculateTransformationCosts(transformation, techDetails, teamData) {
   if (!transformation.tech || !techDetails || !teamData) {
@@ -967,6 +1167,9 @@ function calculateTransformationCosts(transformation, techDetails, teamData) {
   let totalPrix = 0;
   let couts_rh = 0;
   let consommation_totale = 0;
+  let cout_energie = 0;
+  let cout_amortissement = 0;
+  let cout_consommables = 0;
 
   // Coûts RH
   if (techDetails.profils && teamData.profils) {
@@ -985,9 +1188,27 @@ function calculateTransformationCosts(transformation, techDetails, teamData) {
   if (techDetails.conso && teamData.elec) {
     const consoWh = techDetails.conso * tempsUtile * quantity;
     const consoKwh = consoWh / 1000;
-    const prixElec = consoKwh * teamData.elec;
+    cout_energie = consoKwh * teamData.elec;
     consommation_totale = consoKwh;
-    totalPrix += prixElec;
+    totalPrix += cout_energie;
+  }
+
+  // Amortissement (€/h)
+  if (
+    techDetails.amortization !== undefined &&
+    techDetails.amortization !== null
+  ) {
+    cout_amortissement = techDetails.amortization * tempsUtile * quantity;
+    totalPrix += cout_amortissement;
+  }
+
+  // Consommables (€/kg)
+  if (
+    techDetails.consumables !== undefined &&
+    techDetails.consumables !== null
+  ) {
+    cout_consommables = techDetails.consumables * volume;
+    totalPrix += cout_consommables;
   }
 
   return {
@@ -996,7 +1217,9 @@ function calculateTransformationCosts(transformation, techDetails, teamData) {
     cout_unitaire: volume > 0 ? totalPrix / volume : 0,
     consommation_totale,
     couts_rh,
-    cout_energie: totalPrix - couts_rh,
+    cout_energie,
+    cout_amortissement,
+    cout_consommables,
     version_transfo_tech: techDetails.version || '1.0',
   };
 }
@@ -3682,7 +3905,66 @@ function runSankey({ lot, scenario, dimension = 'format' }) {
   // Stocker dans le global pour compatibilité temporaire
   window.sankeyScenario = sankeyScenario;
 
-  // Mettre à jour le Sankey
+  // Vérifier et mettre à jour les versions des techs si la team est chargée
+  if (window.teamData && window.checkAndUpdateTechVersionsGlobal) {
+    // Afficher notification de mise à jour
+    const updatingNotification = showNotification(
+      i18next.t('updatingTechs'),
+      5000
+    );
+
+    // Effectuer la vérification de manière asynchrone
+    checkAndUpdateTechVersionsGlobal()
+      .then(result => {
+        // Fermer la notification de mise à jour
+        if (updatingNotification && updatingNotification.parentNode) {
+          updatingNotification.style.opacity = '0';
+          updatingNotification.style.transform = 'translateX(100%)';
+          setTimeout(() => {
+            if (updatingNotification.parentNode) {
+              updatingNotification.parentNode.removeChild(updatingNotification);
+            }
+          }, 300);
+        }
+
+        if (result.hasUpdates) {
+          // Afficher notification de succès
+          showNotification(
+            `${i18next.t('techsUpdated')} (${result.updatedCount})`,
+            3000
+          );
+
+          // Relancer le Sankey pour afficher les mises à jour
+          setTimeout(() => {
+            const updatedSankeyScenario = applyScenario(lot, scenario);
+            window.sankeyScenario = updatedSankeyScenario;
+            if (typeof updateSankey === 'function') {
+              updateSankey(dimension);
+            }
+          }, 500);
+        } else {
+          // Techs déjà à jour, pas besoin de notification
+        }
+      })
+      .catch(error => {
+        console.error('Erreur lors de la vérification des versions:', error);
+        // Afficher notification d'erreur
+        showNotification(i18next.t('errorUpdatingTechs'), 3000);
+
+        // Fermer la notification de mise à jour
+        if (updatingNotification && updatingNotification.parentNode) {
+          updatingNotification.style.opacity = '0';
+          updatingNotification.style.transform = 'translateX(100%)';
+          setTimeout(() => {
+            if (updatingNotification.parentNode) {
+              updatingNotification.parentNode.removeChild(updatingNotification);
+            }
+          }, 300);
+        }
+      });
+  }
+
+  // Mettre à jour le Sankey (même si la vérification est en cours)
   if (typeof updateSankey === 'function') {
     updateSankey(dimension);
   } else {
@@ -4648,6 +4930,9 @@ function createDropdown(button, options, positionOffset = 0) {
  *   totalLaborCost: number,      // Coût RH en €
  *   totalEnergyConsumption: number, // Consommation en kWh
  *   totalTime: number,           // Temps total RH en heures (⚠️ PAS temps machine)
+ *   totalEquipmentCost: number,  // Coût équipement (amortissement) en €
+ *   totalConsumablesCost: number, // Coût consommables en €
+ *   totalEquipmentTime: number,  // Temps total machine en heures
  *   nodeCosts: Array            // Détails par nœud
  * }
  */
@@ -4657,6 +4942,9 @@ function calculateCosts(nodes, links) {
   let totalLaborCost = 0;
   let totalEnergyConsumption = 0;
   let totalTimeRH = 0;
+  let totalEquipmentCost = 0;
+  let totalConsumablesCost = 0;
+  let totalEquipmentTime = 0;
   let nodeCosts = [];
 
   // ← NOUVEAU : Validation des données de base
@@ -4668,6 +4956,9 @@ function calculateCosts(nodes, links) {
       totalLaborCost: 0,
       totalEnergyConsumption: 0,
       totalTime: 0,
+      totalEquipmentCost: 0,
+      totalConsumablesCost: 0,
+      totalEquipmentTime: 0,
       nodeCosts: [],
     };
   }
@@ -4714,6 +5005,9 @@ function calculateCosts(nodes, links) {
             totalEnergyCost += costs.cout_energie;
             totalLaborCost += costs.couts_rh;
             totalEnergyConsumption += costs.consommation_totale;
+            totalEquipmentCost += costs.cout_amortissement || 0;
+            totalConsumablesCost += costs.cout_consommables || 0;
+            totalEquipmentTime += costs.temps_utile || 0;
 
             // ← NOUVEAU : Calculer le temps total RH pour cette transformation
             let tempsRHTransfo = 0;
@@ -4761,8 +5055,28 @@ function calculateCosts(nodes, links) {
     totalLaborCost,
     totalEnergyConsumption,
     totalTime: totalTimeRH, // ← MODIFIÉ : retourner le temps RH total
+    totalEquipmentCost,
+    totalConsumablesCost,
+    totalEquipmentTime,
     nodeCosts,
   };
+}
+
+// Fonction pour formater le temps en heures et minutes
+function formatTime(hours) {
+  const totalHours = Math.floor(hours);
+  const totalMinutes = Math.round((hours - totalHours) * 60);
+  let formatted = '';
+  if (totalHours > 0) {
+    formatted += `${totalHours}h`;
+  }
+  if (totalMinutes > 0) {
+    formatted += `${totalMinutes}min`;
+  }
+  if (totalHours === 0 && totalMinutes === 0) {
+    formatted = '< 1min';
+  }
+  return formatted;
 }
 
 // Fonction pour afficher le tableau des coûts
@@ -4780,19 +5094,11 @@ function displayCostsTable(costsData) {
     'mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm';
   tableContainer.style.marginTop = '20px';
 
-  // Formater le temps total RH (⚠️ PAS le temps d'utilisation des machines)
-  const totalHours = Math.floor(costsData.totalTime);
-  const totalMinutes = Math.round((costsData.totalTime - totalHours) * 60);
-  let totalTimeFormatted = '';
-  if (totalHours > 0) {
-    totalTimeFormatted += `${totalHours}h`;
-  }
-  if (totalMinutes > 0) {
-    totalTimeFormatted += `${totalMinutes}min`;
-  }
-  if (totalHours === 0 && totalMinutes === 0) {
-    totalTimeFormatted = '< 1min';
-  }
+  // Formater les temps
+  const totalOperationTimeFormatted = formatTime(
+    costsData.totalEquipmentTime || 0
+  );
+  const equipmentTimeFormatted = formatTime(costsData.totalEquipmentTime || 0);
 
   // Calculer les détails des profils RH
   let profilsDetails = '';
@@ -4822,24 +5128,10 @@ function displayCostsTable(costsData) {
 
     // Générer le HTML pour les profils
     if (profilsMap.size > 0) {
-      profilsDetails = `<div class="bg-green-50 p-3 rounded-lg mt-4"><div class="text-sm text-green-600 font-medium mb-2">${i18next.t('laborCostDetails')}</div>`;
+      profilsDetails = `<div class="mt-3"><div class="text-xs text-green-600 font-medium mb-2">${i18next.t('laborCostDetails')}</div>`;
       profilsMap.forEach((details, profilName) => {
-        const profilHeures = Math.floor(details.tempsTotal);
-        const profilMinutes = Math.round(
-          (details.tempsTotal - profilHeures) * 60
-        );
-        let profilTempsFormate = '';
-        if (profilHeures > 0) {
-          profilTempsFormate += `${profilHeures}h`;
-        }
-        if (profilMinutes > 0) {
-          profilTempsFormate += `${profilMinutes}min`;
-        }
-        if (profilHeures === 0 && profilMinutes === 0) {
-          profilTempsFormate = '< 1min';
-        }
-
-        profilsDetails += `<div class="py-1 flex justify-between"><span class="text-sm text-green-700 font-medium">${profilName}</span><div class="text-right"><div class="text-sm text-green-600">${profilTempsFormate}</div><div class="text-sm font-medium text-green-800">${details.coutTotal.toFixed(2)}€</div></div></div>`;
+        const profilTempsFormate = formatTime(details.tempsTotal);
+        profilsDetails += `<div class="py-1 flex justify-between"><span class="text-xs text-green-700 font-medium">${profilName}</span><div class="text-right"><div class="text-xs text-green-600">${profilTempsFormate}</div><div class="text-xs font-medium text-green-800">${details.coutTotal.toFixed(2)}€</div></div></div>`;
       });
       profilsDetails += '</div>';
     }
@@ -4847,29 +5139,46 @@ function displayCostsTable(costsData) {
 
   const tableHTML = `
     <h3 class="text-lg font-semibold text-gray-800 mb-4">${i18next.t('totalCostsTitle')}</h3>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-      <div class="bg-blue-50 p-3 rounded-lg">
-        <div class="text-sm text-blue-600 font-medium">${i18next.t('totalCost')}</div>
-        <div class="text-xl font-bold text-blue-800">${costsData.totalCost.toFixed(2)}€</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <!-- Colonne 1: Total Cost + Total operation time -->
+      <div class="bg-blue-50 p-4 rounded-lg">
+        <div class="text-sm text-blue-600 font-medium mb-2">${i18next.t('totalCost')}</div>
+        <div class="text-xl font-bold text-blue-800 mb-3">${costsData.totalCost.toFixed(2)}€</div>
+        <div class="text-xs text-blue-600 font-medium">${i18next.t('totalOperationTime')}</div>
+        <div class="text-sm font-semibold text-blue-800">${totalOperationTimeFormatted}</div>
       </div>
-      <div class="bg-purple-50 p-3 rounded-lg">
-        <div class="text-sm text-purple-600 font-medium">${i18next.t('totalTime')}</div>
-        <div class="text-xl font-bold text-purple-800">${totalTimeFormatted}</div>
+
+      <!-- Colonne 2: Equipment costs + Equipment time -->
+      <div class="bg-purple-50 p-4 rounded-lg">
+        <div class="text-sm text-purple-600 font-medium mb-2">${i18next.t('equipmentCosts')}</div>
+        <div class="text-xl font-bold text-purple-800 mb-3">${(costsData.totalEquipmentCost || 0).toFixed(2)}€</div>
+        <div class="text-xs text-purple-600 font-medium">${i18next.t('equipmentTime')}</div>
+        <div class="text-sm font-semibold text-purple-800">${equipmentTimeFormatted}</div>
       </div>
-      <div class="bg-yellow-50 p-3 rounded-lg">
-        <div class="text-sm text-yellow-600 font-medium">${i18next.t('energyCost')}</div>
-        <div class="text-xl font-bold text-yellow-800">${costsData.totalEnergyCost.toFixed(4)}€</div>
+
+      <!-- Colonne 3: Energy costs + Energy consumption -->
+      <div class="bg-yellow-50 p-4 rounded-lg">
+        <div class="text-sm text-yellow-600 font-medium mb-2">${i18next.t('energyCosts')}</div>
+        <div class="text-xl font-bold text-yellow-800 mb-3">${costsData.totalEnergyCost.toFixed(2)}€</div>
+        <div class="text-xs text-yellow-600 font-medium">${i18next.t('energyConsumption')}</div>
+        <div class="text-sm font-semibold text-yellow-800">${costsData.totalEnergyConsumption.toFixed(2)} kWh</div>
       </div>
-      <div class="bg-gray-50 p-3 rounded-lg">
-        <div class="text-sm text-gray-600 font-medium">${i18next.t('electricityConsumption')}</div>
-        <div class="text-xl font-bold text-gray-800">${costsData.totalEnergyConsumption.toFixed(4)} kWh</div>
+
+      <!-- Colonne 4: Labor costs + Liste des profils -->
+      <div class="bg-green-50 p-4 rounded-lg">
+        <div class="text-sm text-green-600 font-medium mb-2">${i18next.t('laborCosts')}</div>
+        <div class="text-xl font-bold text-green-800 mb-3">${costsData.totalLaborCost.toFixed(2)}€</div>
+        ${profilsDetails}
+      </div>
+
+      <!-- Colonne 5: Other costs + Consumables -->
+      <div class="bg-orange-50 p-4 rounded-lg">
+        <div class="text-sm text-orange-600 font-medium mb-2">${i18next.t('otherCosts')}</div>
+        <div class="text-xl font-bold text-orange-800 mb-3">${(costsData.totalConsumablesCost || 0).toFixed(2)}€</div>
+        <div class="text-xs text-orange-600 font-medium">${i18next.t('consumables')}</div>
+        <div class="text-sm font-semibold text-orange-800">${(costsData.totalConsumablesCost || 0).toFixed(2)}€</div>
       </div>
     </div>
-    <div class="bg-green-50 p-3 rounded-lg">
-      <div class="text-sm text-green-600 font-medium">${i18next.t('laborCost')}</div>
-      <div class="text-xl font-bold text-green-800">${costsData.totalLaborCost.toFixed(2)}€</div>
-    </div>
-    ${profilsDetails}
   `;
 
   tableContainer.innerHTML = tableHTML;
