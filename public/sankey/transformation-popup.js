@@ -9,6 +9,54 @@ class TransformationPopup {
     this._dropdownCloseHandler = null; // Pour gérer le dropdown proprement
     this.selectedKeys = []; // Pour stocker les keys sélectionnées
     this.isLoadingData = false; // Flag pour tracker le chargement des données API
+    this._selectedDynamic = null; // Informations sur la transformation dynamique sélectionnée
+  }
+
+  translate(key, options = {}) {
+    const i18nInstance = window.i18next;
+
+    if (
+      i18nInstance &&
+      typeof i18nInstance.t === 'function' &&
+      (i18nInstance.isInitialized || window.i18nextReady)
+    ) {
+      return i18nInstance.t(key, options);
+    }
+
+    const resources = window.i18nConfig?.resources || {};
+
+    const languagesToTry = [];
+
+    if (options.lng) {
+      languagesToTry.push(options.lng);
+    }
+
+    if (i18nInstance?.language) {
+      languagesToTry.push(i18nInstance.language);
+    }
+
+    try {
+      const urlLang = new URLSearchParams(window.location.search).get('lang');
+      if (urlLang) {
+        languagesToTry.push(urlLang);
+      }
+    } catch (_error) {
+      // Ignorer les erreurs potentielles liées à URLSearchParams
+    }
+
+    if (window.i18nConfig?.fallbackLng) {
+      languagesToTry.push(window.i18nConfig.fallbackLng);
+    }
+
+    languagesToTry.push('fr_fr');
+
+    for (const lng of languagesToTry) {
+      if (lng && resources[lng]?.translation?.[key] !== undefined) {
+        return resources[lng].translation[key];
+      }
+    }
+
+    return key;
   }
 
   getSelectedKeys() {
@@ -651,7 +699,6 @@ class TransformationPopup {
     const cancelBtn = this.modal.querySelector('#cancel-btn');
     const saveBtn = this.modal.querySelector('#save-btn');
     const transfoTypeSelect = this.modal.querySelector('#transfo-type');
-    const transfoDescription = this.modal.querySelector('#transfo-description');
     const keysContainer = this.modal.querySelector('#transfo-keys');
     const keyInput = this.modal.querySelector('#key-input');
     const keyDropdown = this.modal.querySelector('#key-dropdown');
@@ -688,107 +735,32 @@ class TransformationPopup {
 
     // Écouter les changements de type
     transfoTypeSelect.addEventListener('change', e => {
-      const newType = e.target.value;
-
-      if (window.transformationUtils) {
-        transfoDescription.textContent =
-          window.transformationUtils.getTransformationDescription(newType);
-      }
-
-      // ← NOUVEAU : Détecter si c'est une transformation dynamique et afficher le tableau
-      if (newType.startsWith('dynamic_transfo_')) {
-        const bubbleId = newType.replace('dynamic_transfo_', '');
-        console.log('Transformation dynamique sélectionnée:', bubbleId);
-
-        // Activer le flag de chargement
-        this.isLoadingData = true;
-        updateSaveButtonState();
-
-        // Masquer les keys pour les transformations dynamiques
-        const keysContainer = this.modal.querySelector('#transfo-keys');
-        if (keysContainer) {
-          keysContainer.style.display = 'none';
-        }
-
-        // Masquer aussi l'input des paramètres
-        const keyInput = this.modal.querySelector('#key-input');
-        if (keyInput) {
-          keyInput.parentElement.style.display = 'none';
-        }
-
-        // Masquer la description de la transformation
-        const transfoDescription = this.modal.querySelector(
-          '#transfo-description'
-        );
-        if (transfoDescription) {
-          transfoDescription.style.display = 'none';
-        }
-
-        // Afficher le tableau des détails (qui désactivera le flag de chargement)
-        this.displayDynamicTransfoDetails(bubbleId);
-        // Pour les transformations dynamiques, ne pas vérifier les paramètres
-        return;
-      } else {
-        // Afficher les keys pour les transformations statiques
-        const keysContainer = this.modal.querySelector('#transfo-keys');
-        if (keysContainer) {
-          keysContainer.style.display = 'block';
-        }
-
-        // Afficher aussi l'input des paramètres
-        const keyInput = this.modal.querySelector('#key-input');
-        if (keyInput) {
-          keyInput.parentElement.style.display = 'block';
-        }
-
-        // Afficher la description de la transformation
-        const transfoDescription = this.modal.querySelector(
-          '#transfo-description'
-        );
-        if (transfoDescription) {
-          transfoDescription.style.display = 'block';
-        }
-
-        // Supprimer le tableau s'il existe (pour les transformations non-dynamiques)
-        const existingTable = this.modal.querySelector(
-          '#transfo-details-table'
-        );
-        if (existingTable) {
-          existingTable.remove();
-        }
-
-        // Réinitialiser la step à 'sorting' pour les transformations statiques
-        if (this.currentRef && this.currentRef.transformation) {
-          this.currentRef.transformation.step = 'sorting';
-        }
-      }
-
-      // Vérifier si la nouvelle transformation nécessite des paramètres
-      const keyList =
-        window.transformationTypes &&
-        window.transformationTypes[newType] &&
-        window.transformationTypes[newType].keyList;
-
-      if (keyList) {
-        // Créer une nouvelle référence avec le nouveau type mais sans les anciens paramètres
-        const existingTransfo = this.currentRef.transformation;
-        const newRef = {
-          ...this.currentRef,
-          transformation: {
-            type: [newType],
-            keys: [],
-            _displayNames: [[]],
-            // Conserver les métadonnées importantes
-            _path: existingTransfo?._path,
-            _index: existingTransfo?._index,
-          },
-        };
-        this.close();
-        this.show(newRef, this.mode);
-      }
-
-      updateSaveButtonState();
+      this.handleTransformationTypeChange(
+        e.target.value,
+        updateSaveButtonState
+      );
     });
+
+    // Charger immédiatement les détails si une transformation dynamique est déjà sélectionnée
+    const initialType = transfoTypeSelect.value;
+    const existingTransfo = this.currentRef?.transformation;
+    if (initialType && initialType.startsWith('dynamic_transfo_')) {
+      const existingMeta =
+        existingTransfo && existingTransfo.type
+          ? {
+              bubbleId:
+                existingTransfo.dynamic_transfo_id ||
+                initialType.replace('dynamic_transfo_', ''),
+              version: existingTransfo.dynamic_transfo_version || null,
+              step: existingTransfo.step || null,
+            }
+          : null;
+
+      this.handleTransformationTypeChange(initialType, updateSaveButtonState, {
+        existingMeta,
+        isInitialLoad: true,
+      });
+    }
 
     // Attaching cancel button listener
     cancelBtn.onclick = () => {
@@ -1136,6 +1108,141 @@ class TransformationPopup {
     }
   }
 
+  handleTransformationTypeChange(
+    newType,
+    updateSaveButtonState,
+    { existingMeta = null, isInitialLoad = false } = {}
+  ) {
+    if (!newType) return;
+
+    const transfoDescription = this.modal.querySelector('#transfo-description');
+    if (window.transformationUtils && transfoDescription) {
+      transfoDescription.textContent =
+        window.transformationUtils.getTransformationDescription(newType);
+    }
+
+    const isDynamic = newType.startsWith('dynamic_transfo_');
+    const keysContainer = this.modal.querySelector('#transfo-keys');
+    const keyInput = this.modal.querySelector('#key-input');
+    const keyInputWrapper = keyInput ? keyInput.parentElement : null;
+
+    if (isDynamic) {
+      const bubbleId = newType.replace('dynamic_transfo_', '');
+      console.log('Transformation dynamique sélectionnée:', bubbleId);
+
+      this._selectedDynamic = {
+        bubbleId,
+        version:
+          existingMeta?.version ??
+          this._selectedDynamic?.version ??
+          this.currentRef?.transformation?.dynamic_transfo_version ??
+          null,
+        step:
+          existingMeta?.step ??
+          this._selectedDynamic?.step ??
+          this.currentRef?.transformation?.step ??
+          'sorting',
+      };
+
+      // Activer le flag de chargement et mettre à jour le bouton
+      this.isLoadingData = true;
+      if (typeof updateSaveButtonState === 'function') {
+        updateSaveButtonState();
+      }
+
+      if (keysContainer) {
+        keysContainer.style.display = 'none';
+      }
+      if (keyInputWrapper) {
+        keyInputWrapper.style.display = 'none';
+      }
+      if (transfoDescription) {
+        transfoDescription.style.display = 'none';
+      }
+
+      // Supprimer les résidus d'un chargement précédent
+      const existingTable = this.modal.querySelector('#transfo-details-table');
+      if (existingTable) {
+        existingTable.remove();
+      }
+      const existingGeneralInfo = this.modal.querySelector(
+        '#transfo-general-info'
+      );
+      if (existingGeneralInfo) {
+        existingGeneralInfo.remove();
+      }
+      const existingError = this.modal.querySelector('#transfo-error-message');
+      if (existingError) {
+        existingError.remove();
+      }
+
+      // Afficher le tableau des détails (qui désactivera le flag de chargement)
+      this.displayDynamicTransfoDetails(bubbleId);
+      return;
+    }
+
+    // Cas des transformations statiques
+    if (keysContainer) {
+      keysContainer.style.display = 'block';
+    }
+    if (keyInputWrapper) {
+      keyInputWrapper.style.display = 'block';
+    }
+    if (transfoDescription) {
+      transfoDescription.style.display = 'block';
+    }
+
+    // Nettoyer les éventuels éléments spécifiques aux dynamiques
+    const existingTable = this.modal.querySelector('#transfo-details-table');
+    if (existingTable) {
+      existingTable.remove();
+    }
+    const existingGeneralInfo = this.modal.querySelector(
+      '#transfo-general-info'
+    );
+    if (existingGeneralInfo) {
+      existingGeneralInfo.remove();
+    }
+    const existingError = this.modal.querySelector('#transfo-error-message');
+    if (existingError) {
+      existingError.remove();
+    }
+
+    // Réinitialiser la step à 'sorting' pour les transformations statiques
+    if (!isInitialLoad && this.currentRef && this.currentRef.transformation) {
+      this.currentRef.transformation.step = 'sorting';
+    }
+
+    // Vérifier si la nouvelle transformation nécessite des paramètres
+    const keyList =
+      window.transformationTypes &&
+      window.transformationTypes[newType] &&
+      window.transformationTypes[newType].keyList;
+
+    if (keyList) {
+      // Créer une nouvelle référence avec le nouveau type mais sans les anciens paramètres
+      const existingTransfo = this.currentRef?.transformation;
+      const newRef = {
+        ...this.currentRef,
+        transformation: {
+          type: [newType],
+          keys: [],
+          _displayNames: [[]],
+          // Conserver les métadonnées importantes
+          _path: existingTransfo?._path,
+          _index: existingTransfo?._index,
+        },
+      };
+      this.close();
+      this.show(newRef, this.mode);
+      return;
+    }
+
+    if (typeof updateSaveButtonState === 'function') {
+      updateSaveButtonState();
+    }
+  }
+
   close() {
     // close() called
     if (this.backdrop) {
@@ -1344,6 +1451,21 @@ class TransformationPopup {
         return;
       }
 
+      // Mémoriser les informations principales pour la sauvegarde
+      this._selectedDynamic = {
+        bubbleId,
+        version:
+          transfoDetails.version ??
+          this._selectedDynamic?.version ??
+          this.currentRef?.transformation?.dynamic_transfo_version ??
+          null,
+        step:
+          transfoDetails.step ??
+          this._selectedDynamic?.step ??
+          this.currentRef?.transformation?.step ??
+          'sorting',
+      };
+
       // Extraire les données pour le tableau
       const tableData = await this.extractTableDataFromTransfo(transfoDetails);
 
@@ -1435,15 +1557,15 @@ class TransformationPopup {
       generalInfoHTML = `
         <div id="transfo-general-info" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div id="general-info-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
-            <h4 class="text-sm font-medium text-gray-900">${i18next.t('generalInfo')}</h4>
+            <h4 class="text-sm font-medium text-gray-900">${this.translate('generalInfo')}</h4>
             <svg id="general-info-collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
           </div>
           <div id="general-info-body" class="px-3 py-2">
             <div class="space-y-2 text-sm">
-              ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
-              ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
+              ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${this.translate('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
+              ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${this.translate('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
             </div>
           </div>
         </div>

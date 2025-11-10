@@ -2341,17 +2341,18 @@ class GenericTransformationEngine {
     );
     const decrochedMass = this.calculateLotTotalMass(filteredLot);
 
-    const transformedPrimary = this.applyTargetTransformation(
-      JSON.parse(JSON.stringify(filteredLot)),
-      { [targetConfig.key]: targetConfig.value },
-      primaryDimension
-    );
+    this.applyPrimaryTarget(filteredLot, primaryDimension, {
+      [targetConfig.key]: targetConfig.value,
+    });
+    filteredLot.total = this.calculateLotTotalMass(filteredLot);
 
     const targetLot = {
-      [primaryDimension]: transformedPrimary[primaryDimension],
+      [primaryDimension]: JSON.parse(
+        JSON.stringify(filteredLot[primaryDimension] || {})
+      ),
     };
     targetLot.title = transfoDetails.title || 'Transformation dynamique';
-    this.copySiblingDimensions(targetLot, transformedPrimary, primaryDimension);
+    this.copySiblingDimensions(targetLot, filteredLot, primaryDimension);
 
     // 6. Calculer la masse totale décrochée
     const totalDecrochedMass = decrochedMass;
@@ -2382,7 +2383,11 @@ class GenericTransformationEngine {
     }
 
     // 9. Appliquer les targets enfants éventuels
-    this.applyChildTargets(targetLot, transfoDetails.dimensions);
+    this.applyChildTargets(
+      targetLot,
+      transfoDetails.dimensions,
+      primaryDimension
+    );
 
     // 10. Recalculer les pourcentages pour maintenir la cohérence
     this.recalculatePercentagesAfterDecrochage(targetLot);
@@ -3027,6 +3032,185 @@ class GenericTransformationEngine {
     });
   }
 
+  setLotDimensionToSingleKey(lot, dimensionName, targetCfg) {
+    if (!lot || !targetCfg) return;
+    const targetKey = Object.keys(targetCfg)[0];
+    const targetVal = Object.values(targetCfg)[0];
+    if (!targetKey || !targetVal) return;
+
+    const entry = {
+      bubble_id: targetVal.bubble_id,
+      pourcentage: 100,
+    };
+    if (
+      window.colorById &&
+      targetVal.bubble_id &&
+      window.colorById.has(targetVal.bubble_id)
+    ) {
+      entry.color = window.colorById.get(targetVal.bubble_id);
+    } else if (targetVal.color) {
+      entry.color = targetVal.color;
+    }
+    lot[dimensionName] = { [targetKey]: entry };
+  }
+
+  setFibresToSingleKey(lot, targetCfg) {
+    if (!lot || !lot.formats || !targetCfg) return;
+    const targetKey = Object.keys(targetCfg)[0];
+    const targetVal = Object.values(targetCfg)[0];
+    if (!targetKey || !targetVal) return;
+
+    Object.values(lot.formats).forEach(formatObj => {
+      const types = formatObj.types || {};
+      Object.values(types).forEach(typeObj => {
+        const matieres = typeObj.matieres || {};
+        Object.values(matieres).forEach(matiereObj => {
+          const newChild = {
+            [targetKey]: {
+              bubble_id: targetVal.bubble_id,
+              pourcentage: 100,
+            },
+          };
+          if (
+            window.colorById &&
+            targetVal.bubble_id &&
+            window.colorById.has(targetVal.bubble_id)
+          ) {
+            newChild[targetKey].color = window.colorById.get(
+              targetVal.bubble_id
+            );
+          } else if (targetVal.color) {
+            newChild[targetKey].color = targetVal.color;
+          }
+          matiereObj.fibres = newChild;
+        });
+      });
+    });
+  }
+
+  enforceMatieresTargetAggregation(lot, targetCfg) {
+    if (!lot || !lot.formats || !targetCfg) return;
+    const targetKey = Object.keys(targetCfg)[0];
+    const targetVal = Object.values(targetCfg)[0];
+    if (!targetKey || !targetVal) return;
+
+    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+      const types = formatObj.types || {};
+      Object.entries(types).forEach(([typeKey, typeObj]) => {
+        const matieres = typeObj.matieres || {};
+        if (Object.keys(matieres).length === 0) return;
+
+        const aggregatedFibres = {};
+        let hasFibres = false;
+
+        Object.values(matieres).forEach(matiereObj => {
+          const matPct = Math.max(Number(matiereObj.pourcentage) || 0, 0);
+          if (matiereObj.fibres) {
+            Object.entries(matiereObj.fibres).forEach(([fKey, fObj]) => {
+              const fibrePct = Math.max(Number(fObj.pourcentage) || 0, 0);
+              if (!aggregatedFibres[fKey]) {
+                aggregatedFibres[fKey] = {
+                  bubble_id: fObj.bubble_id,
+                  pourcentage: 0,
+                };
+                if (fObj.color) aggregatedFibres[fKey].color = fObj.color;
+              }
+              aggregatedFibres[fKey].pourcentage += (matPct * fibrePct) / 100;
+              if (
+                !aggregatedFibres[fKey].color &&
+                window.colorById &&
+                fObj.bubble_id &&
+                window.colorById.has(fObj.bubble_id)
+              ) {
+                aggregatedFibres[fKey].color = window.colorById.get(
+                  fObj.bubble_id
+                );
+              }
+              hasFibres = true;
+            });
+          }
+        });
+
+        if (hasFibres) {
+          const fibreSum = Object.values(aggregatedFibres).reduce(
+            (acc, fibre) => acc + (Number(fibre.pourcentage) || 0),
+            0
+          );
+          if (fibreSum > 0) {
+            Object.values(aggregatedFibres).forEach(fibre => {
+              fibre.pourcentage =
+                (Number(fibre.pourcentage) || 0) * (100 / fibreSum);
+            });
+          }
+        }
+
+        const newMatiere = {
+          bubble_id: targetVal.bubble_id,
+          pourcentage: 100,
+        };
+        if (
+          window.colorById &&
+          targetVal.bubble_id &&
+          window.colorById.has(targetVal.bubble_id)
+        ) {
+          newMatiere.color = window.colorById.get(targetVal.bubble_id);
+        } else if (targetVal.color) {
+          newMatiere.color = targetVal.color;
+        }
+        if (hasFibres) {
+          newMatiere.fibres = aggregatedFibres;
+        }
+
+        lot.formats[formatKey].types[typeKey].matieres = {
+          [targetKey]: newMatiere,
+        };
+      });
+    });
+  }
+
+  applyPrimaryTarget(lot, primaryDimension, targetConfig) {
+    if (!lot || !targetConfig) return;
+    switch (primaryDimension) {
+      case 'formats': {
+        const transformed = this.applyTargetTransformation(
+          lot,
+          targetConfig,
+          'formats'
+        );
+        lot.formats = transformed.formats || {};
+        break;
+      }
+      case 'types':
+        this.enforceTypesTargetAggregation(lot, targetConfig);
+        break;
+      case 'matieres':
+        this.enforceMatieresTargetAggregation(lot, targetConfig);
+        break;
+      case 'fibres':
+        this.setFibresToSingleKey(lot, targetConfig);
+        break;
+      case 'couleurs':
+        this.setTypeChildDimensionToSingleKey(lot, 'couleurs', targetConfig);
+        break;
+      case 'perturbateurs':
+        this.setTypeChildDimensionToSingleKey(
+          lot,
+          'perturbateurs',
+          targetConfig
+        );
+        break;
+      case 'proprete':
+      case 'qualite':
+        this.setLotDimensionToSingleKey(lot, primaryDimension, targetConfig);
+        break;
+      default:
+        console.warn(
+          '[DynamicTransfo] Dimension primaire non gérée:',
+          primaryDimension
+        );
+    }
+  }
+
   // Fusionner la structure de référence avec les données de l'élément original
   mergeWithReferenceStructure(targetElement, referenceItem, originalElement) {
     const merged = { ...targetElement };
@@ -3264,20 +3448,30 @@ class GenericTransformationEngine {
   }
 
   // Appliquer les targets enfants
-  applyChildTargets(targetLot, dimensions) {
-    if (dimensions.types && this.hasTarget(dimensions.types.target)) {
-      this.enforceTypesTargetAggregation(targetLot, dimensions.types.target);
-    }
-    if (
-      dimensions.perturbateurs &&
-      this.hasTarget(dimensions.perturbateurs.target)
-    ) {
-      this.setTypeChildDimensionToSingleKey(
-        targetLot,
-        'perturbateurs',
-        dimensions.perturbateurs.target
-      );
-    }
+  applyChildTargets(targetLot, dimensions, primaryDimension) {
+    if (!dimensions) return;
+
+    const handlers = {
+      types: cfg => this.enforceTypesTargetAggregation(targetLot, cfg),
+      matieres: cfg => this.enforceMatieresTargetAggregation(targetLot, cfg),
+      fibres: cfg => this.setFibresToSingleKey(targetLot, cfg),
+      couleurs: cfg =>
+        this.setTypeChildDimensionToSingleKey(targetLot, 'couleurs', cfg),
+      perturbateurs: cfg =>
+        this.setTypeChildDimensionToSingleKey(targetLot, 'perturbateurs', cfg),
+      proprete: cfg =>
+        this.setLotDimensionToSingleKey(targetLot, 'proprete', cfg),
+      qualite: cfg =>
+        this.setLotDimensionToSingleKey(targetLot, 'qualite', cfg),
+    };
+
+    Object.entries(handlers).forEach(([dimension, handler]) => {
+      if (dimension === primaryDimension) return;
+      const dimensionCfg = dimensions[dimension];
+      if (dimensionCfg && this.hasTarget(dimensionCfg.target)) {
+        handler(dimensionCfg.target);
+      }
+    });
   }
 
   // Recalculer les pourcentages après décrochage pour maintenir la cohérence des totaux

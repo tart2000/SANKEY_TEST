@@ -2127,6 +2127,7 @@ function getIconSVG(name, className = '') {
     truck: 'ph-truck',
     broom: 'ph-broom',
     package: 'ph-package',
+    'test-tube': 'ph-test-tube',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
@@ -2152,6 +2153,8 @@ function getStepIcon(stepId) {
     polymerization: 'flask',
     spinning: 'gradient',
     transport: 'truck',
+    'chemical-treatment': 'test-tube',
+    'chemical treatment': 'test-tube',
   };
   return fallback[stepId] || 'arrows-split';
 }
