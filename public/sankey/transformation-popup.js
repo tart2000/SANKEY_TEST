@@ -12,53 +12,6 @@ class TransformationPopup {
     this._selectedDynamic = null; // Informations sur la transformation dynamique sélectionnée
   }
 
-  translate(key, options = {}) {
-    const i18nInstance = window.i18next;
-
-    if (
-      i18nInstance &&
-      typeof i18nInstance.t === 'function' &&
-      (i18nInstance.isInitialized || window.i18nextReady)
-    ) {
-      return i18nInstance.t(key, options);
-    }
-
-    const resources = window.i18nConfig?.resources || {};
-
-    const languagesToTry = [];
-
-    if (options.lng) {
-      languagesToTry.push(options.lng);
-    }
-
-    if (i18nInstance?.language) {
-      languagesToTry.push(i18nInstance.language);
-    }
-
-    try {
-      const urlLang = new URLSearchParams(window.location.search).get('lang');
-      if (urlLang) {
-        languagesToTry.push(urlLang);
-      }
-    } catch (_error) {
-      // Ignorer les erreurs potentielles liées à URLSearchParams
-    }
-
-    if (window.i18nConfig?.fallbackLng) {
-      languagesToTry.push(window.i18nConfig.fallbackLng);
-    }
-
-    languagesToTry.push('fr_fr');
-
-    for (const lng of languagesToTry) {
-      if (lng && resources[lng]?.translation?.[key] !== undefined) {
-        return resources[lng].translation[key];
-      }
-    }
-
-    return key;
-  }
-
   getSelectedKeys() {
     return this.selectedKeys;
   }
@@ -1542,6 +1495,17 @@ class TransformationPopup {
 
   // Fonction pour créer et afficher le tableau HTML
   renderTransfoDetailsTable(data) {
+    const i18nInstance = window.i18next;
+
+    if (
+      !window.i18nextReady ||
+      !i18nInstance ||
+      typeof i18nInstance.t !== 'function'
+    ) {
+      setTimeout(() => this.renderTransfoDetailsTable(data), 100);
+      return;
+    }
+
     // Vérifier si on a des données (ancien format array ou nouveau format objet)
     const dimensions = Array.isArray(data) ? data : data.dimensions || [];
     const generalInfo = data.generalInfo || null;
@@ -1557,15 +1521,15 @@ class TransformationPopup {
       generalInfoHTML = `
         <div id="transfo-general-info" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div id="general-info-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
-            <h4 class="text-sm font-medium text-gray-900">${this.translate('generalInfo')}</h4>
+            <h4 class="text-sm font-medium text-gray-900">${i18next.t('generalInfo')}</h4>
             <svg id="general-info-collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
           </div>
           <div id="general-info-body" class="px-3 py-2">
             <div class="space-y-2 text-sm">
-              ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${this.translate('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
-              ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${this.translate('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
+              ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
+              ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
             </div>
           </div>
         </div>
