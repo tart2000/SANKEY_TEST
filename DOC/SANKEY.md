@@ -647,7 +647,7 @@ Tech {
   step: string, // collecting, sorting, etc.
   details: {
     version: string,
-    conso: number, // W
+    conso: number, // kWh par heure de fonctionnement (par machine)
     profils: {
       profil_name: {
         timeh: number // heures pour 1h d'utilisation de la tech
@@ -745,8 +745,7 @@ function calculateTransformationCosts(transformation, techDetails, teamData) {
 
   // Consommation électrique
   if (techDetails.conso && teamData.elec) {
-    const consoWh = techDetails.conso * tempsUtile * quantity;
-    const consoKwh = consoWh / 1000;
+    const consoKwh = techDetails.conso * tempsUtile * quantity;
     const prixElec = consoKwh * teamData.elec;
     consommation_totale = consoKwh;
     totalPrix += prixElec;
