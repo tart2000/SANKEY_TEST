@@ -2,7 +2,9 @@
 
 ## Description
 
-Ce projet est un prototype de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot de textile, avec la possibilité de voir différentes dimensions (matière, format, couleur, qualité, fibres) à travers les étapes de traitement.
+Ce projet est un prototype avancé de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot, d’éditer les scénarios de transformation (principaux et coproduits) et de synchroniser les données avec Bubble via l’API interne. Le module Sankey tourne dans `public/sankey/` (HTML/JS autonome) et est encapsulé dans l’application Next.js (`/sankey`) qui gère la sélection du lot/scénario/team, la langue, le mode édition et les communications `postMessage`.
+
+Le Sankey offre une navigation multi-dimensions (format, type, matière, couleur, qualité, fibres, propreté, perturbateurs) avec stackbars colorées dynamiques, tooltips détaillés, boutons d’action contextuels (`+`, fork, etc.), calculs de coûts par technologie et gestion des transformations dynamiques définies côté Bubble.
 
 ## Fonctionnalités Principales
 
@@ -29,30 +31,66 @@ Ce projet est un prototype de visualisation interactive de type Sankey pour suiv
 
 ### Structure du Scénario
 
-Le scénario est défini comme un objet avec deux propriétés principales :
+Le scénario est défini comme un objet arborescent qui distingue :
+
+- les transformations principales (`main.transformations`) lorsqu’il provient de Bubble (structure recommandée) ;
+- un champ `transformations` à la racine pour les scénarios historiques (toujours supporté pour compatibilité) ;
+- le champ `coproduct_scenario.transformations` pour les actions appliquées au “reste”.
 
 ```js
 const scenario = {
   main: {
     transformations: [
       {
-        type: 'selectByFormat', // ou autre type de sélection
-        keys: ['vêtements'], // valeurs à sélectionner
+        type: 'selectByFormat', // type de sélection
+        keys: ['1730809932159x273229509786599420'], // bubble_ids à sélectionner
         scenario: {
-          // sous-scénario optionnel
-          target: 'CT2', // destination finale
-          transformations: [], // transformations supplémentaires
+          transformations: [
+            {
+              type: 'selectByMatiere',
+              keys: ['1753277557054x291758371680550900'],
+              scenario: {
+                transformations: [],
+                coproduct_scenario: { transformations: [] },
+              },
+              _path: [
+                'main',
+                'transformations',
+                0,
+                'scenario',
+                'transformations',
+                0,
+              ],
+              _nodeId: 'path-0-0',
+            },
+          ],
+          coproduct_scenario: { transformations: [] },
         },
+        coproduct_scenario: { transformations: [] },
+        target: 'CT2',
+        _path: ['main', 'transformations', 0],
+        _nodeId: 'path-0',
       },
     ],
   },
   coproduct_scenario: {
-    transformations: [], // transformations pour le reste
+    transformations: [
+      {
+        type: 'selectByCouleur',
+        keys: ['1753277499159x841848085058682900'],
+        _path: ['coproduct_scenario', 'transformations', 0],
+        _nodeId: 'coproduct-0',
+      },
+    ],
   },
 };
 ```
 
-**Note importante** : La structure a évolué pour séparer clairement les transformations principales (`main.transformations`) des transformations du coproduit (`coproduct_scenario.transformations`).
+**Notes importantes :**
+
+- `_path`, `_index` et `_nodeId` sont maintenus automatiquement pour faciliter les mises à jour, la navigation et l’affichage du bouton `+`.
+- Si `main` est absent, `scenario.transformations` et `scenario.coproduct_scenario` restent pris en charge (fichiers Bubble anciens).
+- Les `keys` doivent toujours contenir les `bubble_id` (pas les labels). Les textes affichés sont injectés via les données du lot.
 
 ### Types de Sélection Disponibles
 
@@ -88,11 +126,16 @@ const scenario = {
 
 ### Structure des Fichiers
 
-- `index.html` : Structure de base
-- `styles.css` : Styles et apparence
-- `data.js` : Données et constantes
-- `scenario.js` : Logique de transformation
-- `sankey.js` : Visualisation et interaction
+- `index.html` : structure HTML + initialisation i18next + paramètres iframe
+- `styles.css` : base visuelle spécifique au module Sankey (complétée par Tailwind compilé)
+- `sankey.js` : orchestrateur principal (chargement des données Bubble, parsing, rendu d3, interactions, communication postMessage)
+- `scenario.js` : helpers pour la navigation dans l’arbre, duplication profonde, calculs sur les lots, dynamic transfos
+- `processes.js` : librairie des transformations statiques (selectBy*, process*, filtres)
+- `transformation-popup.js` : popup d’édition d’une transformation (sélection, cibles, options)
+- `tech-popup.js` : popup d’édition des technos (fetch Bubble, versioning, calculs de coûts)
+- `utils/` : fonctions partagées (normalisation, couleurs, lots)
+- `../data/*.js` : jeux de données modulaires (lot type, couleurs, dynamic transfos) synchronisés avec Bubble
+- `../i18n-config.js` : configuration i18next générée par `npm run build:translations`
 
 ### Dépendances
 
@@ -249,64 +292,65 @@ Pour filtrer sur une dimension précise, utilisez les types de transformation su
 ```js
 {
   type: 'selectByFormat',
-  keys: ['Vêtements', 'Chaussures et bottes'],
+  keys: ['1752674004466x758392426243031000', '1753277499159x841848085058682900'], // bubble_ids
   scenario: { /* ... */ }
 }
 ```
 
-→ Sélectionne tous les lots dont le format est "Vêtements" ou "Chaussures et bottes".
+→ Sélectionne tous les lots dont le format correspond aux bubble_ids fournis.
 
 #### Sélection par type
 
 ```js
 {
   type: 'selectByType',
-  keys: ['T-shirt', 'Pantalon en jean'],
+  keys: ['1753277557054x291758371680550900'],
   scenario: { /* ... */ }
 }
 ```
 
-→ Sélectionne tous les lots dont le type est "T-shirt" ou "Pantalon en jean" (après avoir sélectionné un format).
+→ Sélectionne tous les lots dont le type possède l’un des bubble_ids listés (après avoir sélectionné un format).
 
 #### Sélection par matière
 
 ```js
 {
   type: 'selectByMatiere',
-  keys: ['100% coton', 'coton/polyester'],
+  keys: ['1752565035081x996348588023394400'],
   scenario: { /* ... */ }
 }
 ```
 
-→ Sélectionne tous les lots dont la matière est "100% coton" ou "coton/polyester" (après avoir sélectionné un format et un type).
+→ Sélectionne toutes les matières correspondant aux bubble_ids fournis (après filtrage format + type).
 
 #### Sélection par couleur
 
 ```js
 {
   type: 'selectByCouleur',
-  keys: ['blanc', 'noir'],
+  keys: ['1752564923160x133963234616413900'],
   scenario: { /* ... */ }
 }
 ```
 
-→ Sélectionne tous les lots dont la couleur est "blanc" ou "noir".
+→ Sélectionne toutes les couleurs correspondant aux bubble_ids fournis.
 
 #### Sélection par qualité
 
 ```js
 {
   type: 'selectByQualite',
-  keys: ['neuf étiqueté', 'parfait état'],
+  keys: ['1752657446787x193212466860654600'],
   scenario: { /* ... */ }
 }
 ```
 
-→ Sélectionne tous les lots dont la qualité est "neuf étiqueté" ou "parfait état".
+→ Sélectionne toutes les qualités correspondant aux bubble_ids fournis.
 
 **Remarques :**
 
 - Pour les sélections imbriquées (type, matière), il faut d'abord avoir filtré sur le niveau supérieur (format, puis type).
+- Les `keys` doivent toujours être des identifiants Bubble. Les libellés affichés sont récupérés via les données du lot/dimensions.
 - Vous pouvez passer une ou plusieurs valeurs dans `keys` pour chaque type de sélection.
 
 ---
@@ -409,22 +453,51 @@ Le Sankey peut être généré dynamiquement à partir d'un lot de départ (dist
 
 ### Nouvelle structure du scénario
 
-Un scénario est un objet avec deux propriétés :
+Un scénario standard comporte :
 
-- `transformations` : tableau de transformations principales (sélections)
-- `coproduct_scenario` : tableau de transformations appliquées au "reste" (coproduit)
+- `main.transformations` : liste principale des transformations (sélections, processes, dynamic transfos…).
+- `main.coproduct_scenario.transformations` : transformations appliquées au reste généré par chacun des nœuds `main` (optionnel).
+- `coproduct_scenario.transformations` à la racine : transformations appliquées au reste global du lot initial.
+- Propriétés additionnelles susceptibles d’être présentes :
+  - `target` : destination finale (bubble_id) ;
+  - `tech` : techno associée (voir section techno) ;
+  - `dynamic_transfo_id`, `transfo_type` ;
+  - attributs d’UI (`_path`, `_nodeId`, `_index`, `isProcess`, etc.).
 
-Chaque transformation est un objet :
+Chaque transformation possède les clés principales suivantes :
 
-- `transform` : { type, dimension, keys } (type = "select", dimension = nom de la dimension, keys = valeurs sélectionnées)
-- `scenario` : (optionnel) sous-scénario imbriqué, même structure (objet avec transformations/coproduct_scenario)
+```ts
+type Transformation = {
+  type: string; // selectBy*, process*, dynamic_transfo, ...
+  keys?: string[]; // bubble_ids ciblés
+  dimension?: string; // pour selectFirstLevel / dynamic
+  threshold?: number; // selectByFibre
+  condition?: 'over' | 'under';
+  scenario?: ScenarioNode; // sous-scénario (même structure)
+  coproduct_scenario?: ScenarioNode;
+  target?: string; // bubble_id destination
+  yield?: number; // processes dynamiques
+  tech?: TechAttachment; // techno attachée
+  _path?: (string | number)[]; // chemin vers la transformation
+  _nodeId?: string; // identifiant UI
+  _index?: number; // index dans le tableau parent
+};
+
+type ScenarioNode = {
+  transformations?: Transformation[];
+  coproduct_scenario?: ScenarioNode;
+};
+```
 
 #### Exemple minimal (vide)
 
 ```js
 const scenario = {
-  transformations: [],
-  coproduct_scenario: [],
+  main: {
+    transformations: [],
+    coproduct_scenario: { transformations: [] },
+  },
+  coproduct_scenario: { transformations: [] },
 };
 ```
 
@@ -436,40 +509,68 @@ const scenario = {
     transformations: [
       {
         type: 'selectByFormat',
-        keys: ['Chaussures et bottes'],
+        keys: ['173...'], // bubble_id format
         scenario: {
           transformations: [
             {
-              type: 'selectByMatiere',
-              keys: ['100% coton'],
+              type: 'dynamic_transfo',
+              dynamic_transfo_id: 'transfo_lavage_1',
+              yield: 80,
               scenario: {
                 transformations: [],
                 coproduct_scenario: { transformations: [] },
               },
             },
-            {...},
-            {...}
+            {
+              type: 'selectByMatiere',
+              keys: ['175...'],
+              target: 'CT2',
+              scenario: {
+                transformations: [],
+                coproduct_scenario: { transformations: [] },
+              },
+            },
           ],
           coproduct_scenario: { transformations: [] },
         },
         _path: ['main', 'transformations', 0],
         _index: 0,
+        _nodeId: 'path-0',
       },
-      {...},
-      {...}
     ],
+    coproduct_scenario: {
+      transformations: [
+        {
+          type: 'selectByCouleur',
+          keys: ['175...'],
+          _path: ['main', 'coproduct_scenario', 'transformations', 0],
+          _nodeId: 'main-coproduit-0',
+        },
+      ],
+    },
   },
   coproduct_scenario: {
     transformations: [
-      // transformations à appliquer au reste du lot initial
+      {
+        type: 'processBroyage',
+        yield: 60,
+        tech: {
+          bubble_id: 'tech_123',
+          quantity: 2,
+          rate: 100,
+          details: { version: '2025.03' },
+        },
+        _path: ['coproduct_scenario', 'transformations', 0],
+        _nodeId: 'coproduit-root-0',
+      },
     ],
   },
 };
 ```
 
-- À chaque niveau, tu peux imbriquer autant de sous-scénarios que tu veux.
-- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_scenario.transformations`.
-- Chaque transformation possède un `_path` et un `_index` pour permettre une navigation et une modification dynamique dans l'arbre.
+- À chaque niveau, tu peux imbriquer autant de sous-scénarios que nécessaire.
+- Les transformations du "reste" (coproduit) se trouvent toujours dans un champ `coproduct_scenario.transformations`.
+- Les `_path` / `_nodeId` sont recalculés lors de la sauvegarde pour conserver la cohérence UI.
 
 ### Parsing
 
@@ -567,7 +668,7 @@ Pour toute question ou adaptation de la structure, contactez le développeur du 
 
 ---
 
-# Intégration Bubble-ready : Mode Iframe
+# Intégration Bubble-ready : Mode Iframe & wrapper Next.js
 
 ## Objectif
 
@@ -575,25 +676,30 @@ Permettre d'intégrer la visualisation Sankey dans Bubble via une iframe, avec p
 
 ## Paramètres d'entrée de l'iframe
 
-L'iframe Sankey doit accepter les paramètres suivants (via URL ou postMessage) :
+Les paramètres sont injectés par la page Next (`/sankey`) ou par Bubble dans le cas d’une iframe directe :
 
-- `scenario` : **ID Bubble** du scénario à afficher
-- `lot` : **ID Bubble** du lot à afficher
-- `isLive` : `yes` ou `no` (pour choisir la base Bubble live ou dev)
-- `isEditable` : `yes` ou `no` (pour activer/désactiver l'édition)
+- `lang` (`fr_fr`, `en_gb`, …) : langue i18next
+- `scenarioIdx` : index du scénario courant (utile pour les scénarios mockés côté front)
+- `lotId` : **bubble_id** du lot à charger
+- `scenarioId` : **bubble_id** du scénario Bubble
+- `teamId` : **bubble_id** de la team (profils RH, prix électricité, catalogue tech)
+- `isEditable` : `true` / `false` (désactive toute action si faux)
+- `isLive` : `true` / `false` (bascule dev/live pour les endpoints Bubble)
 
 ## Fonctionnement attendu
 
-- **Aucun dropdown de sélection** dans l'iframe : la sélection des lots/scénarios/types se fait dans le header Bubble, pas dans l'iframe.
+- **Aucun dropdown Bubble** dans l'iframe : la sélection se fait dans l’app hôte (Next ou Bubble).
 - L'iframe reçoit les IDs à afficher et charge les données correspondantes via API Bubble.
 - Les données sont affichées dès qu'elles sont chargées (afficher un loader si besoin).
-- Le mode édition (`isEditable`) désactive toutes les fonctionnalités d'édition si à `no` (pas de drag/drop, pas de modals d'édition, etc.).
+- Le mode édition (`isEditable=false`) désactive toutes les fonctionnalités d'édition (boutons `+`, popups, drag/drop, sauvegarde).
 
 ## API Bubble à brancher
 
 - Réutiliser la fonction existante pour récupérer un lot complet par son ID.
 - Créer une fonction pour récupérer un scénario complet par son ID (même logique que pour les lots).
 - Les objets récupérés doivent être compatibles avec la structure attendue par le Sankey (voir plus haut).
+- Endpoint `team` : retourne les profils RH, coût électrique, liste des techs (avec versions).
+- Endpoint `base_data` : dimensions, transformations dynamiques, mappings complémentaires (utilisé pour initialiser les dropdowns).
 
 ## Initialisation de l'iframe
 
@@ -604,7 +710,7 @@ L'iframe Sankey doit accepter les paramètres suivants (via URL ou postMessage) 
 
 ## Synchronisation et notifications
 
-- Prévoir une fonction pour notifier Bubble (via postMessage) quand le Sankey est modifié (si édition activée)
+- Prévoir une fonction pour notifier Bubble (via postMessage) quand le Sankey est modifié (si édition activée). Message courant : `{ type: 'showLotDetails', payload: { nodeId, lotData, ... } }`.
 - Gérer les erreurs de chargement (afficher un message d'erreur ou un loader)
 
 ## Problèmes potentiels et recommandations
@@ -623,6 +729,15 @@ L'iframe Sankey doit accepter les paramètres suivants (via URL ou postMessage) 
 5. Toute modification dans l'iframe (si édition) est notifiée à Bubble
 
 ---
+
+### Rôle du wrapper Next (`/sankey`)
+
+- Interface utilisateur pour choisir le lot, le scénario, la team et la langue (composants shadcn / Radix).
+- Rechargement automatique de l’iframe lorsque l’un des paramètres change (`key` basé sur le state).
+- Ajustement automatique de la hauteur de l’iframe via les messages `IFRAME_HEIGHT`.
+- Console log des messages métier (`showLotDetails`) pour intégration future dans Bubble ou un panneau latéral.
+- Passage du mode édition via checkbox (`isEditable`).
+- Gestion de la version dev/live via les métadonnées `isLive` sur les lots/scénarios/teams.
 
 **Pour toute adaptation ou évolution, suivre ce guide pour garantir la compatibilité et la robustesse de l'intégration Bubble.**
 
