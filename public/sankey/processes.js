@@ -1152,6 +1152,43 @@ async function fetchItemMini(bubbleId) {
   }
 }
 
+function fetchItemMiniSync(bubbleId) {
+  try {
+    if (!bubbleId) return null;
+    if (window.itemMiniCache.has(bubbleId)) {
+      return window.itemMiniCache.get(bubbleId) || null;
+    }
+
+    const params = getUrlParams();
+    const isLive = params.isLive;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/bubble', false);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(
+      JSON.stringify({
+        endpoint: 'item_small',
+        params: { id: bubbleId, isLive },
+        method: 'GET',
+      })
+    );
+
+    if (xhr.status === 200) {
+      const data = JSON.parse(xhr.responseText);
+      window.itemMiniCache.set(bubbleId, data);
+      if (data && data.color) {
+        window.colorById.set(bubbleId, data.color);
+      }
+      return data;
+    }
+
+    console.warn('fetchItemMiniSync failed for', bubbleId, xhr.status);
+    return null;
+  } catch (error) {
+    console.warn('fetchItemMiniSync failed for', bubbleId, error);
+    return null;
+  }
+}
+
 // Récupère l'item complet depuis l'API /item (structure complète avec toutes les dimensions)
 async function fetchItemComplete(bubbleId) {
   try {
@@ -1183,6 +1220,43 @@ async function fetchItemComplete(bubbleId) {
     return data;
   } catch (e) {
     console.warn('fetchItemComplete failed for', bubbleId, e);
+    return null;
+  }
+}
+
+function fetchItemCompleteSync(bubbleId) {
+  try {
+    if (!bubbleId) return null;
+    if (window.itemCompleteCache.has(bubbleId)) {
+      return window.itemCompleteCache.get(bubbleId) || null;
+    }
+
+    const params = getUrlParams();
+    const isLive = params.isLive;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/bubble', false);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(
+      JSON.stringify({
+        endpoint: 'item',
+        method: 'POST',
+        params: { id: bubbleId, isLive },
+      })
+    );
+
+    if (xhr.status === 200) {
+      const data = JSON.parse(xhr.responseText);
+      window.itemCompleteCache.set(bubbleId, data);
+      if (data && data.color) {
+        window.colorById.set(bubbleId, data.color);
+      }
+      return data;
+    }
+
+    console.warn('fetchItemCompleteSync failed for', bubbleId, xhr.status);
+    return null;
+  } catch (error) {
+    console.warn('fetchItemCompleteSync failed for', bubbleId, error);
     return null;
   }
 }
@@ -1231,6 +1305,54 @@ async function ensureDimensionColorsLoaded(dimension) {
     });
   } catch (e) {
     console.warn('ensureDimensionColorsLoaded failed for', dimension, e);
+  }
+}
+
+function ensureDimensionColorsLoadedSync(dimension) {
+  try {
+    if (!dimension) return;
+    const endpointMap = {
+      qualite: 'qualites',
+      proprete: 'propretes',
+    };
+    const endpoint = endpointMap[dimension] || dimension;
+    const params = getUrlParams();
+    const isLive = params.isLive;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/bubble', false);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({ endpoint, params: { isLive }, method: 'GET' }));
+
+    if (xhr.status !== 200) {
+      console.warn(
+        'ensureDimensionColorsLoadedSync failed for',
+        dimension,
+        xhr.status
+      );
+      return;
+    }
+
+    const data = JSON.parse(xhr.responseText) || {};
+    Object.values(data).forEach(item => {
+      if (item && item.bubble_id) {
+        const itemMini = {
+          bubble_id: item.bubble_id,
+          fr_fr: item.fr_fr || null,
+          en_gb: item.en_gb || null,
+          color: item.color || null,
+        };
+        window.itemMiniCache.set(item.bubble_id, itemMini);
+        if (item.color) {
+          window.colorById.set(item.bubble_id, item.color);
+        }
+      }
+    });
+  } catch (error) {
+    console.warn(
+      'ensureDimensionColorsLoadedSync failed for',
+      dimension,
+      error
+    );
   }
 }
 
@@ -1566,7 +1688,7 @@ const transformationUtils = {
 };
 
 // Fonction pour exécuter les transformations dynamiques
-async function executeDynamicTransfo(lot, transfoDetails) {
+function executeDynamicTransfo(lot, transfoDetails) {
   console.log('executeDynamicTransfo appelée avec:', { lot, transfoDetails });
 
   // Utiliser le moteur de transformation générique unifié
@@ -1574,7 +1696,7 @@ async function executeDynamicTransfo(lot, transfoDetails) {
     window.genericTransformationEngine = new GenericTransformationEngine();
   }
 
-  return await window.genericTransformationEngine.executeTransformation(
+  return window.genericTransformationEngine.executeTransformation(
     lot,
     transfoDetails
   );
@@ -1594,6 +1716,10 @@ window.processes = {
 
 window.transformationUtils = transformationUtils;
 window.transformationTypes = transformationTypes;
+
+window.fetchItemMiniSync = fetchItemMiniSync;
+window.fetchItemCompleteSync = fetchItemCompleteSync;
+window.ensureDimensionColorsLoadedSync = ensureDimensionColorsLoadedSync;
 
 // ← NOUVEAU : Exposer le cache globalement pour le debug
 window.dynamicTransfosCache = dynamicTransfosCache;
@@ -2142,7 +2268,7 @@ class GenericTransformationEngine {
   }
 
   // Méthode principale qui orchestre la transformation avec décrochage hiérarchique
-  async executeTransformation(lot, transfoDetails) {
+  executeTransformation(lot, transfoDetails) {
     console.log(
       'GenericTransformationEngine.executeTransformation (hiérarchique) appelée pour:',
       transfoDetails.title
@@ -2177,7 +2303,11 @@ class GenericTransformationEngine {
     }
 
     // 3. Trouver tous les éléments qui matchent dans la hiérarchie
-    const matchingElements = this.findMatchingElements(lot, allInputCriteria);
+    const matchingElements = this.findMatchingElements(
+      lot,
+      allInputCriteria,
+      primaryDimension
+    );
     console.log('Éléments à décrocher:', matchingElements);
 
     if (matchingElements.length === 0) {
@@ -2204,53 +2334,61 @@ class GenericTransformationEngine {
       );
     }
 
-    const decrochedElements = [];
-    for (const elementPath of matchingElements) {
-      const decroched = await this.decrocherElement(
-        lot,
-        elementPath,
-        targetConfig
-      );
-      if (decroched) {
-        decrochedElements.push(decroched);
-      }
-    }
-
-    // 5. Concaténer tous les éléments décrochés dans le target
-    const targetLot = this.concatenateDecrochedElements(
-      decrochedElements,
-      targetConfig.key
+    const { filteredLot, remainingLot } = this.filterLotByCriteria(
+      lot,
+      matchingElements,
+      primaryDimension
     );
+    const decrochedMass = this.calculateLotTotalMass(filteredLot);
+
+    const transformedPrimary = this.applyTargetTransformation(
+      JSON.parse(JSON.stringify(filteredLot)),
+      { [targetConfig.key]: targetConfig.value },
+      primaryDimension
+    );
+
+    const targetLot = {
+      [primaryDimension]: transformedPrimary[primaryDimension],
+    };
     targetLot.title = transfoDetails.title || 'Transformation dynamique';
+    this.copySiblingDimensions(targetLot, transformedPrimary, primaryDimension);
 
     // 6. Calculer la masse totale décrochée
-    const totalDecrochedMass = this.calculateTotalMass(decrochedElements);
+    const totalDecrochedMass = decrochedMass;
     console.log('Masse totale décrochée:', totalDecrochedMass);
 
     // 7. Appliquer le yield sur la masse totale décrochée
     const yieldPercent = transfoDetails.yield || 100;
     const targetMass = (totalDecrochedMass * yieldPercent) / 100;
     const coproFromDecroched = Math.max(totalDecrochedMass - targetMass, 0);
-
+    const remainderMass = Math.max((lot.total || 0) - totalDecrochedMass, 0);
     targetLot.total = targetMass;
 
     // 8. Créer le co-produit
-    let coProductLot = await this.createCoProductLot(
-      lot,
-      matchingElements,
+    const coProductLot = this.finalizeCoProductLot(
+      remainingLot,
       coproFromDecroched,
-      primaryCfg.coproduct,
+      primaryCfg,
       primaryDimension,
-      decrochedElements
+      remainderMass
     );
-    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+    if (coProductLot) {
+      coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+      this.copySiblingDimensions(
+        coProductLot,
+        remainingLot || lot,
+        primaryDimension
+      );
+    }
 
     // 9. Appliquer les targets enfants éventuels
     this.applyChildTargets(targetLot, transfoDetails.dimensions);
 
     // 10. Recalculer les pourcentages pour maintenir la cohérence
     this.recalculatePercentagesAfterDecrochage(targetLot);
-    this.recalculatePercentagesAfterDecrochage(coProductLot);
+    if (coProductLot) {
+      this.recalculatePercentagesAfterDecrochage(coProductLot);
+    }
 
     return { targetLot, coProductLot };
   }
@@ -2312,7 +2450,11 @@ class GenericTransformationEngine {
     // Recherche d'éléments correspondants (pour information, pas de filtrage ici)
     if (this.hasInputCriteria(input)) {
       console.log(`Recherche d'éléments correspondants pour ${dimensionName}`);
-      const matchingElements = this.findMatchingElements(lot, input);
+      const matchingElements = this.findMatchingElements(
+        lot,
+        input,
+        dimensionName
+      );
       console.log(`Éléments trouvés:`, matchingElements);
       // Note: Le filtrage sera fait plus tard dans executeTransformation
     }
@@ -2361,73 +2503,140 @@ class GenericTransformationEngine {
 
   // Trouver tous les éléments qui matchent les critères d'input dans la hiérarchie
   findMatchingElements(lot, inputCriteria) {
-    console.log(
-      "Recherche d'éléments correspondants avec critères:",
-      inputCriteria
-    );
-
-    const matchingPaths = [];
-
-    // Si pas de critères, retourner tous les éléments de niveau 1 (formats)
+    const criteria = {};
     if (!inputCriteria || Object.keys(inputCriteria).length === 0) {
-      console.log("Aucun critère d'input - tous les formats sont acceptés");
-      if (lot.formats) {
-        for (const [formatKey, formatValue] of Object.entries(lot.formats)) {
-          matchingPaths.push([formatKey]);
-        }
-      }
-      return matchingPaths;
+      return criteria;
     }
 
-    // Extraire les bubble_ids des critères d'input
-    const inputBubbleIds = Object.values(inputCriteria).map(
-      item => item.bubble_id
+    this.processingOrder.forEach(dimension => {
+      const dimensionInput = inputCriteria[dimension];
+      if (!dimensionInput || typeof dimensionInput !== 'object') return;
+      const ids = new Set();
+      Object.values(dimensionInput).forEach(entry => {
+        if (entry && entry.bubble_id) {
+          ids.add(entry.bubble_id);
+        }
+      });
+      if (ids.size > 0) {
+        criteria[dimension] = ids;
+      }
+    });
+
+    console.log(
+      'Critères normalisés pour la transformation dynamique:',
+      Object.fromEntries(
+        Object.entries(criteria).map(([dim, set]) => [dim, Array.from(set)])
+      )
     );
-    console.log('Bubble IDs recherchés:', inputBubbleIds);
 
-    // Parcourir récursivement la hiérarchie
-    this.searchInHierarchy(lot, [], inputBubbleIds, matchingPaths);
-
-    console.log('Éléments trouvés:', matchingPaths);
-    return matchingPaths;
+    return criteria;
   }
 
-  // Recherche récursive dans la hiérarchie
-  searchInHierarchy(current, currentPath, targetBubbleIds, matchingPaths) {
-    // Parcourir toutes les dimensions dans l'ordre de traitement
-    for (const dimension of this.processingOrder) {
-      if (!current[dimension]) continue;
+  getSelectorForDimension(dimension) {
+    const map = {
+      formats: selectByFormat,
+      types: selectByType,
+      matieres: selectByMatiere,
+      fibres: selectByFibre,
+      couleurs: selectByCouleur,
+      perturbateurs: selectByPerturbateur,
+      proprete: selectByProprete,
+      qualite: selectByQualite,
+    };
+    return map[dimension] || null;
+  }
 
-      // Parcourir tous les éléments de cette dimension
-      for (const [elementKey, elementValue] of Object.entries(
-        current[dimension]
-      )) {
-        // Vérifier si cet élément matche un des bubble_ids recherchés
-        if (
-          elementValue &&
-          elementValue.bubble_id &&
-          targetBubbleIds.includes(elementValue.bubble_id)
-        ) {
-          // Élément trouvé ! Ajouter le chemin complet
-          const fullPath = [...currentPath, elementKey];
-          matchingPaths.push(fullPath);
-          console.log(
-            `Élément trouvé: ${elementKey} (${elementValue.bubble_id}) dans le chemin:`,
-            fullPath
-          );
-        }
+  filterLotByCriteria(lot, criteria, primaryDimension) {
+    let filteredLot = JSON.parse(JSON.stringify(lot));
+    const remainderLots = [];
 
-        // Continuer la recherche récursive dans les dimensions enfants
-        if (elementValue && typeof elementValue === 'object') {
-          this.searchInHierarchy(
-            elementValue,
-            [...currentPath, elementKey],
-            targetBubbleIds,
-            matchingPaths
-          );
-        }
+    this.processingOrder.forEach(dimension => {
+      const ids = criteria[dimension];
+      if (!ids || ids.size === 0) return;
+      const selector = this.getSelectorForDimension(dimension);
+      if (!selector) return;
+
+      const idsArray = Array.from(ids);
+      if (idsArray.length === 0) return;
+
+      const result = selector(filteredLot, idsArray);
+      if (result && result.targetLot) {
+        filteredLot = result.targetLot;
+      }
+      if (result && result.coProductLot && result.coProductLot.total) {
+        remainderLots.push(result.coProductLot);
+      }
+    });
+
+    filteredLot.total = this.calculateLotTotalMass(filteredLot);
+
+    let remainingLot = null;
+    if (remainderLots.length > 0) {
+      const validLots = remainderLots.filter(
+        lotPart =>
+          lotPart &&
+          (typeof lotPart.total === 'number'
+            ? lotPart.total > 0
+            : this.calculateLotTotalMass(lotPart) > 0)
+      );
+      if (validLots.length > 0) {
+        remainingLot = mergeLots(validLots);
+        remainingLot.total = this.calculateLotTotalMass(remainingLot);
       }
     }
+
+    return { filteredLot, remainingLot };
+  }
+
+  finalizeCoProductLot(
+    remainingLot,
+    coproFromDecroched,
+    primaryCfg,
+    primaryDimension,
+    remainderMass = 0
+  ) {
+    let coProductLot = remainingLot
+      ? JSON.parse(JSON.stringify(remainingLot))
+      : null;
+
+    const coproductCfg = primaryCfg && primaryCfg.coproduct;
+    if (
+      coproFromDecroched > 0 &&
+      coproductCfg &&
+      Object.keys(coproductCfg).length > 0
+    ) {
+      if (!coProductLot) {
+        coProductLot = { total: 0 };
+        coProductLot[primaryDimension] = {};
+      }
+      this.addCoproductDistribution(
+        coProductLot,
+        coproFromDecroched,
+        coproductCfg,
+        primaryDimension
+      );
+    }
+
+    const remainder = Math.max(Number(remainderMass) || 0, 0);
+    if (!coProductLot && (remainder > 0 || coproFromDecroched > 0)) {
+      coProductLot = { total: 0 };
+      coProductLot[primaryDimension] = {};
+    }
+
+    if (!coProductLot) {
+      return null;
+    }
+
+    coProductLot.total =
+      this.calculateLotTotalMass(coProductLot) +
+      Math.max(coproFromDecroched || 0, 0) +
+      remainder;
+
+    if (!coProductLot.total || coProductLot.total <= 0.1) {
+      return null;
+    }
+
+    return coProductLot;
   }
 
   // Appliquer la transformation cible
@@ -2818,100 +3027,6 @@ class GenericTransformationEngine {
     });
   }
 
-  // Décrocher un élément de la hiérarchie jusqu'à la racine et le placer dans le target
-  async decrocherElement(lot, elementPath, targetConfig) {
-    console.log(
-      "Décrochage de l'élément:",
-      elementPath,
-      'vers target:',
-      targetConfig
-    );
-
-    // elementPath = ["Vêtements", "Robes", "Coton"] par exemple
-    // targetConfig = { key: "Morceaux", value: { bubble_id: "target_id" } }
-
-    // 1. Trouver l'élément dans la hiérarchie
-    let current = lot;
-    for (const level of elementPath) {
-      // Chercher dans toutes les dimensions possibles
-      let found = false;
-      for (const dimension of this.processingOrder) {
-        if (current[dimension] && current[dimension][level]) {
-          current = current[dimension][level];
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        console.warn('Élément non trouvé dans le chemin:', elementPath);
-        return null;
-      }
-    }
-
-    // 2. Charger l'item complet du target pour avoir la structure de référence
-    const targetBubbleId = Object.values(targetConfig)[0].bubble_id;
-    const targetItem = await window.fetchItemComplete(targetBubbleId);
-
-    if (!targetItem) {
-      console.warn(
-        "Impossible de charger l'item complet du target:",
-        targetBubbleId
-      );
-      // Fallback : créer une structure minimale
-      return this.createMinimalTargetStructure(current, targetConfig);
-    }
-
-    // 3. Créer le target avec la structure complète de l'élément
-    const target = {
-      [targetConfig.key]: {
-        ...targetConfig.value,
-        // Copier TOUTE la hiérarchie de l'élément original
-        types: current.types || {},
-        matieres: current.matieres || {},
-        fibres: current.fibres || {},
-        couleurs: current.couleurs || {},
-        perturbateurs: current.perturbateurs || {},
-        proprete: current.proprete || {},
-        qualite: current.qualite || {},
-        // Préserver les propriétés de base
-        pourcentage: current.pourcentage || 100,
-        color:
-          current.color ||
-          (window.colorById && window.colorById.get(targetBubbleId)),
-      },
-    };
-
-    // 4. Appliquer la structure de référence du target si disponible
-    if (targetItem && targetItem.types) {
-      // Fusionner la structure de référence avec les données de l'élément original
-      target[targetConfig.key] = this.mergeWithReferenceStructure(
-        target[targetConfig.key],
-        targetItem,
-        current
-      );
-    }
-
-    return target;
-  }
-
-  // Créer une structure minimale si l'API échoue
-  createMinimalTargetStructure(element, targetConfig) {
-    return {
-      [targetConfig.key]: {
-        ...targetConfig.value,
-        types: element.types || {},
-        matieres: element.matieres || {},
-        fibres: element.fibres || {},
-        couleurs: element.couleurs || {},
-        perturbateurs: element.perturbateurs || {},
-        proprete: element.proprete || {},
-        qualite: element.qualite || {},
-        pourcentage: element.pourcentage || 100,
-        color: element.color,
-      },
-    };
-  }
-
   // Fusionner la structure de référence avec les données de l'élément original
   mergeWithReferenceStructure(targetElement, referenceItem, originalElement) {
     const merged = { ...targetElement };
@@ -2952,46 +3067,45 @@ class GenericTransformationEngine {
   }
 
   // Concaténer tous les éléments décrochés dans le target
-  concatenateDecrochedElements(decrochedElements, targetKey) {
-    if (decrochedElements.length === 0) {
-      return { total: 0 };
-    }
+  concatenateDecrochedElements(decrochedElements, targetKey, primaryDimension) {
+    let combinedEntry = null;
 
-    // Prendre le premier élément comme base
-    const baseElement = decrochedElements[0];
-    const targetLot = JSON.parse(JSON.stringify(baseElement));
-
-    // Fusionner tous les autres éléments
-    for (let i = 1; i < decrochedElements.length; i++) {
-      const element = decrochedElements[i];
-      if (element[targetKey]) {
-        this.mergeElementIntoTarget(targetLot, element[targetKey], targetKey);
+    decrochedElements.forEach(element => {
+      const dimensionMap = element[primaryDimension];
+      if (!dimensionMap) return;
+      const entry = dimensionMap[targetKey];
+      if (!entry) return;
+      if (!combinedEntry) {
+        combinedEntry = JSON.parse(JSON.stringify(entry));
+      } else {
+        this.mergeElementIntoTarget(combinedEntry, entry);
       }
+    });
+
+    if (!combinedEntry) {
+      return {};
     }
 
-    return targetLot;
+    return { [targetKey]: combinedEntry };
   }
 
   // Fusionner un élément dans le target
-  mergeElementIntoTarget(targetLot, element, targetKey) {
-    if (!targetLot[targetKey]) {
-      targetLot[targetKey] = { ...element };
-      return;
-    }
+  mergeElementIntoTarget(targetEntry, element) {
+    if (!targetEntry) return;
+    if (!element) return;
 
-    // Fusionner les pourcentages
-    const currentPct = targetLot[targetKey].pourcentage || 0;
+    const currentPct = targetEntry.pourcentage || 0;
     const elementPct = element.pourcentage || 0;
-    targetLot[targetKey].pourcentage = currentPct + elementPct;
+    targetEntry.pourcentage = currentPct + elementPct;
 
     // Fusionner les dimensions enfants
     for (const dimension of this.processingOrder) {
       if (element[dimension]) {
-        if (!targetLot[targetKey][dimension]) {
-          targetLot[targetKey][dimension] = {};
+        if (!targetEntry[dimension]) {
+          targetEntry[dimension] = {};
         }
         this.mergeDimensionIntoTarget(
-          targetLot[targetKey][dimension],
+          targetEntry[dimension],
           element[dimension]
         );
       }
@@ -3013,25 +3127,34 @@ class GenericTransformationEngine {
   }
 
   // Calculer la masse totale des éléments décrochés
-  calculateTotalMass(decrochedElements) {
+  calculateTotalMass(
+    decrochedElements,
+    sourceLotTotal,
+    primaryDimension,
+    targetKey
+  ) {
+    const baseMass = Number(sourceLotTotal) || 0;
     let totalMass = 0;
     for (const element of decrochedElements) {
-      const elementKey = Object.keys(element)[0];
-      if (element[elementKey] && element[elementKey].pourcentage) {
-        totalMass += element[elementKey].pourcentage;
-      }
+      const dimensionMap = element[primaryDimension];
+      if (!dimensionMap) continue;
+      const entry = dimensionMap[targetKey];
+      if (!entry || entry.pourcentage === undefined) continue;
+      const pct = Number(entry.pourcentage) || 0;
+      totalMass += (pct / 100) * baseMass;
     }
     return totalMass;
   }
 
   // Créer le lot co-produit
-  async createCoProductLot(
+  createCoProductLot(
     originalLot,
     matchingElements,
     coproFromDecroched,
     coproductCfg,
     primaryDimension,
-    decrochedElements
+    decrochedElements,
+    remainderMass
   ) {
     // Commencer avec le lot original
     const coProductLot = JSON.parse(JSON.stringify(originalLot));
@@ -3045,7 +3168,7 @@ class GenericTransformationEngine {
       coproductCfg &&
       Object.keys(coproductCfg).length > 0
     ) {
-      await this.addCoproductDistribution(
+      this.addCoproductDistribution(
         coProductLot,
         coproFromDecroched,
         coproductCfg,
@@ -3054,50 +3177,20 @@ class GenericTransformationEngine {
     }
 
     // Calculer la masse totale du co-produit
-    coProductLot.total =
-      this.calculateLotTotalMass(coProductLot) + coproFromDecroched;
+    const remaining = Math.max(Number(remainderMass) || 0, 0);
+    coProductLot.total = remaining + coproFromDecroched;
+
+    if (!coProductLot.total || coProductLot.total <= 0.1) {
+      return null;
+    }
 
     return coProductLot;
   }
 
-  // Retirer les éléments décrochés du lot
-  removeDecrochedElementsFromLot(lot, matchingElements) {
-    for (const elementPath of matchingElements) {
-      this.removeElementFromPath(lot, elementPath);
-    }
-  }
-
-  // Retirer un élément d'un chemin spécifique
-  removeElementFromPath(lot, elementPath) {
-    let current = lot;
-    for (let i = 0; i < elementPath.length - 1; i++) {
-      const key = elementPath[i];
-      // Chercher dans toutes les dimensions
-      for (const dimension of this.processingOrder) {
-        if (current[dimension] && current[dimension][key]) {
-          current = current[dimension][key];
-          break;
-        }
-      }
-    }
-
-    // Supprimer le dernier élément du chemin
-    const lastKey = elementPath[elementPath.length - 1];
-    for (const dimension of this.processingOrder) {
-      if (current[dimension] && current[dimension][lastKey]) {
-        delete current[dimension][lastKey];
-        break;
-      }
-    }
-  }
-
   // Ajouter la distribution des co-produits avec chargement des items complets
-  async addCoproductDistribution(
-    coProductLot,
-    mass,
-    coproductCfg,
-    primaryDimension
-  ) {
+  addCoproductDistribution(coProductLot, mass, coproductCfg, primaryDimension) {
+    if (!coproductCfg || Object.keys(coproductCfg).length === 0) return;
+    if (!mass || mass <= 0) return;
     if (!coProductLot[primaryDimension]) {
       coProductLot[primaryDimension] = {};
     }
@@ -3106,12 +3199,25 @@ class GenericTransformationEngine {
       (sum, cfg) => sum + (cfg.percent || 0),
       0
     );
+    if (!totalPercent) return;
+
+    if (
+      typeof window.ensureDimensionColorsLoadedSync === 'function' &&
+      primaryDimension
+    ) {
+      window.ensureDimensionColorsLoadedSync(primaryDimension);
+    }
 
     for (const [name, cfg] of Object.entries(coproductCfg)) {
       const percent = (cfg.percent || 0) * (mass / totalPercent);
 
       // Charger l'item complet pour avoir la structure de référence
-      const completeItem = await window.fetchItemComplete(cfg.bubble_id);
+      let completeItem = null;
+      if (window.itemCompleteCache.has(cfg.bubble_id)) {
+        completeItem = window.itemCompleteCache.get(cfg.bubble_id);
+      } else if (typeof window.fetchItemCompleteSync === 'function') {
+        completeItem = window.fetchItemCompleteSync(cfg.bubble_id);
+      }
 
       if (completeItem) {
         // Utiliser la structure complète de l'item
@@ -3186,6 +3292,24 @@ class GenericTransformationEngine {
     }
 
     return lot;
+  }
+
+  copySiblingDimensions(targetLot, sourceLot, primaryDimension) {
+    if (!sourceLot) return;
+    this.processingOrder.forEach(dimension => {
+      if (dimension === primaryDimension) return;
+      if (!sourceLot[dimension]) return;
+      if (!targetLot[dimension]) {
+        targetLot[dimension] = JSON.parse(JSON.stringify(sourceLot[dimension]));
+        return;
+      }
+      if (typeof targetLot[dimension] === 'object') {
+        this.mergeDimensionIntoTarget(
+          targetLot[dimension],
+          sourceLot[dimension]
+        );
+      }
+    });
   }
 
   // Normaliser les pourcentages d'une dimension pour qu'ils totalisent 100%
