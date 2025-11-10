@@ -2922,6 +2922,9 @@ function updateSankey(dimension) {
         );
         fo.node().appendChild(div);
 
+        // Mémoriser le bouton pour permettre un déclenchement via le libellé du nœud
+        link.dropdownTrigger = div;
+
         // Dropdown menu state
         let dropdownMenu = null;
         let dropdownOpen = false;
@@ -3779,6 +3782,7 @@ function updateSankey(dimension) {
 
     // Déterminer le titre à afficher
     let displayTitle = '';
+    let incomingLink = null;
 
     if (d.isTarget) {
       // Pour les nœuds target, afficher le nom du target
@@ -3789,7 +3793,7 @@ function updateSankey(dimension) {
     } else {
       // Pour les autres nœuds, afficher le nom de la transformation en français
       // Chercher la transformation qui a créé ce nœud
-      const incomingLink = sankeyLinks.find(l => l.target.id === d.id);
+      incomingLink = sankeyLinks.find(l => l.target.id === d.id);
       if (incomingLink && incomingLink.transformation) {
         const transfo = incomingLink.transformation;
         const type = Array.isArray(transfo.type)
@@ -3836,7 +3840,22 @@ function updateSankey(dimension) {
       .attr('dominant-baseline', 'middle')
       .style('font-size', '11px')
       .style('fill', '#666')
-      .style('pointer-events', 'none');
+      .style(
+        'pointer-events',
+        incomingLink && incomingLink.transformation ? 'auto' : 'none'
+      )
+      .style(
+        'cursor',
+        incomingLink && incomingLink.transformation ? 'pointer' : 'default'
+      )
+      .on('click', function () {
+        if (!incomingLink || !incomingLink.dropdownTrigger) {
+          return;
+        }
+        incomingLink.dropdownTrigger.dispatchEvent(
+          new MouseEvent('click', { bubbles: true, cancelable: true })
+        );
+      });
 
     lines.forEach((line, index) => {
       textElement
