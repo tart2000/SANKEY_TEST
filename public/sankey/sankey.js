@@ -4507,7 +4507,6 @@ function applyScenario(
           ? `${titre} — ${base} → ${targetLot.target}`
           : `${titre} — ${base}`;
       }
-      targetLot.id = nodeId;
 
       // On crée d'abord le nœud
       // Note: _nodeId ne doit pas être généré ici, il doit être persistant
@@ -4594,7 +4593,6 @@ function applyScenario(
         'transformations',
       ];
     }
-    resteLot.id = coproductNodeId;
     // Note: _path ne doit plus être stocké
     const nodeName = resteLot.target ? `Reste → ${resteLot.target}` : 'Reste';
     nodes.push({
