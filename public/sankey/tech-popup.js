@@ -800,7 +800,7 @@ class TechPopup {
     if (techDetails.conso !== undefined) {
       tableRows += `<tr class="border-b border-gray-200">
         <td class="py-2 font-medium text-gray-700">${i18next.t('electricalConsumption')}</td>
-        <td class="py-2 text-gray-600">${techDetails.conso} W</td>
+        <td class="py-2 text-gray-600">${techDetails.conso} kWh</td>
       </tr>`;
     }
 
