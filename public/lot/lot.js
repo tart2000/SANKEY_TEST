@@ -976,6 +976,54 @@ function clampPercent(val, min = 1, max = 100) {
   return Math.max(min, Math.min(max, val));
 }
 
+// --- Fonction utilitaire pour normaliser une distribution ---
+function normaliserDistribution(liste) {
+  const keys = Object.keys(liste).filter(k => k !== 'title');
+  if (keys.length === 0) return;
+
+  if (keys.length === 1) {
+    const uniqueKey = keys[0];
+    const item = liste[uniqueKey];
+    if (typeof item === 'object' && item.pourcentage !== undefined) {
+      item.pourcentage = 100;
+    } else {
+      liste[uniqueKey] = 100;
+    }
+    return;
+  }
+
+  let total = 0;
+  const valeurs = keys.map(key => {
+    const item = liste[key];
+    const pct =
+      typeof item === 'object' && item.pourcentage !== undefined
+        ? item.pourcentage
+        : item;
+    total += pct;
+    return { key, pct };
+  });
+
+  if (total === 0) return;
+
+  let cumul = 0;
+  valeurs.forEach((entry, index) => {
+    let pct = (entry.pct * 100) / total;
+    if (index < valeurs.length - 1) {
+      pct = Math.round(pct * 10) / 10;
+      cumul += pct;
+    } else {
+      pct = Math.round((100 - cumul) * 10) / 10;
+    }
+
+    const item = liste[entry.key];
+    if (typeof item === 'object' && item.pourcentage !== undefined) {
+      item.pourcentage = pct;
+    } else {
+      liste[entry.key] = pct;
+    }
+  });
+}
+
 // --- Deep copy utilitaire ---
 function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -1012,22 +1060,7 @@ function supprimerNoeudEtRepartir(niveau) {
   delete liste[keyToDelete];
 
   // Réajuste les pourcentages
-  let total = 0;
-  Object.values(liste).forEach(obj => {
-    if (typeof obj === 'object' && obj.pourcentage !== undefined) {
-      total += obj.pourcentage;
-    } else if (typeof obj === 'number') {
-      total += obj;
-    }
-  });
-  Object.keys(liste).forEach(k => {
-    if (typeof liste[k] === 'object' && liste[k].pourcentage !== undefined) {
-      liste[k].pourcentage =
-        total > 0 ? (liste[k].pourcentage * 100) / total : 0;
-    } else if (typeof liste[k] === 'number') {
-      liste[k] = total > 0 ? (liste[k] * 100) / total : 0;
-    }
-  });
+  normaliserDistribution(liste);
 
   // Tronque le chemin à ce niveau (on garde 0 à N-1)
   cheminSelection = cheminSelection.slice(0, niveau);
@@ -1856,6 +1889,8 @@ function ajouterElementEtRepartir(
     ...donneesBase,
     pourcentage: pourcentage,
   };
+
+  normaliserDistribution(node[dimension]);
   publierEtatLot();
   window.lotCourant = lotCourant;
 }
