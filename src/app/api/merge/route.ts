@@ -126,11 +126,10 @@ export async function POST(request: Request) {
     const lot1 = lot1Result.data as Lot;
     const lot2 = lot2Result.data as Lot;
 
-    const mergedLot = mergeLots([lot1, lot2]);
+    const mergedLot = mergeLots([lot1, lot2]) as Lot;
 
-    if (mergedLot && typeof mergedLot === 'object') {
-      (mergedLot as Record<string, unknown>).title = 'merged';
-    }
+    mergedLot.title = 'merged';
+    mergedLot.frequency = (lot1 as Lot).frequency ?? null;
 
     return buildResponse(mergedLot, 200);
   } catch (err) {
