@@ -23,7 +23,7 @@ export const validators: ValidatorDescriptor[] = [
   },
   {
     id: 'dimensions-hierarchy',
-    label: 'Hiérarchie des dimensions',
+    label: 'Présence de clés non autorisées',
     run: validateDimensions,
   },
 ];

@@ -71,6 +71,7 @@ export const translations = {
       create: 'Créer',
       transformationType: 'Type de transformation',
       selectTransformation: 'Sélectionner une transformation',
+      dynamicTransformationsSeparator: '--- Transformations dynamiques ---',
       noTransformation: 'Aucune transformation',
       // Caractéristiques tech
       rate: 'Débit',
@@ -123,6 +124,7 @@ export const translations = {
       reste: 'Reste',
       viewLot: 'Visualiser le lot',
       transformationDetails: 'Détails de la transformation',
+      generalInfo: 'Informations générales',
       cannotLoadTransformationDetails:
         'Impossible de charger les détails de la transformation',
       errorLoadingTransformationDetails:
@@ -204,6 +206,7 @@ export const translations = {
       create: 'Create',
       transformationType: 'Transformation type',
       selectTransformation: 'Select a transformation',
+      dynamicTransformationsSeparator: '--- Dynamic transformations ---',
       noTransformation: 'No transformation',
       // Tech characteristics
       rate: 'Rate',
@@ -253,6 +256,7 @@ export const translations = {
       reste: 'Remainder',
       viewLot: 'View lot',
       transformationDetails: 'Transformation details',
+      generalInfo: 'General information',
       cannotLoadTransformationDetails: 'Cannot load transformation details',
       errorLoadingTransformationDetails: 'Error loading transformation details',
       updatingTechs: 'Updating techs...',
@@ -332,6 +336,7 @@ export const translations = {
       create: 'Crear',
       transformationType: 'Tipo de transformación',
       selectTransformation: 'Seleccionar una transformación',
+      dynamicTransformationsSeparator: '--- Transformaciones dinámicas ---',
       noTransformation: 'Sin transformación',
       // Características tech
       rate: 'Tasa',
@@ -382,6 +387,7 @@ export const translations = {
       reste: 'Resto',
       viewLot: 'Ver lote',
       transformationDetails: 'Detalles de la transformación',
+      generalInfo: 'Información general',
       cannotLoadTransformationDetails:
         'No se pueden cargar los detalles de la transformación',
       errorLoadingTransformationDetails:
@@ -464,6 +470,7 @@ export const translations = {
       create: 'Erstellen',
       transformationType: 'Transformationstyp',
       selectTransformation: 'Transformation auswählen',
+      dynamicTransformationsSeparator: '--- Dynamische Transformationen ---',
       noTransformation: 'Keine Transformation',
       // Tech characteristics
       rate: 'Rate',
@@ -514,6 +521,7 @@ export const translations = {
       reste: 'Rest',
       viewLot: 'Los anzeigen',
       transformationDetails: 'Transformationsdetails',
+      generalInfo: 'Allgemeine Informationen',
       cannotLoadTransformationDetails:
         'Transformationsdetails können nicht geladen werden',
       errorLoadingTransformationDetails:

@@ -1597,12 +1597,23 @@ const transformationUtils = {
       }))
       .sort((a, b) => a.label.localeCompare(b.label)); // Tri alphabétique par titre
 
+    if (
+      !window.i18nextReady ||
+      !window.i18next ||
+      typeof window.i18next.t !== 'function'
+    ) {
+      console.warn(
+        "[processes] i18next n'est pas initialisé pour le séparateur des transformations dynamiques"
+      );
+      return [...staticTransformations, ...dynamicTransformations];
+    }
+
     // Retourner avec séparateur
     return [
       ...staticTransformations,
       {
         value: 'separator',
-        label: '--- Transformations dynamiques ---',
+        label: window.i18next.t('dynamicTransformationsSeparator'),
         isSeparator: true,
       },
       ...dynamicTransformations,

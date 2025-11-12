@@ -13,6 +13,24 @@ class TransformationPopup {
     this._availableTransformations = null; // Cache local des transformations proposées
   }
 
+  async getI18nInstance(maxAttempts = 60, interval = 50) {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (
+        window.i18nextReady &&
+        window.i18next &&
+        typeof window.i18next.t === 'function'
+      ) {
+        return window.i18next;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+
+    throw new Error(
+      "[transformation-popup] i18next n'est pas prêt après l'attente configurée."
+    );
+  }
+
   getSelectedKeys() {
     return this.selectedKeys;
   }
@@ -1356,6 +1374,8 @@ class TransformationPopup {
 
   // Fonction pour afficher le tableau des détails de transformation
   async displayDynamicTransfoDetails(bubbleId) {
+    const i18nInstance = await this.getI18nInstance();
+
     // Afficher le spinner pendant le chargement
     const transfoTypeSelect = this.modal.querySelector('#transfo-type');
     if (transfoTypeSelect) {
@@ -1372,7 +1392,9 @@ class TransformationPopup {
         <div id="transfo-loading-spinner" class="mt-3 flex items-center justify-center py-8 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div class="text-center">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-            <p class="text-sm text-gray-600">Chargement des détails...</p>
+            <p class="text-sm text-gray-600">${i18nInstance.t(
+              'loadingDetails'
+            )}</p>
           </div>
         </div>
       `;
@@ -1385,10 +1407,10 @@ class TransformationPopup {
         await window.transformationUtils.getDynamicTransfoDetails(bubbleId);
 
       if (!transfoDetails) {
-        console.warn(i18next.t('cannotLoadTransformationDetails'));
+        console.warn(i18nInstance.t('cannotLoadTransformationDetails'));
         // Afficher un message d'avertissement
         this.showTransfoDetailsError(
-          i18next.t('cannotLoadTransformationDetails')
+          i18nInstance.t('cannotLoadTransformationDetails')
         );
         return;
       }
@@ -1426,7 +1448,7 @@ class TransformationPopup {
       );
       // Afficher un message d'erreur
       this.showTransfoDetailsError(
-        'Erreur lors du chargement des détails. Veuillez réessayer.'
+        i18nInstance.t('errorLoadingTransformationDetails')
       );
     } finally {
       // Désactiver le flag de chargement dans tous les cas

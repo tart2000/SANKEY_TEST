@@ -86,6 +86,22 @@ type ValidationIssue = {
 };
 ```
 
+### Détails renvoyés par l’API
+
+Chaque contrôle est résumé dans la réponse via :
+
+```ts
+type CheckDetail = {
+  id: string; // ex: "distributions"
+  label: string; // ex: "Totaux à 100%"
+  status: 'OK' | 'ISSUES'; // succès ou présence d’anomalies
+  severity?: 'critical' | 'warning' | 'info';
+  issues?: ValidationIssue[];
+};
+```
+
+Même sans anomalie, chaque check apparaît avec `status: "OK"` pour confirmer son exécution.
+
 ### `validateRootStructure`
 
 - Vérifie la présence des clés minimales : `title`, `total`, `frequency`, `formats`.
@@ -131,6 +147,7 @@ type ValidationIssue = {
 
 - Les écarts sont arrondis à 2 décimales pour l’affichage.
 - Les niveaux ≤ 1 pp peuvent être ignorés dans le message principal si aucune autre anomalie n’est présente.
+- Si la somme vaut exactement 100 (delta = 0), aucune issue n’est créée.
 
 ### Algorithme de scoring
 
@@ -147,30 +164,32 @@ type ValidationIssue = {
 Pseudo-code :
 
 ```ts
-function buildCheckResponse(issues: ValidationIssue[]) {
-  const buckets = { critical: [], warning: [], info: [] };
-  for (const issue of issues) {
-    buckets[issue.severity].push(issue);
-  }
+function buildCheckResponse(outcomes: ValidatorOutcome[]) {
+  const issues = outcomes.flatMap(outcome => outcome.issues);
 
-  const crit = Math.min(buckets.critical.length, 9);
-  const warn = Math.min(buckets.warning.length, 9);
-  const info = Math.min(buckets.info.length, 9);
+  const crit = Math.min(
+    issues.filter(i => i.severity === 'critical').length,
+    9
+  );
+  const warn = Math.min(issues.filter(i => i.severity === 'warning').length, 9);
+  const info = Math.min(issues.filter(i => i.severity === 'info').length, 9);
 
   const code = `${crit}${warn}${info}`;
+  const message = formatMessage(crit, warn, info);
 
-  let message: string;
-  if (crit > 0) {
-    message = `${buckets.critical.length} anomalie(s) critique(s), corriger avant diffusion`;
-  } else if (warn > 0) {
-    message = `${buckets.warning.length} warning(s), vérifier la cohérence`;
-  } else if (info > 0) {
-    message = `Lot valide avec ${buckets.info.length} remarque(s) mineure(s)`;
-  } else {
-    message = 'Lot valide';
-  }
+  const details = outcomes.map(outcome =>
+    outcome.issues.length === 0
+      ? { id: outcome.id, label: outcome.label, status: 'OK' }
+      : {
+          id: outcome.id,
+          label: outcome.label,
+          status: 'ISSUES',
+          severity: highestSeverity(outcome.issues),
+          issues: outcome.issues,
+        }
+  );
 
-  return { code, message, details: issues };
+  return { code, message, details };
 }
 ```
 
@@ -178,15 +197,106 @@ function buildCheckResponse(issues: ValidationIssue[]) {
 
 1. **Lot valide**
    ```json
-   { "code": "000", "message": "Lot valide", "details": [] }
+   {
+     "code": "000",
+     "message": "Lot valide",
+     "details": [
+       {
+         "id": "root-structure",
+         "label": "Structure haut niveau",
+         "status": "OK"
+       },
+       { "id": "distributions", "label": "Totaux à 100%", "status": "OK" },
+       {
+         "id": "items-structure",
+         "label": "Structure de chaque élément",
+         "status": "OK"
+       },
+       {
+         "id": "dimensions-hierarchy",
+         "label": "Présence de clés non autorisées",
+         "status": "OK"
+       }
+     ]
+   }
    ```
 2. **Lot avec warnings mineurs**
    ```json
-   { "code": "021", "message": "2 warning(s), vérifier la cohérence", "details": [...] }
+   {
+     "code": "021",
+     "message": "2 warning(s), vérifier la cohérence – 0 critiques, 2 warnings, 1 infos",
+     "details": [
+       {
+         "id": "root-structure",
+         "label": "Structure haut niveau",
+         "status": "OK"
+       },
+       {
+         "id": "distributions",
+         "label": "Totaux à 100%",
+         "status": "ISSUES",
+         "severity": "warning",
+         "issues": [
+           /* … */
+         ]
+       },
+       {
+         "id": "items-structure",
+         "label": "Structure de chaque élément",
+         "status": "OK"
+       },
+       {
+         "id": "dimensions-hierarchy",
+         "label": "Présence de clés non autorisées",
+         "status": "ISSUES",
+         "severity": "info",
+         "issues": [
+           /* … */
+         ]
+       }
+     ]
+   }
    ```
 3. **Lot critique**
    ```json
-   { "code": "310", "message": "3 anomalie(s) critique(s), corriger avant diffusion", "details": [...] }
+   {
+     "code": "310",
+     "message": "3 anomalie(s) critique(s), corriger avant diffusion – 3 critiques, 1 warnings, 0 infos",
+     "details": [
+       {
+         "id": "root-structure",
+         "label": "Structure haut niveau",
+         "status": "ISSUES",
+         "severity": "critical",
+         "issues": [
+           /* … */
+         ]
+       },
+       {
+         "id": "distributions",
+         "label": "Totaux à 100%",
+         "status": "ISSUES",
+         "severity": "critical",
+         "issues": [
+           /* … */
+         ]
+       },
+       {
+         "id": "items-structure",
+         "label": "Structure de chaque élément",
+         "status": "ISSUES",
+         "severity": "warning",
+         "issues": [
+           /* … */
+         ]
+       },
+       {
+         "id": "dimensions-hierarchy",
+         "label": "Présence de clés non autorisées",
+         "status": "OK"
+       }
+     ]
+   }
    ```
 
 ## Gestion des erreurs techniques
