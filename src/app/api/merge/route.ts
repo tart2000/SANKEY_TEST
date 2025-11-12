@@ -103,17 +103,35 @@ export async function POST(request: Request) {
     ]);
 
     if (!isBetween(lot1Result.status, 200, 299)) {
-      return buildResponse(lot1Result.data, lot1Result.status);
+      return buildResponse(
+        {
+          error: "Impossible de charger le lot d'origine",
+          message:
+            'Bubble a renvoyé une erreur en récupérant le lot lié à id1.',
+          bubbleResponse: lot1Result.data,
+        },
+        lot1Result.status
+      );
     }
 
     if (!isBetween(lot2Result.status, 200, 299)) {
-      return buildResponse(lot2Result.data, lot2Result.status);
+      return buildResponse(
+        {
+          error: 'Impossible de charger le lot à fusionner',
+          message:
+            'Bubble a renvoyé une erreur en récupérant le lot lié à id2.',
+          bubbleResponse: lot2Result.data,
+        },
+        lot2Result.status
+      );
     }
 
     if (!isRecord(lot1Result.data) || !isRecord(lot2Result.data)) {
       return buildResponse(
         {
-          error: 'Réponse inattendue de Bubble lors du chargement des lots',
+          error: 'Le format du lot renvoyé par Bubble est inattendu',
+          message:
+            "Bubble n'a pas renvoyé un objet lot exploitable. Vérifiez que le workflow renvoie bien le JSON complet.",
           details: {
             lot1: lot1Result.data,
             lot2: lot2Result.data,
