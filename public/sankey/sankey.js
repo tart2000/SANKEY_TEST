@@ -4437,7 +4437,13 @@ function applyScenario(
           }
 
           // ← NOUVEAU : Ajouter le titre et la step de la transformation
-          transfo.title = transfoDetails.title || 'Transformation dynamique';
+          const params = getUrlParams();
+          const lang = params.lang || 'fr_fr';
+          const dynamicTitle =
+            lang === 'en_gb' && transfoDetails?.en_gb
+              ? transfoDetails.en_gb
+              : transfoDetails.title;
+          transfo.title = dynamicTitle || 'Transformation dynamique';
           if (transfoDetails.step) {
             transfo.step = transfoDetails.step; // garantit l'icône correcte
           } else if (!transfo.step) {

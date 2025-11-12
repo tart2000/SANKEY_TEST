@@ -1437,9 +1437,16 @@ async function loadDynamicTransformations() {
 
     // Mettre en cache SEULEMENT la liste (sans détails)
     Object.entries(data).forEach(([title, transfo]) => {
+      const titleEn =
+        transfo.en_gb ||
+        transfo.title_en ||
+        (transfo.translations && transfo.translations.en_gb) ||
+        title;
+
       dynamicTransfosCache.set(transfo.bubble_id, {
         ...transfo,
-        title: title,
+        title,
+        en_gb: titleEn,
       });
     });
 
@@ -1582,6 +1589,7 @@ const transformationUtils = {
       .map(transfo => ({
         value: `dynamic_transfo_${transfo.bubble_id}`,
         label: transfo.title,
+        en_gb: transfo.en_gb || transfo.title,
         description: `Transformation dynamique: ${transfo.step}`,
         isDynamic: true,
         bubbleId: transfo.bubble_id,

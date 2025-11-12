@@ -10,6 +10,7 @@ class TransformationPopup {
     this.selectedKeys = []; // Pour stocker les keys sélectionnées
     this.isLoadingData = false; // Flag pour tracker le chargement des données API
     this._selectedDynamic = null; // Informations sur la transformation dynamique sélectionnée
+    this._availableTransformations = null; // Cache local des transformations proposées
   }
 
   getSelectedKeys() {
@@ -20,6 +21,7 @@ class TransformationPopup {
     // TransformationPopup.show called
     this.currentRef = ref;
     this.mode = mode;
+    this._availableTransformations = null;
     this.createPopup(ref);
     // Ne pas appeler attachEventListeners ici, on le fera dans createPopupWithKeyList si nécessaire
   }
@@ -309,6 +311,8 @@ class TransformationPopup {
 
     // Utiliser directement les transformations passées en paramètre
     if (transformations && transformations.length > 0) {
+      this._availableTransformations = transformations;
+      this._availableTransformations = transformations;
       // Récupérer la langue depuis les paramètres URL
       const params = getUrlParams();
       const lang = params.lang || 'fr';
@@ -418,6 +422,7 @@ class TransformationPopup {
       // Charger les transformations disponibles
       // const transformations = await window.transformationUtils.getAvailableTransformations(); // This line is now redundant as transformations are passed as an argument
 
+      this._availableTransformations = transformations;
       // Générer les options du select
       let options = '';
       if (!lastType) {
@@ -661,7 +666,11 @@ class TransformationPopup {
     // Charger immédiatement les détails si une transformation dynamique est déjà sélectionnée
     const initialType = transfoTypeSelect.value;
     const existingTransfo = this.currentRef?.transformation;
-    if (initialType && initialType.startsWith('dynamic_transfo_')) {
+    if (
+      initialType &&
+      (initialType.startsWith('dynamic_transfo_') ||
+        initialType === 'dynamic_transfo')
+    ) {
       const existingMeta =
         existingTransfo && existingTransfo.type
           ? {
@@ -687,6 +696,16 @@ class TransformationPopup {
 
     saveBtn.onclick = () => {
       const selectedType = transfoTypeSelect.value;
+      const selectedMeta =
+        this._availableTransformations?.find(
+          transfo => transfo.value === selectedType
+        ) || null;
+      const params = getUrlParams();
+      const lang = params.lang || 'fr_fr';
+      const currentTransfo =
+        this.currentRef?.transformation && this.currentRef.transformation.type
+          ? this.currentRef.transformation
+          : null;
       let transformation;
 
       // ← NOUVEAU : Détecter si c'est une transformation dynamique
@@ -711,6 +730,12 @@ class TransformationPopup {
           // Enregistrer explicitement la step pour l'icône
           step: this._selectedDynamic?.step || 'sorting',
         };
+        if (lang === 'en_gb' && selectedMeta) {
+          transformation.title =
+            selectedMeta.en_gb || selectedMeta.label || bubbleId;
+        } else if (currentTransfo?.title) {
+          transformation.title = currentTransfo.title;
+        }
       } else {
         // ← EXISTANT : Logique pour les transformations statiques
         const selectedIds = this.selectedKeys.map(k => k.id);
