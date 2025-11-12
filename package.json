@@ -13,7 +13,7 @@
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
     "check": "npm run lint && npm run type-check",
-    "test": "node --test tests/**/*.test.js",
+    "test": "tsx --test tests/**/*.test.ts tests/**/*.test.js",
     "prebuild": "npm run check",
     "prepare": "husky"
   },
@@ -41,6 +41,7 @@
     "eslint-config-next": "15.3.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
+    "tsx": "^4.19.2",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.11",

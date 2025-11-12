@@ -138,3 +138,45 @@ export async function callBubble({
     });
   }
 }
+
+const isSuccessStatus = (status: number) => status >= 200 && status < 300;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export async function fetchBubbleLot({
+  id,
+  isLive,
+}: {
+  id: string;
+  isLive: boolean;
+}): Promise<Record<string, unknown>> {
+  const { status, data } = await callBubble({
+    endpoint: 'lot',
+    params: { id, isLive },
+    method: 'POST',
+  });
+
+  if (!isSuccessStatus(status)) {
+    throw new BubbleClientError(
+      'Impossible de récupérer le lot via Bubble',
+      status,
+      data
+    );
+  }
+
+  if (!isRecord(data)) {
+    throw new BubbleClientError(
+      'Format de lot renvoyé par Bubble inattendu',
+      502,
+      {
+        error: 'Lot invalide',
+        details:
+          'Bubble doit renvoyer un objet JSON représentant le lot complet.',
+        bubbleResponse: data,
+      }
+    );
+  }
+
+  return data;
+}
