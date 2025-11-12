@@ -68,8 +68,8 @@ export const createCheckHandler =
     try {
       const lot = await fetchBubbleLot({ id, isLive: isLiveValue });
       const hierarchy = getDimensionHierarchy();
-      const issues = runValidators(lot, { dimensionHierarchy: hierarchy });
-      const result = buildCheckResponse(issues);
+      const outcomes = runValidators(lot, { dimensionHierarchy: hierarchy });
+      const result = buildCheckResponse(outcomes);
 
       return buildResponse(result, 200, result.code);
     } catch (error) {

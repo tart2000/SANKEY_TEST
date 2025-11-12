@@ -1,8 +1,12 @@
-import type { CheckContext, ValidationIssue } from './types';
+import type { CheckContext, ValidatorOutcome } from './types';
 import { validators } from './validators';
 
 export const runValidators = (
   lot: Record<string, unknown>,
   context: CheckContext
-): ValidationIssue[] =>
-  validators.flatMap(validator => validator(lot, context));
+): ValidatorOutcome[] =>
+  validators.map(({ id, label, run }) => ({
+    id,
+    label,
+    issues: run(lot, context),
+  }));

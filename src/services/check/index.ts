@@ -6,4 +6,5 @@ export type {
   DimensionHierarchy,
   Severity,
   ValidationIssue,
+  ValidatorOutcome,
 } from './types';

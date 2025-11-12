@@ -26,3 +26,15 @@ export type Validator = (
   lot: Record<string, unknown>,
   context: CheckContext
 ) => ValidationIssue[];
+
+export type ValidatorDescriptor = {
+  id: string;
+  label: string;
+  run: Validator;
+};
+
+export type ValidatorOutcome = {
+  id: string;
+  label: string;
+  issues: ValidationIssue[];
+};

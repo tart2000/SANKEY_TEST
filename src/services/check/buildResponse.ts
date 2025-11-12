@@ -1,4 +1,4 @@
-import type { ValidationIssue } from './types';
+import type { Severity, ValidationIssue, ValidatorOutcome } from './types';
 
 const MAX_PER_BUCKET = 9;
 
@@ -21,10 +21,43 @@ const formatMessage = (crit: number, warn: number, info: number): string => {
 export type CheckResult = {
   code: string;
   message: string;
-  details: ValidationIssue[];
+  details: CheckDetail[];
 };
 
-export const buildCheckResponse = (issues: ValidationIssue[]): CheckResult => {
+export type CheckDetail = {
+  id: string;
+  label: string;
+  status: 'OK' | 'ISSUES';
+  severity?: Severity;
+  issues?: ValidationIssue[];
+};
+
+const severityRank: Record<Severity, number> = {
+  critical: 3,
+  warning: 2,
+  info: 1,
+};
+
+const getHighestSeverity = (
+  issues: ValidationIssue[]
+): Severity | undefined => {
+  if (issues.length === 0) {
+    return undefined;
+  }
+
+  return issues.reduce<Severity>((acc, issue) => {
+    if (severityRank[issue.severity] > severityRank[acc]) {
+      return issue.severity;
+    }
+    return acc;
+  }, issues[0].severity);
+};
+
+export const buildCheckResponse = (
+  outcomes: ValidatorOutcome[]
+): CheckResult => {
+  const issues = outcomes.flatMap(outcome => outcome.issues);
+
   const counts = {
     critical: issues.filter(issue => issue.severity === 'critical').length,
     warning: issues.filter(issue => issue.severity === 'warning').length,
@@ -50,9 +83,27 @@ export const buildCheckResponse = (issues: ValidationIssue[]): CheckResult => {
       ? baseMessage
       : `${baseMessage} – ${summary}`;
 
+  const details: CheckDetail[] = outcomes.map(outcome => {
+    if (outcome.issues.length === 0) {
+      return {
+        id: outcome.id,
+        label: outcome.label,
+        status: 'OK',
+      };
+    }
+
+    return {
+      id: outcome.id,
+      label: outcome.label,
+      status: 'ISSUES',
+      severity: getHighestSeverity(outcome.issues),
+      issues: outcome.issues,
+    };
+  });
+
   return {
     code,
     message,
-    details: issues,
+    details,
   };
 };
