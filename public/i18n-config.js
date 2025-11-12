@@ -161,7 +161,7 @@ window.i18nConfig = {
         selectTransformation: 'Select a transformation',
         dynamicTransformationsSeparator: '--- Dynamic transformations ---',
         noTransformation: 'No transformation',
-        rate: 'Rate :',
+        rate: 'Flow rate :',
         electricalConsumption: 'Electrical consumption',
         laborProfiles: 'Labor profiles',
         hoursPerUnit: 'h/unit',

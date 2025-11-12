@@ -725,6 +725,11 @@
             Math.max(MIN_H, realContentHeight + SAFETY)
           );
 
+          if (height < 500) {
+            console.log('[Height] Mesure ignorée (<500px):', height);
+            return;
+          }
+
           // Éviter d'envoyer la même hauteur plusieurs fois (évite les boucles)
           if (Math.abs(height - lastReportedHeight) < 10) {
             return; // Pas de changement significatif
