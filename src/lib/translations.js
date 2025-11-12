@@ -31,7 +31,7 @@ export const translations = {
       moveDown: 'Descendre',
       delete: 'Effacer',
       // Volet de synthèse des coûts
-      totalCostsTitle: 'Coûts totaux du scénario',
+      totalCostsTitle: 'Coûts du scénario',
       totalCost: 'Coût total',
       totalTime: 'Temps total',
       totalOperationTime: "Temps total d'opération",
@@ -47,6 +47,7 @@ export const translations = {
       amortization: 'Amortissement',
       otherCosts: 'Autres coûts',
       consumables: 'Consommables',
+      toolsAssignedLabel: 'outils assignés',
       loadingDetails: 'Chargement des détails...',
       // Popup Tech
       addTool: 'Ajouter un outil',
@@ -163,7 +164,7 @@ export const translations = {
       moveDown: 'Move down',
       delete: 'Delete',
       // Volet de synthèse des coûts
-      totalCostsTitle: 'Total scenario costs',
+      totalCostsTitle: 'Scenario costs',
       totalCost: 'Total cost',
       totalTime: 'Total time',
       totalOperationTime: 'Total operation time',
@@ -179,6 +180,7 @@ export const translations = {
       amortization: 'Amortization',
       otherCosts: 'Other costs',
       consumables: 'Consumables',
+      toolsAssignedLabel: 'tools assigned',
       loadingDetails: 'Loading details...',
       // Popup Tech
       addTool: 'Add tool',
@@ -290,7 +292,7 @@ export const translations = {
       moveDown: 'Bajar',
       delete: 'Eliminar',
       // Volet de synthèse des coûts
-      totalCostsTitle: 'Costos totales del escenario',
+      totalCostsTitle: 'Costos del escenario',
       totalCost: 'Costo total',
       totalTime: 'Tiempo total',
       totalOperationTime: 'Tiempo total de operación',
@@ -306,6 +308,7 @@ export const translations = {
       amortization: 'Amortización',
       otherCosts: 'Otros costos',
       consumables: 'Consumibles',
+      toolsAssignedLabel: 'herramientas asignadas',
       loadingDetails: 'Cargando detalles...',
       // Popup Tech
       addTool: 'Añadir herramienta',
@@ -421,7 +424,7 @@ export const translations = {
       moveDown: 'Nach unten',
       delete: 'Löschen',
       // Volet de synthèse des coûts
-      totalCostsTitle: 'Gesamtkosten des Szenarios',
+      totalCostsTitle: 'Kosten des Szenarios',
       totalCost: 'Gesamtkosten',
       totalTime: 'Gesamtzeit',
       totalOperationTime: 'Gesamte Betriebszeit',
@@ -437,6 +440,7 @@ export const translations = {
       amortization: 'Abschreibung',
       otherCosts: 'Sonstige Kosten',
       consumables: 'Verbrauchsmaterialien',
+      toolsAssignedLabel: 'zugewiesene Werkzeuge',
       loadingDetails: 'Details werden geladen...',
       // Popup Tech
       addTool: 'Werkzeug hinzufügen',

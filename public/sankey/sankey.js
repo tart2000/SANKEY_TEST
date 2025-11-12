@@ -4985,6 +4985,9 @@ function calculateCosts(nodes, links) {
   let totalConsumablesCost = 0;
   let totalEquipmentTime = 0;
   let nodeCosts = [];
+  const uniqueTransformations = new Map();
+  let totalTransformationsCount = 0;
+  let assignedToolsCount = 0;
 
   // ← NOUVEAU : Validation des données de base
   if (!window.teamData || !window.teamData.profils) {
@@ -5012,12 +5015,39 @@ function calculateCosts(nodes, links) {
     ) {
       // Parcourir TOUTES les transformations du nœud, pas seulement la dernière
       node.transformations_appliquees.forEach(transformation => {
-        if (
-          transformation &&
+        if (!transformation) {
+          return;
+        }
+
+        const transformationId =
+          transformation._nodeId != null
+            ? String(transformation._nodeId)
+            : `missing-${uniqueTransformations.size + 1}`;
+        const hasAssignedTech = !!(
           transformation.tech &&
+          (transformation.tech.details || transformation.tech.bubble_id)
+        );
+
+        if (!uniqueTransformations.has(transformationId)) {
+          uniqueTransformations.set(transformationId, {
+            hasAssignedTech,
+          });
+          totalTransformationsCount += 1;
+          if (hasAssignedTech) {
+            assignedToolsCount += 1;
+          }
+        } else if (
+          hasAssignedTech &&
+          !uniqueTransformations.get(transformationId).hasAssignedTech
+        ) {
+          uniqueTransformations.get(transformationId).hasAssignedTech = true;
+          assignedToolsCount += 1;
+        }
+
+        if (
+          hasAssignedTech &&
           transformation.tech.details &&
-          transformation._nodeId && // S'assurer qu'on a un _nodeId unique
-          !transformationsTraitees.has(transformation._nodeId) // Éviter les doublons
+          !transformationsTraitees.has(transformationId) // Éviter les doublons
         ) {
           // Créer une transformation avec le volume du lot d'entrée correct
           const transformationWithVolume = {
@@ -5074,7 +5104,7 @@ function calculateCosts(nodes, links) {
             });
 
             // Marquer cette transformation comme traitée
-            transformationsTraitees.add(transformation._nodeId);
+            transformationsTraitees.add(transformationId);
           }
         }
       });
@@ -5091,6 +5121,8 @@ function calculateCosts(nodes, links) {
     totalConsumablesCost,
     totalEquipmentTime,
     nodeCosts,
+    totalTransformationsCount,
+    assignedToolsCount,
   };
 }
 
@@ -5169,8 +5201,29 @@ function displayCostsTable(costsData) {
     }
   }
 
+  const totalTransformations = costsData.totalTransformationsCount || 0;
+  const assignedTools = costsData.assignedToolsCount || 0;
+  const progressPercent =
+    totalTransformations > 0
+      ? Math.min(100, Math.round((assignedTools / totalTransformations) * 100))
+      : 0;
+
+  const headerHtml = `
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-800">${i18next.t('totalCostsTitle')}</h3>
+      <div class="flex flex-col gap-1 md:items-end">
+        <span class="text-sm font-medium text-gray-600 md:text-right">
+          ${assignedTools}/${totalTransformations} ${i18next.t('toolsAssignedLabel')}
+        </span>
+        <div class="w-full md:w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-500 transition-all" style="width: ${progressPercent}%;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
   const tableHTML = `
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">${i18next.t('totalCostsTitle')}</h3>
+    ${headerHtml}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
       <!-- Colonne 1: Total Cost + Total operation time -->
       <div class="bg-blue-50 p-4 rounded-lg">
