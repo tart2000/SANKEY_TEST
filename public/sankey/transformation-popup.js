@@ -186,18 +186,6 @@ class TransformationPopup {
 
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
-      ${
-        this.mode === 'edit' && ref.transformation && ref.transformation._path
-          ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
-          ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
-         </div>`
-          : this.mode === 'add'
-            ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(ref.path)}</div>
-         </div>`
-            : ''
-      }
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
@@ -360,18 +348,6 @@ class TransformationPopup {
 
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
-      ${
-        this.mode === 'edit' && ref.transformation && ref.transformation._path
-          ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
-          ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
-         </div>`
-          : this.mode === 'add'
-            ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(ref.path)}</div>
-         </div>`
-            : ''
-      }
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
@@ -474,18 +450,6 @@ class TransformationPopup {
 
       this.modal.innerHTML = `
         <h3 class="text-lg font-semibold mb-2">${title}</h3>
-        ${
-          this.mode === 'edit' && ref.transformation && ref.transformation._path
-            ? `<div class="text-xs text-gray-500 mb-4">
-            <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
-            ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
-           </div>`
-            : this.mode === 'add'
-              ? `<div class="text-xs text-gray-500 mb-4">
-            <div>Path: ${JSON.stringify(ref.path)}</div>
-           </div>`
-              : ''
-        }
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
