@@ -155,8 +155,6 @@
           matieres: {},
           couleurs: {},
           perturbateurs: {},
-          qualites: {},
-          propres: {},
         };
         if (typeColor) result.formats[format].types[type].color = typeColor;
 
@@ -384,86 +382,7 @@
         }
 
         // Qualités pour ce type
-        const qualitesInType = new Set();
-        lots.forEach(lot => {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].qualites
-          ) {
-            Object.keys(lot.formats[format].types[type].qualites).forEach(
-              qualite => qualitesInType.add(qualite)
-            );
-          }
-        });
-
-        qualitesInType.forEach(qualite => {
-          if (!masses.qualites[qualite]) return;
-          // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-          let qualiteColor = null;
-          for (const lot of lots) {
-            if (
-              lot.formats &&
-              lot.formats[format] &&
-              lot.formats[format].types[type] &&
-              lot.formats[format].types[type].qualites[qualite] &&
-              lot.formats[format].types[type].qualites[qualite].color
-            ) {
-              qualiteColor =
-                lot.formats[format].types[type].qualites[qualite].color;
-              break; // Prendre la première couleur trouvée
-            }
-          }
-
-          result.formats[format].types[type].qualites[qualite] = {
-            pourcentage: (masses.qualites[qualite] / masses.types[type]) * 100,
-          };
-          if (qualiteColor)
-            result.formats[format].types[type].qualites[qualite].color =
-              qualiteColor;
-        });
-
-        // Propres pour ce type
-        const propresInType = new Set();
-        lots.forEach(lot => {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].propres
-          ) {
-            Object.keys(lot.formats[format].types[type].propres).forEach(
-              propre => propresInType.add(propre)
-            );
-          }
-        });
-
-        propresInType.forEach(propre => {
-          if (!masses.propres[propre]) return;
-          // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-          let propreColor = null;
-          for (const lot of lots) {
-            if (
-              lot.formats &&
-              lot.formats[format] &&
-              lot.formats[format].types[type] &&
-              lot.formats[format].types[type].propres[propre] &&
-              lot.formats[format].types[type].propres[propre].color
-            ) {
-              propreColor =
-                lot.formats[format].types[type].propres[propre].color;
-              break; // Prendre la première couleur trouvée
-            }
-          }
-
-          result.formats[format].types[type].propres[propre] = {
-            pourcentage: (masses.propres[propre] / masses.types[type]) * 100,
-          };
-          if (propreColor)
-            result.formats[format].types[type].propres[propre].color =
-              propreColor;
-        });
+        // Pas de création de clés qualites/propres à ce niveau : ces dimensions existent uniquement au niveau racine.
       });
     });
 
