@@ -90,24 +90,34 @@ const traverseCollection = (
   }
 
   const delta = sum - 100;
+  const roundedDelta = Number(delta.toFixed(2));
+
+  if (roundedDelta === 0) {
+    return;
+  }
+
   const deltaResult = evaluateDelta(delta);
 
   if (!deltaResult) {
     return;
   }
 
+  const roundedSum = Number(sum.toFixed(2));
+
   issues.push({
     path: toPath(path),
     expected: 'Somme des pourcentages = 100',
-    found: Number(sum.toFixed(2)),
+    found: roundedSum,
     severity: deltaResult.severity,
     context: {
-      delta: Number(delta.toFixed(2)),
+      delta: roundedDelta,
     },
     suggestion:
       deltaResult.severity === 'critical'
         ? 'Rééquilibrer la répartition avant publication'
-        : 'Ajuster les pourcentages pour améliorer la cohérence',
+        : deltaResult.severity === 'warning'
+          ? 'Ajuster les pourcentages pour améliorer la cohérence'
+          : undefined,
   });
 };
 
