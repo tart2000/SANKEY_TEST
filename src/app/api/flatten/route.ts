@@ -339,14 +339,15 @@ const flattenDimension = (
     // Calculer le poids total fusionné (en poids absolu)
     const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
 
-    // Calculer le nouveau pourcentage par rapport au parent
-    // totalWeight est en poids absolu, parentPercentage est en pourcentage
-    // Si parentPercentage = 100% et totalWeight = 66.66, alors newPercentage = 66.66%
-    // Mais attention : totalWeight = (parentPercentage * elementPercentage) / 100
-    // Donc si on a deux éléments à 33.33% chacun : totalWeight = 33.33 + 33.33 = 66.66
-    // Et newPercentage = (66.66 / 100) * 100 = 66.66%, ce qui est correct
-    const newPercentage =
-      parentPercentage > 0 ? (totalWeight / parentPercentage) * 100 : 0;
+    // Calculer le nouveau pourcentage : somme des pourcentages originaux
+    // Si on fusionne deux éléments à 33.33% chacun, le nouveau pourcentage est 66.66%
+    const newPercentage = entries.reduce((sum, entry) => {
+      const pct =
+        typeof entry.value.pourcentage === 'number'
+          ? entry.value.pourcentage
+          : 0;
+      return sum + pct;
+    }, 0);
 
     // Créer l'objet fusionné en copiant les propriétés de base du premier élément
     // (mais pas les dimensions enfants, on va les fusionner séparément)
