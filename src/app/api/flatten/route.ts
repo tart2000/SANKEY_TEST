@@ -82,22 +82,150 @@ const fetchLotRaw = async (
     );
   }
 
-  // Parser le JSON brut en préservant les clés dupliquées
-  // On utilise une approche simple : parser le JSON normalement avec JSON.parse()
-  // puis détecter les clés dupliquées dans le texte brut et les grouper
+  // Parser le JSON manuellement en préservant les clés dupliquées à tous les niveaux
+  const parseJSONWithDuplicates = (jsonText: string): unknown => {
+    let pos = 0;
 
-  // D'abord, parser normalement pour avoir une structure valide
+    const skipWhitespace = () => {
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+    };
+
+    const parseString = (): string => {
+      pos++; // Skip opening quote
+      let str = '';
+      while (pos < jsonText.length && jsonText[pos] !== '"') {
+        if (jsonText[pos] === '\\') {
+          pos++;
+          if (pos < jsonText.length) {
+            if (jsonText[pos] === 'n') str += '\n';
+            else if (jsonText[pos] === 't') str += '\t';
+            else if (jsonText[pos] === 'r') str += '\r';
+            else if (jsonText[pos] === '\\') str += '\\';
+            else if (jsonText[pos] === '"') str += '"';
+            else str += jsonText[pos];
+            pos++;
+          }
+        } else {
+          str += jsonText[pos++];
+        }
+      }
+      pos++; // Skip closing quote
+      return str;
+    };
+
+    const parseArray = (): unknown[] => {
+      pos++; // Skip '['
+      const arr: unknown[] = [];
+      skipWhitespace();
+
+      while (pos < jsonText.length && jsonText[pos] !== ']') {
+        arr.push(parseValue());
+        skipWhitespace();
+        if (jsonText[pos] === ',') {
+          pos++;
+          skipWhitespace();
+        }
+      }
+      pos++; // Skip ']'
+      return arr;
+    };
+
+    const parseObject = (): Record<string, unknown> => {
+      pos++; // Skip '{'
+      const obj: Record<string, unknown[]> = {}; // Utiliser des tableaux pour stocker les valeurs
+
+      skipWhitespace();
+
+      while (pos < jsonText.length && jsonText[pos] !== '}') {
+        const key = parseString();
+        skipWhitespace();
+        if (jsonText[pos] !== ':') throw new Error('Expected :');
+        pos++;
+        skipWhitespace();
+        const value = parseValue();
+
+        // Stocker toutes les valeurs pour cette clé (même si dupliquée)
+        if (!obj[key]) {
+          obj[key] = [];
+        }
+        obj[key].push(value);
+
+        skipWhitespace();
+        if (jsonText[pos] === ',') {
+          pos++;
+          skipWhitespace();
+        }
+      }
+      pos++; // Skip '}'
+
+      // Convertir les tableaux de longueur 1 en valeurs simples
+      const result: Record<string, unknown> = {};
+      Object.entries(obj).forEach(([k, values]) => {
+        result[k] = values.length === 1 ? values[0] : values;
+      });
+
+      return result;
+    };
+
+    const parseValue = (): unknown => {
+      skipWhitespace();
+
+      if (pos >= jsonText.length) {
+        throw new Error('Unexpected end of JSON');
+      }
+
+      if (jsonText[pos] === '{') {
+        return parseObject();
+      } else if (jsonText[pos] === '[') {
+        return parseArray();
+      } else if (jsonText[pos] === '"') {
+        return parseString();
+      } else if (
+        jsonText[pos] === 't' &&
+        jsonText.substring(pos, pos + 4) === 'true'
+      ) {
+        pos += 4;
+        return true;
+      } else if (
+        jsonText[pos] === 'f' &&
+        jsonText.substring(pos, pos + 5) === 'false'
+      ) {
+        pos += 5;
+        return false;
+      } else if (
+        jsonText[pos] === 'n' &&
+        jsonText.substring(pos, pos + 4) === 'null'
+      ) {
+        pos += 4;
+        return null;
+      } else {
+        // Nombre
+        let numStr = '';
+        while (pos < jsonText.length && /[\d.eE+-]/.test(jsonText[pos])) {
+          numStr += jsonText[pos++];
+        }
+        return parseFloat(numStr);
+      }
+    };
+
+    skipWhitespace();
+    return parseValue();
+  };
+
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(text) as Record<string, unknown>;
+    parsed = parseJSONWithDuplicates(text) as Record<string, unknown>;
   } catch (parseError) {
-    // Si le JSON est invalide, essayer de réparer les clés dupliquées
-    // en les convertissant en tableaux avant de parser
-    throw new BubbleClientError('Erreur lors du parsing JSON', 502, {
-      error: 'JSON invalide',
-      message:
-        parseError instanceof Error ? parseError.message : String(parseError),
-    });
+    // Fallback sur JSON.parse si le parsing manuel échoue
+    try {
+      parsed = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new BubbleClientError('Erreur lors du parsing JSON', 502, {
+        error: 'JSON invalide',
+        message:
+          parseError instanceof Error ? parseError.message : String(parseError),
+      });
+    }
   }
 
   if (!isRecord(parsed)) {
@@ -113,93 +241,7 @@ const fetchLotRaw = async (
     );
   }
 
-  // Pour détecter les clés dupliquées, on va chercher toutes les occurrences de chaque clé
-  // au niveau où elle apparaît dans le JSON parsé
-  // On utilise une approche simple : chercher dans le texte brut toutes les occurrences
-  // de chaque clé de dimension, puis extraire les objets correspondants
-
-  // Fonction récursive pour traiter un objet et détecter les clés dupliquées
-  const processObject = (
-    obj: Record<string, unknown>,
-    path: string[]
-  ): Record<string, unknown> => {
-    const result: Record<string, unknown> = {};
-
-    Object.entries(obj).forEach(([key, value]) => {
-      // Conserver les clés spéciales
-      if (key === 'title' || key === 'total' || key === 'frequency') {
-        result[key] = value;
-        return;
-      }
-
-      if (isRecord(value)) {
-        // Chercher toutes les occurrences de cette clé dans le texte brut
-        // Pattern simple : "key": {
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const keyPattern = new RegExp(`"${escapedKey}"\\s*:\\s*\\{`, 'g');
-        const allMatches = [...text.matchAll(keyPattern)];
-
-        // Filtrer les matches pour ne garder que ceux qui sont au bon niveau
-        // (en vérifiant le contexte avant dans le texte)
-        const relevantMatches = allMatches.filter(match => {
-          if (match.index === undefined) return false;
-
-          // Vérifier qu'on est bien dans le bon contexte
-          // Pour le niveau racine, on cherche directement après "formats": { ou "qualite": { etc.
-          // Pour les niveaux enfants, c'est plus complexe, mais on va accepter tous les matches
-          // et laisser le groupement par bubble_id faire le travail
-          return true;
-        });
-
-        if (relevantMatches.length > 1) {
-          // Clé dupliquée détectée : extraire toutes les valeurs
-          const values: unknown[] = [];
-
-          relevantMatches.forEach(match => {
-            if (match.index !== undefined) {
-              try {
-                const objStart = match.index + match[0].length - 1;
-                let depth = 1;
-                let objEnd = objStart;
-
-                while (objEnd < text.length && depth > 0) {
-                  if (text[objEnd] === '{') depth++;
-                  else if (text[objEnd] === '}') depth--;
-                  objEnd++;
-                }
-
-                const objText = text.substring(objStart, objEnd);
-                const parsedObj = JSON.parse(objText) as Record<
-                  string,
-                  unknown
-                >;
-                values.push(parsedObj);
-              } catch {
-                // Ignorer les erreurs d'extraction
-              }
-            }
-          });
-
-          if (values.length > 1) {
-            // Plusieurs valeurs trouvées : les stocker comme tableau
-            result[key] = values;
-          } else {
-            // Une seule valeur ou aucune : traiter récursivement
-            result[key] = processObject(value, [...path, key]);
-          }
-        } else {
-          // Pas de doublons détectés : traiter récursivement
-          result[key] = processObject(value, [...path, key]);
-        }
-      } else {
-        result[key] = value;
-      }
-    });
-
-    return result;
-  };
-
-  return processObject(parsed, []);
+  return parsed;
 };
 
 /**
