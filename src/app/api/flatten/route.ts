@@ -83,253 +83,113 @@ const fetchLotRaw = async (
   }
 
   // Parser le JSON brut en préservant les clés dupliquées
-  // On doit parser manuellement pour détecter les clés dupliquées avant JSON.parse()
-  // qui les perdrait
+  // On utilise une approche simple : parser le JSON normalement avec JSON.parse()
+  // puis détecter les clés dupliquées dans le texte brut et les grouper
 
-  // Fonction récursive pour parser un objet JSON en préservant les clés dupliquées
-  const parseObjectWithDuplicates = (
-    jsonText: string,
-    startPos: number
-  ): { obj: unknown; endPos: number } => {
-    let pos = startPos;
-    const result: Record<string, unknown[]> = {}; // Utiliser des tableaux pour stocker les valeurs dupliquées
+  // D'abord, parser normalement pour avoir une structure valide
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(text) as Record<string, unknown>;
+  } catch (parseError) {
+    // Si le JSON est invalide, essayer de réparer les clés dupliquées
+    // en les convertissant en tableaux avant de parser
+    throw new BubbleClientError('Erreur lors du parsing JSON', 502, {
+      error: 'JSON invalide',
+      message:
+        parseError instanceof Error ? parseError.message : String(parseError),
+    });
+  }
 
-    // Ignorer les espaces
-    while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-    if (jsonText[pos] !== '{') {
-      throw new Error('Expected {');
-    }
-    pos++; // Skip '{'
+  if (!isRecord(parsed)) {
+    throw new BubbleClientError(
+      'Format de lot renvoyé par Bubble inattendu',
+      502,
+      {
+        error: 'Lot invalide',
+        details:
+          'Bubble doit renvoyer un objet JSON représentant le lot complet.',
+        bubbleResponse: parsed,
+      }
+    );
+  }
 
-    while (pos < jsonText.length) {
-      // Ignorer les espaces
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+  // Maintenant, détecter les clés dupliquées dans le texte brut pour les dimensions
+  // On va parser récursivement les dimensions pour détecter les doublons
+  const processDimensionForDuplicates = (
+    obj: Record<string, unknown>,
+    dimensionPath: string[]
+  ): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
 
-      if (jsonText[pos] === '}') {
-        pos++;
-        break;
+    Object.entries(obj).forEach(([key, value]) => {
+      if (key === 'title' || key === 'total' || key === 'frequency') {
+        result[key] = value;
+        return;
       }
 
-      // Parser la clé
-      let key = '';
-      if (jsonText[pos] === '"') {
-        pos++;
-        while (pos < jsonText.length && jsonText[pos] !== '"') {
-          if (jsonText[pos] === '\\') {
-            key += jsonText[pos++];
-            if (pos < jsonText.length) key += jsonText[pos++];
+      // Pour les dimensions, chercher les clés dupliquées dans le texte brut
+      if (isRecord(value)) {
+        // Chercher toutes les occurrences de cette clé dans le texte brut
+        // au niveau de la dimension courante
+        const keyPattern = new RegExp(
+          `"${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s*:\\s*\\{`,
+          'g'
+        );
+        const matches = [...text.matchAll(keyPattern)];
+
+        if (matches.length > 1) {
+          // Clé dupliquée détectée : extraire toutes les valeurs
+          const values: unknown[] = [];
+
+          matches.forEach(match => {
+            if (match.index !== undefined) {
+              // Extraire l'objet JSON complet à partir de cette position
+              try {
+                const objStart = match.index + match[0].length - 1;
+                let depth = 1;
+                let objEnd = objStart;
+
+                while (objEnd < text.length && depth > 0) {
+                  if (text[objEnd] === '{') depth++;
+                  else if (text[objEnd] === '}') depth--;
+                  objEnd++;
+                }
+
+                const objText = text.substring(objStart, objEnd);
+                const parsedObj = JSON.parse(objText) as Record<
+                  string,
+                  unknown
+                >;
+                values.push(parsedObj);
+              } catch {
+                // Ignorer les erreurs d'extraction
+              }
+            }
+          });
+
+          if (values.length > 1) {
+            result[key] = values; // Stocker comme tableau
           } else {
-            key += jsonText[pos++];
+            result[key] = processDimensionForDuplicates(value, [
+              ...dimensionPath,
+              key,
+            ]);
           }
+        } else {
+          result[key] = processDimensionForDuplicates(value, [
+            ...dimensionPath,
+            key,
+          ]);
         }
-        if (jsonText[pos] === '"') pos++;
       } else {
-        throw new Error('Expected string key');
-      }
-
-      // Ignorer les espaces
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-      if (jsonText[pos] !== ':') {
-        throw new Error('Expected :');
-      }
-      pos++;
-
-      // Parser la valeur
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-
-      let value: unknown;
-      if (jsonText[pos] === '{') {
-        const parsed = parseObjectWithDuplicates(jsonText, pos);
-        value = parsed.obj;
-        pos = parsed.endPos;
-      } else if (jsonText[pos] === '[') {
-        const parsed = parseArray(jsonText, pos);
-        value = parsed.arr;
-        pos = parsed.endPos;
-      } else if (jsonText[pos] === '"') {
-        const parsed = parseString(jsonText, pos);
-        value = parsed.str;
-        pos = parsed.endPos;
-      } else if (
-        jsonText[pos] === 't' &&
-        jsonText.substring(pos, pos + 4) === 'true'
-      ) {
-        value = true;
-        pos += 4;
-      } else if (
-        jsonText[pos] === 'f' &&
-        jsonText.substring(pos, pos + 5) === 'false'
-      ) {
-        value = false;
-        pos += 5;
-      } else if (
-        jsonText[pos] === 'n' &&
-        jsonText.substring(pos, pos + 4) === 'null'
-      ) {
-        value = null;
-        pos += 4;
-      } else {
-        // Nombre
-        let numStr = '';
-        while (pos < jsonText.length && /[\d.eE+-]/.test(jsonText[pos])) {
-          numStr += jsonText[pos++];
-        }
-        value = parseFloat(numStr);
-      }
-
-      // Stocker la valeur (même si la clé existe déjà)
-      if (!result[key]) {
-        result[key] = [];
-      }
-      result[key].push(value);
-
-      // Ignorer les espaces
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-
-      if (jsonText[pos] === ',') {
-        pos++;
-      } else if (jsonText[pos] !== '}') {
-        throw new Error('Expected , or }');
-      }
-    }
-
-    // Si une clé a plusieurs valeurs, on doit les préserver
-    // On va créer un objet spécial qui contient toutes les valeurs
-    const finalResult: Record<string, unknown> = {};
-    Object.entries(result).forEach(([k, values]) => {
-      if (values.length > 1) {
-        // Plusieurs valeurs pour la même clé : les stocker dans un tableau
-        // flattenDimension devra gérer ce cas
-        finalResult[k] = values;
-      } else {
-        finalResult[k] = values[0];
+        result[key] = value;
       }
     });
 
-    return { obj: finalResult, endPos: pos };
+    return result;
   };
 
-  const parseArray = (
-    jsonText: string,
-    startPos: number
-  ): { arr: unknown[]; endPos: number } => {
-    let pos = startPos;
-    const arr: unknown[] = [];
-
-    if (jsonText[pos] !== '[') {
-      throw new Error('Expected [');
-    }
-    pos++;
-
-    while (pos < jsonText.length) {
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-
-      if (jsonText[pos] === ']') {
-        pos++;
-        break;
-      }
-
-      let value: unknown;
-      if (jsonText[pos] === '{') {
-        const parsed = parseObjectWithDuplicates(jsonText, pos);
-        value = parsed.obj;
-        pos = parsed.endPos;
-      } else if (jsonText[pos] === '[') {
-        const parsed = parseArray(jsonText, pos);
-        value = parsed.arr;
-        pos = parsed.endPos;
-      } else if (jsonText[pos] === '"') {
-        const parsed = parseString(jsonText, pos);
-        value = parsed.str;
-        pos = parsed.endPos;
-      } else {
-        throw new Error('Unsupported array element type');
-      }
-
-      arr.push(value);
-
-      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
-      if (jsonText[pos] === ',') {
-        pos++;
-      } else if (jsonText[pos] !== ']') {
-        throw new Error('Expected , or ]');
-      }
-    }
-
-    return { arr, endPos: pos };
-  };
-
-  const parseString = (
-    jsonText: string,
-    startPos: number
-  ): { str: string; endPos: number } => {
-    let pos = startPos;
-    let str = '';
-
-    if (jsonText[pos] !== '"') {
-      throw new Error('Expected "');
-    }
-    pos++;
-
-    while (pos < jsonText.length && jsonText[pos] !== '"') {
-      if (jsonText[pos] === '\\') {
-        pos++;
-        if (pos < jsonText.length) {
-          if (jsonText[pos] === 'n') str += '\n';
-          else if (jsonText[pos] === 't') str += '\t';
-          else if (jsonText[pos] === 'r') str += '\r';
-          else if (jsonText[pos] === '\\') str += '\\';
-          else if (jsonText[pos] === '"') str += '"';
-          else str += jsonText[pos];
-          pos++;
-        }
-      } else {
-        str += jsonText[pos++];
-      }
-    }
-
-    if (jsonText[pos] === '"') pos++;
-
-    return { str, endPos: pos };
-  };
-
-  try {
-    const parsed = parseObjectWithDuplicates(text, 0);
-    const lot = parsed.obj as Record<string, unknown>;
-
-    if (!isRecord(lot)) {
-      throw new BubbleClientError(
-        'Format de lot renvoyé par Bubble inattendu',
-        502,
-        {
-          error: 'Lot invalide',
-          details:
-            'Bubble doit renvoyer un objet JSON représentant le lot complet.',
-          bubbleResponse: lot,
-        }
-      );
-    }
-
-    return lot;
-  } catch {
-    // Si le parsing manuel échoue, essayer avec JSON.parse normal
-    const parsed = JSON.parse(text) as Record<string, unknown>;
-
-    if (!isRecord(parsed)) {
-      throw new BubbleClientError(
-        'Format de lot renvoyé par Bubble inattendu',
-        502,
-        {
-          error: 'Lot invalide',
-          details:
-            'Bubble doit renvoyer un objet JSON représentant le lot complet.',
-          bubbleResponse: parsed,
-        }
-      );
-    }
-
-    return parsed;
-  }
+  return processDimensionForDuplicates(parsed, []);
 };
 
 /**
@@ -466,21 +326,30 @@ const flattenDimension = (
       });
 
       if (childCollections.length > 0) {
-        // Fusionner toutes les collections enfants
-        const mergedChildCollection: Record<string, unknown> = {};
+        // D'abord, collecter tous les éléments enfants avec leurs contributions
+        // en les groupant par bubble_id (pas par clé)
+        const childElementsByBubbleId = new Map<
+          string,
+          Array<{
+            key: string;
+            value: Record<string, unknown>;
+            contribution: number;
+          }>
+        >();
 
         childCollections.forEach(({ collection, weight }) => {
           Object.entries(collection).forEach(([childKey, childValue]) => {
             if (childKey === 'title') {
-              // Conserver les clés spéciales
-              if (!mergedChildCollection[childKey]) {
-                mergedChildCollection[childKey] = childValue;
-              }
-              return;
+              return; // On gère title séparément
             }
 
             if (!isRecord(childValue)) {
               return;
+            }
+
+            const bubbleId = childValue.bubble_id;
+            if (!bubbleId || typeof bubbleId !== 'string') {
+              return; // Ignorer les éléments sans bubble_id
             }
 
             const childPercentage =
@@ -494,44 +363,131 @@ const flattenDimension = (
             // La contribution = weight * (childPercentage / 100)
             const contribution = weight * (childPercentage / 100);
 
-            if (!mergedChildCollection[childKey]) {
-              // Nouvelle clé : créer une copie
-              // Le pourcentage sera recalculé après normalisation
-              mergedChildCollection[childKey] = {
-                ...childValue,
-                pourcentage: contribution,
-              };
-            } else {
-              // Clé déjà présente : additionner les contributions
-              const existing = mergedChildCollection[childKey];
-              if (isRecord(existing)) {
-                const existingContribution =
-                  typeof existing.pourcentage === 'number'
-                    ? existing.pourcentage
-                    : 0;
-                existing.pourcentage = existingContribution + contribution;
-              }
+            if (!childElementsByBubbleId.has(bubbleId)) {
+              childElementsByBubbleId.set(bubbleId, []);
             }
+            childElementsByBubbleId.get(bubbleId)!.push({
+              key: childKey,
+              value: childValue,
+              contribution,
+            });
           });
         });
 
-        // Convertir les contributions en pourcentages relatifs au nouveau parent
-        // Après fusion, on a des contributions en poids absolu, il faut les convertir
-        // en pourcentages relatifs au nouveau parent (newPercentage)
-        if (newPercentage > 0) {
-          Object.entries(mergedChildCollection).forEach(([key, value]) => {
-            if (key === 'title') return;
-            if (isRecord(value) && typeof value.pourcentage === 'number') {
-              // Convertir la contribution en pourcentage relatif au nouveau parent
-              value.pourcentage = (value.pourcentage / newPercentage) * 100;
+        // Maintenant, fusionner les éléments avec le même bubble_id
+        const mergedChildCollection: Record<string, unknown> = {};
+
+        childElementsByBubbleId.forEach(elements => {
+          // Prendre la première clé comme référence
+          const firstElement = elements[0];
+
+          // Additionner toutes les contributions
+          const totalContribution = elements.reduce(
+            (sum, el) => sum + el.contribution,
+            0
+          );
+
+          // Fusionner toutes les valeurs (garder la première clé)
+          const mergedValue: Record<string, unknown> = {
+            ...firstElement.value,
+          };
+
+          // Fusionner récursivement les dimensions enfants de tous les éléments
+          const allowedGrandChildren =
+            hierarchy[childDimension]?.children ?? [];
+          allowedGrandChildren.forEach(grandChildDimension => {
+            const grandChildCollections: Array<{
+              collection: Record<string, unknown>;
+              contribution: number;
+            }> = [];
+
+            elements.forEach(el => {
+              const grandChildCollection = el.value[grandChildDimension];
+              if (
+                isRecord(grandChildCollection) &&
+                Object.keys(grandChildCollection).length > 0
+              ) {
+                grandChildCollections.push({
+                  collection: grandChildCollection,
+                  contribution: el.contribution,
+                });
+              }
+            });
+
+            if (grandChildCollections.length > 0) {
+              // Fusionner récursivement (même logique)
+              const mergedGrandChild: Record<string, unknown> = {};
+              grandChildCollections.forEach(({ collection, contribution }) => {
+                Object.entries(collection).forEach(([key, value]) => {
+                  if (key === 'title') {
+                    if (!mergedGrandChild[key]) {
+                      mergedGrandChild[key] = value;
+                    }
+                    return;
+                  }
+                  if (!isRecord(value)) return;
+
+                  const pct =
+                    typeof value.pourcentage === 'number'
+                      ? value.pourcentage
+                      : 0;
+                  const childContribution = contribution * (pct / 100);
+
+                  if (!mergedGrandChild[key]) {
+                    mergedGrandChild[key] = {
+                      ...value,
+                      pourcentage: childContribution,
+                    };
+                  } else {
+                    const existing = mergedGrandChild[key];
+                    if (isRecord(existing)) {
+                      const existingPct =
+                        typeof existing.pourcentage === 'number'
+                          ? existing.pourcentage
+                          : 0;
+                      existing.pourcentage = existingPct + childContribution;
+                    }
+                  }
+                });
+              });
+
+              // Convertir en pourcentages
+              if (totalContribution > 0) {
+                Object.entries(mergedGrandChild).forEach(([key, value]) => {
+                  if (key === 'title') return;
+                  if (
+                    isRecord(value) &&
+                    typeof value.pourcentage === 'number'
+                  ) {
+                    value.pourcentage =
+                      (value.pourcentage / totalContribution) * 100;
+                  }
+                });
+              }
+
+              normalizePercentages(mergedGrandChild);
+              mergedValue[grandChildDimension] = flattenDimension(
+                mergedGrandChild,
+                grandChildDimension,
+                hierarchy,
+                (totalContribution / newPercentage) * 100
+              );
             }
           });
-        }
 
-        // Normaliser les pourcentages avant d'appliquer le flattening récursif
+          // Convertir la contribution totale en pourcentage relatif au nouveau parent
+          mergedValue.pourcentage =
+            newPercentage > 0 ? (totalContribution / newPercentage) * 100 : 0;
+
+          // Utiliser la première clé rencontrée
+          mergedChildCollection[firstElement.key] = mergedValue;
+        });
+
+        // Normaliser les pourcentages pour que la somme fasse exactement 100%
         normalizePercentages(mergedChildCollection);
 
         // Appliquer le flattening récursif sur la collection fusionnée
+        // (pour grouper les éléments qui n'ont pas encore été groupés)
         merged[childDimension] = flattenDimension(
           mergedChildCollection,
           childDimension,
