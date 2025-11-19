@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 
-import { BubbleClientError, fetchBubbleLot } from '@/lib/bubbleClient';
+import { BubbleClientError } from '@/lib/bubbleClient';
 import { getDimensionHierarchy } from '@/lib/dimensions';
 
 const JSON_HEADERS = {
@@ -30,6 +30,306 @@ const normalizeBoolean = (value: unknown): boolean | null => {
     return false;
   }
   return null;
+};
+
+/**
+ * Récupère le lot depuis Bubble en texte brut pour préserver les clés dupliquées
+ */
+const fetchLotRaw = async (
+  endpoint: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> => {
+  const apiKey = process.env.BUBBLE_API_KEY;
+  if (!apiKey) {
+    throw new BubbleClientError(
+      'Configuration error: BUBBLE_API_KEY not found',
+      500,
+      { error: 'Configuration error: BUBBLE_API_KEY not found' }
+    );
+  }
+
+  const normalizedParams: Record<string, unknown> = { ...params };
+  const isLive =
+    normalizedParams.isLive === true || normalizedParams.isLive === 'true';
+  let baseUrl = 'https://app.valoramix.com/';
+  if (!isLive) {
+    baseUrl += 'version-test/';
+  }
+  baseUrl += 'api/1.1/wf/';
+
+  const paramsSansIsLive: Record<string, unknown> = { ...normalizedParams };
+  delete paramsSansIsLive.isLive;
+
+  const url = baseUrl + endpoint.replace(/^\//, '');
+  const fetchOptions: RequestInit = {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(paramsSansIsLive),
+    signal: AbortSignal.timeout(30000),
+  };
+
+  const response = await fetch(url, fetchOptions);
+  const text = await response.text();
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new BubbleClientError(
+      'Impossible de récupérer le lot via Bubble',
+      response.status,
+      { error: 'Erreur Bubble', raw: text }
+    );
+  }
+
+  // Parser le JSON brut en préservant les clés dupliquées
+  // On doit parser manuellement pour détecter les clés dupliquées avant JSON.parse()
+  // qui les perdrait
+
+  // Fonction récursive pour parser un objet JSON en préservant les clés dupliquées
+  const parseObjectWithDuplicates = (
+    jsonText: string,
+    startPos: number
+  ): { obj: unknown; endPos: number } => {
+    let pos = startPos;
+    const result: Record<string, unknown[]> = {}; // Utiliser des tableaux pour stocker les valeurs dupliquées
+
+    // Ignorer les espaces
+    while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+    if (jsonText[pos] !== '{') {
+      throw new Error('Expected {');
+    }
+    pos++; // Skip '{'
+
+    while (pos < jsonText.length) {
+      // Ignorer les espaces
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+
+      if (jsonText[pos] === '}') {
+        pos++;
+        break;
+      }
+
+      // Parser la clé
+      let key = '';
+      if (jsonText[pos] === '"') {
+        pos++;
+        while (pos < jsonText.length && jsonText[pos] !== '"') {
+          if (jsonText[pos] === '\\') {
+            key += jsonText[pos++];
+            if (pos < jsonText.length) key += jsonText[pos++];
+          } else {
+            key += jsonText[pos++];
+          }
+        }
+        if (jsonText[pos] === '"') pos++;
+      } else {
+        throw new Error('Expected string key');
+      }
+
+      // Ignorer les espaces
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+      if (jsonText[pos] !== ':') {
+        throw new Error('Expected :');
+      }
+      pos++;
+
+      // Parser la valeur
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+
+      let value: unknown;
+      if (jsonText[pos] === '{') {
+        const parsed = parseObjectWithDuplicates(jsonText, pos);
+        value = parsed.obj;
+        pos = parsed.endPos;
+      } else if (jsonText[pos] === '[') {
+        const parsed = parseArray(jsonText, pos);
+        value = parsed.arr;
+        pos = parsed.endPos;
+      } else if (jsonText[pos] === '"') {
+        const parsed = parseString(jsonText, pos);
+        value = parsed.str;
+        pos = parsed.endPos;
+      } else if (
+        jsonText[pos] === 't' &&
+        jsonText.substring(pos, pos + 4) === 'true'
+      ) {
+        value = true;
+        pos += 4;
+      } else if (
+        jsonText[pos] === 'f' &&
+        jsonText.substring(pos, pos + 5) === 'false'
+      ) {
+        value = false;
+        pos += 5;
+      } else if (
+        jsonText[pos] === 'n' &&
+        jsonText.substring(pos, pos + 4) === 'null'
+      ) {
+        value = null;
+        pos += 4;
+      } else {
+        // Nombre
+        let numStr = '';
+        while (pos < jsonText.length && /[\d.eE+-]/.test(jsonText[pos])) {
+          numStr += jsonText[pos++];
+        }
+        value = parseFloat(numStr);
+      }
+
+      // Stocker la valeur (même si la clé existe déjà)
+      if (!result[key]) {
+        result[key] = [];
+      }
+      result[key].push(value);
+
+      // Ignorer les espaces
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+
+      if (jsonText[pos] === ',') {
+        pos++;
+      } else if (jsonText[pos] !== '}') {
+        throw new Error('Expected , or }');
+      }
+    }
+
+    // Si une clé a plusieurs valeurs, on doit les préserver
+    // On va créer un objet spécial qui contient toutes les valeurs
+    const finalResult: Record<string, unknown> = {};
+    Object.entries(result).forEach(([k, values]) => {
+      if (values.length > 1) {
+        // Plusieurs valeurs pour la même clé : les stocker dans un tableau
+        // flattenDimension devra gérer ce cas
+        finalResult[k] = values;
+      } else {
+        finalResult[k] = values[0];
+      }
+    });
+
+    return { obj: finalResult, endPos: pos };
+  };
+
+  const parseArray = (
+    jsonText: string,
+    startPos: number
+  ): { arr: unknown[]; endPos: number } => {
+    let pos = startPos;
+    const arr: unknown[] = [];
+
+    if (jsonText[pos] !== '[') {
+      throw new Error('Expected [');
+    }
+    pos++;
+
+    while (pos < jsonText.length) {
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+
+      if (jsonText[pos] === ']') {
+        pos++;
+        break;
+      }
+
+      let value: unknown;
+      if (jsonText[pos] === '{') {
+        const parsed = parseObjectWithDuplicates(jsonText, pos);
+        value = parsed.obj;
+        pos = parsed.endPos;
+      } else if (jsonText[pos] === '[') {
+        const parsed = parseArray(jsonText, pos);
+        value = parsed.arr;
+        pos = parsed.endPos;
+      } else if (jsonText[pos] === '"') {
+        const parsed = parseString(jsonText, pos);
+        value = parsed.str;
+        pos = parsed.endPos;
+      } else {
+        throw new Error('Unsupported array element type');
+      }
+
+      arr.push(value);
+
+      while (pos < jsonText.length && /\s/.test(jsonText[pos])) pos++;
+      if (jsonText[pos] === ',') {
+        pos++;
+      } else if (jsonText[pos] !== ']') {
+        throw new Error('Expected , or ]');
+      }
+    }
+
+    return { arr, endPos: pos };
+  };
+
+  const parseString = (
+    jsonText: string,
+    startPos: number
+  ): { str: string; endPos: number } => {
+    let pos = startPos;
+    let str = '';
+
+    if (jsonText[pos] !== '"') {
+      throw new Error('Expected "');
+    }
+    pos++;
+
+    while (pos < jsonText.length && jsonText[pos] !== '"') {
+      if (jsonText[pos] === '\\') {
+        pos++;
+        if (pos < jsonText.length) {
+          if (jsonText[pos] === 'n') str += '\n';
+          else if (jsonText[pos] === 't') str += '\t';
+          else if (jsonText[pos] === 'r') str += '\r';
+          else if (jsonText[pos] === '\\') str += '\\';
+          else if (jsonText[pos] === '"') str += '"';
+          else str += jsonText[pos];
+          pos++;
+        }
+      } else {
+        str += jsonText[pos++];
+      }
+    }
+
+    if (jsonText[pos] === '"') pos++;
+
+    return { str, endPos: pos };
+  };
+
+  try {
+    const parsed = parseObjectWithDuplicates(text, 0);
+    const lot = parsed.obj as Record<string, unknown>;
+
+    if (!isRecord(lot)) {
+      throw new BubbleClientError(
+        'Format de lot renvoyé par Bubble inattendu',
+        502,
+        {
+          error: 'Lot invalide',
+          details:
+            'Bubble doit renvoyer un objet JSON représentant le lot complet.',
+          bubbleResponse: lot,
+        }
+      );
+    }
+
+    return lot;
+  } catch {
+    // Si le parsing manuel échoue, essayer avec JSON.parse normal
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+
+    if (!isRecord(parsed)) {
+      throw new BubbleClientError(
+        'Format de lot renvoyé par Bubble inattendu',
+        502,
+        {
+          error: 'Lot invalide',
+          details:
+            'Bubble doit renvoyer un objet JSON représentant le lot complet.',
+          bubbleResponse: parsed,
+        }
+      );
+    }
+
+    return parsed;
+  }
 };
 
 /**
@@ -84,27 +384,34 @@ const flattenDimension = (
       return;
     }
 
-    if (!isRecord(value)) {
-      return;
-    }
+    // Gérer le cas où value est un tableau (clés dupliquées)
+    const values = Array.isArray(value) ? value : [value];
 
-    const bubbleId = value.bubble_id;
-    if (!bubbleId || typeof bubbleId !== 'string') {
-      // Ignorer les éléments sans bubble_id
-      return;
-    }
+    values.forEach(singleValue => {
+      if (!isRecord(singleValue)) {
+        return;
+      }
 
-    const elementPercentage =
-      typeof value.pourcentage === 'number' ? value.pourcentage : 0;
-    const realWeight = (parentPercentage * elementPercentage) / 100;
+      const bubbleId = singleValue.bubble_id;
+      if (!bubbleId || typeof bubbleId !== 'string') {
+        // Ignorer les éléments sans bubble_id
+        return;
+      }
 
-    if (!groupedByBubbleId.has(bubbleId)) {
-      groupedByBubbleId.set(bubbleId, []);
-    }
-    groupedByBubbleId.get(bubbleId)!.push({
-      key,
-      value,
-      weight: realWeight,
+      const elementPercentage =
+        typeof singleValue.pourcentage === 'number'
+          ? singleValue.pourcentage
+          : 0;
+      const realWeight = (parentPercentage * elementPercentage) / 100;
+
+      if (!groupedByBubbleId.has(bubbleId)) {
+        groupedByBubbleId.set(bubbleId, []);
+      }
+      groupedByBubbleId.get(bubbleId)!.push({
+        key,
+        value: singleValue,
+        weight: realWeight,
+      });
     });
   });
 
@@ -306,7 +613,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lot = await fetchBubbleLot({ id, isLive: normalizedIsLive });
+    // Récupérer le lot depuis Bubble
+    const lot = await fetchLotRaw('lot', {
+      id,
+      isLive: normalizedIsLive,
+    });
+
     const hierarchy = getDimensionHierarchy();
     const flattenedLot = flattenLot(lot, hierarchy);
 
