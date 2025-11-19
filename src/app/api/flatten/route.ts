@@ -116,7 +116,6 @@ const flattenDimension = (
 
     // Prendre la première clé comme référence
     const firstEntry = entries[0];
-    const merged: Record<string, unknown> = { ...firstEntry.value };
 
     // Calculer le poids total fusionné
     const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
@@ -124,6 +123,17 @@ const flattenDimension = (
     // Calculer le nouveau pourcentage par rapport au parent
     const newPercentage =
       parentPercentage > 0 ? (totalWeight / parentPercentage) * 100 : 0;
+
+    // Créer l'objet fusionné en copiant les propriétés de base du premier élément
+    // (mais pas les dimensions enfants, on va les fusionner séparément)
+    const merged: Record<string, unknown> = {};
+    Object.entries(firstEntry.value).forEach(([key, value]) => {
+      // Ne pas copier les dimensions enfants, on va les fusionner
+      const allowedChildren = hierarchy[dimensionName]?.children ?? [];
+      if (!allowedChildren.includes(key)) {
+        merged[key] = value;
+      }
+    });
     merged.pourcentage = newPercentage;
 
     // Fusionner récursivement les dimensions enfants
