@@ -166,44 +166,53 @@ const flattenDimension = (
               return;
             }
 
-            if (!mergedChildCollection[childKey]) {
-              // Nouvelle clé : créer une copie avec le pourcentage ajusté
-              const childPercentage =
-                typeof childValue.pourcentage === 'number'
-                  ? childValue.pourcentage
-                  : 0;
-              // Calculer le pourcentage relatif au nouveau parent
-              const relativePercentage =
-                newPercentage > 0
-                  ? (weight / newPercentage) * 100 * (childPercentage / 100)
-                  : 0;
+            const childPercentage =
+              typeof childValue.pourcentage === 'number'
+                ? childValue.pourcentage
+                : 0;
 
+            // Calculer la contribution de cet enfant au total
+            // weight est le poids réel du parent (ex: 25 pour 25%)
+            // childPercentage est le pourcentage de l'enfant dans son parent (ex: 100 pour 100%)
+            // La contribution = weight * (childPercentage / 100)
+            const contribution = weight * (childPercentage / 100);
+
+            if (!mergedChildCollection[childKey]) {
+              // Nouvelle clé : créer une copie
+              // Le pourcentage sera recalculé après normalisation
               mergedChildCollection[childKey] = {
                 ...childValue,
-                pourcentage: relativePercentage,
+                pourcentage: contribution,
               };
             } else {
-              // Clé déjà présente : additionner les pourcentages
+              // Clé déjà présente : additionner les contributions
               const existing = mergedChildCollection[childKey];
               if (isRecord(existing)) {
-                const existingPercentage =
+                const existingContribution =
                   typeof existing.pourcentage === 'number'
                     ? existing.pourcentage
                     : 0;
-                const childPercentage =
-                  typeof childValue.pourcentage === 'number'
-                    ? childValue.pourcentage
-                    : 0;
-                const relativePercentage =
-                  newPercentage > 0
-                    ? (weight / newPercentage) * 100 * (childPercentage / 100)
-                    : 0;
-
-                existing.pourcentage = existingPercentage + relativePercentage;
+                existing.pourcentage = existingContribution + contribution;
               }
             }
           });
         });
+
+        // Convertir les contributions en pourcentages relatifs au nouveau parent
+        // Après fusion, on a des contributions en poids absolu, il faut les convertir
+        // en pourcentages relatifs au nouveau parent (newPercentage)
+        if (newPercentage > 0) {
+          Object.entries(mergedChildCollection).forEach(([key, value]) => {
+            if (key === 'title') return;
+            if (isRecord(value) && typeof value.pourcentage === 'number') {
+              // Convertir la contribution en pourcentage relatif au nouveau parent
+              value.pourcentage = (value.pourcentage / newPercentage) * 100;
+            }
+          });
+        }
+
+        // Normaliser les pourcentages avant d'appliquer le flattening récursif
+        normalizePercentages(mergedChildCollection);
 
         // Appliquer le flattening récursif sur la collection fusionnée
         merged[childDimension] = flattenDimension(
