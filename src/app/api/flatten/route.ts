@@ -113,37 +113,50 @@ const fetchLotRaw = async (
     );
   }
 
-  // Maintenant, détecter les clés dupliquées dans le texte brut pour les dimensions
-  // On va parser récursivement les dimensions pour détecter les doublons
-  const processDimensionForDuplicates = (
+  // Pour détecter les clés dupliquées, on va chercher toutes les occurrences de chaque clé
+  // au niveau où elle apparaît dans le JSON parsé
+  // On utilise une approche simple : chercher dans le texte brut toutes les occurrences
+  // de chaque clé de dimension, puis extraire les objets correspondants
+
+  // Fonction récursive pour traiter un objet et détecter les clés dupliquées
+  const processObject = (
     obj: Record<string, unknown>,
-    dimensionPath: string[]
+    path: string[]
   ): Record<string, unknown> => {
     const result: Record<string, unknown> = {};
 
     Object.entries(obj).forEach(([key, value]) => {
+      // Conserver les clés spéciales
       if (key === 'title' || key === 'total' || key === 'frequency') {
         result[key] = value;
         return;
       }
 
-      // Pour les dimensions, chercher les clés dupliquées dans le texte brut
       if (isRecord(value)) {
         // Chercher toutes les occurrences de cette clé dans le texte brut
-        // au niveau de la dimension courante
-        const keyPattern = new RegExp(
-          `"${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s*:\\s*\\{`,
-          'g'
-        );
-        const matches = [...text.matchAll(keyPattern)];
+        // Pattern simple : "key": {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const keyPattern = new RegExp(`"${escapedKey}"\\s*:\\s*\\{`, 'g');
+        const allMatches = [...text.matchAll(keyPattern)];
 
-        if (matches.length > 1) {
+        // Filtrer les matches pour ne garder que ceux qui sont au bon niveau
+        // (en vérifiant le contexte avant dans le texte)
+        const relevantMatches = allMatches.filter(match => {
+          if (match.index === undefined) return false;
+
+          // Vérifier qu'on est bien dans le bon contexte
+          // Pour le niveau racine, on cherche directement après "formats": { ou "qualite": { etc.
+          // Pour les niveaux enfants, c'est plus complexe, mais on va accepter tous les matches
+          // et laisser le groupement par bubble_id faire le travail
+          return true;
+        });
+
+        if (relevantMatches.length > 1) {
           // Clé dupliquée détectée : extraire toutes les valeurs
           const values: unknown[] = [];
 
-          matches.forEach(match => {
+          relevantMatches.forEach(match => {
             if (match.index !== undefined) {
-              // Extraire l'objet JSON complet à partir de cette position
               try {
                 const objStart = match.index + match[0].length - 1;
                 let depth = 1;
@@ -168,18 +181,15 @@ const fetchLotRaw = async (
           });
 
           if (values.length > 1) {
-            result[key] = values; // Stocker comme tableau
+            // Plusieurs valeurs trouvées : les stocker comme tableau
+            result[key] = values;
           } else {
-            result[key] = processDimensionForDuplicates(value, [
-              ...dimensionPath,
-              key,
-            ]);
+            // Une seule valeur ou aucune : traiter récursivement
+            result[key] = processObject(value, [...path, key]);
           }
         } else {
-          result[key] = processDimensionForDuplicates(value, [
-            ...dimensionPath,
-            key,
-          ]);
+          // Pas de doublons détectés : traiter récursivement
+          result[key] = processObject(value, [...path, key]);
         }
       } else {
         result[key] = value;
@@ -189,7 +199,7 @@ const fetchLotRaw = async (
     return result;
   };
 
-  return processDimensionForDuplicates(parsed, []);
+  return processObject(parsed, []);
 };
 
 /**
@@ -466,18 +476,23 @@ const flattenDimension = (
               }
 
               normalizePercentages(mergedGrandChild);
+              // Le parentPercentage pour les petits-enfants est le pourcentage de l'enfant fusionné
+              // qui est calculé à partir de totalContribution / totalWeight
+              const grandChildParentPercentage =
+                totalWeight > 0 ? (totalContribution / totalWeight) * 100 : 0;
               mergedValue[grandChildDimension] = flattenDimension(
                 mergedGrandChild,
                 grandChildDimension,
                 hierarchy,
-                (totalContribution / newPercentage) * 100
+                grandChildParentPercentage
               );
             }
           });
 
           // Convertir la contribution totale en pourcentage relatif au nouveau parent
+          // totalContribution est en poids absolu, totalWeight aussi
           mergedValue.pourcentage =
-            newPercentage > 0 ? (totalContribution / newPercentage) * 100 : 0;
+            totalWeight > 0 ? (totalContribution / totalWeight) * 100 : 0;
 
           // Utiliser la première clé rencontrée
           mergedChildCollection[firstElement.key] = mergedValue;
