@@ -336,10 +336,15 @@ const flattenDimension = (
     // Prendre la première clé comme référence
     const firstEntry = entries[0];
 
-    // Calculer le poids total fusionné
+    // Calculer le poids total fusionné (en poids absolu)
     const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
 
     // Calculer le nouveau pourcentage par rapport au parent
+    // totalWeight est en poids absolu, parentPercentage est en pourcentage
+    // Si parentPercentage = 100% et totalWeight = 66.66, alors newPercentage = 66.66%
+    // Mais attention : totalWeight = (parentPercentage * elementPercentage) / 100
+    // Donc si on a deux éléments à 33.33% chacun : totalWeight = 33.33 + 33.33 = 66.66
+    // Et newPercentage = (66.66 / 100) * 100 = 66.66%, ce qui est correct
     const newPercentage =
       parentPercentage > 0 ? (totalWeight / parentPercentage) * 100 : 0;
 
@@ -424,6 +429,16 @@ const flattenDimension = (
               contribution,
             });
           });
+        });
+
+        // Calculer la somme totale de toutes les contributions (pour normaliser)
+        let totalAllContributions = 0;
+        childElementsByBubbleId.forEach(elements => {
+          const contribution = elements.reduce(
+            (sum, el) => sum + el.contribution,
+            0
+          );
+          totalAllContributions += contribution;
         });
 
         // Maintenant, fusionner les éléments avec le même bubble_id
@@ -532,9 +547,12 @@ const flattenDimension = (
           });
 
           // Convertir la contribution totale en pourcentage relatif au nouveau parent
-          // totalContribution est en poids absolu, totalWeight aussi
+          // totalContribution est en poids absolu, totalAllContributions est la somme de toutes les contributions
+          // Si totalAllContributions = 0, on utilise totalWeight comme fallback
+          const denominator =
+            totalAllContributions > 0 ? totalAllContributions : totalWeight;
           mergedValue.pourcentage =
-            totalWeight > 0 ? (totalContribution / totalWeight) * 100 : 0;
+            denominator > 0 ? (totalContribution / denominator) * 100 : 0;
 
           // Utiliser la première clé rencontrée
           mergedChildCollection[firstElement.key] = mergedValue;
