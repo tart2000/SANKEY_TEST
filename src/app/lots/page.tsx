@@ -15,6 +15,7 @@ export default function LotsPage() {
   const [selectedLotIdx, setSelectedLotIdx] = useState(0);
   const [selectedLanguage, setSelectedLanguage] =
     useState<LanguageCode>('fr_fr');
+  const [iframeHeight, setIframeHeight] = useState<number>(400);
   const [isEditable, setIsEditable] = useState(true);
   const [iframeKey, setIframeKey] = useState(0);
   const lot = lots[selectedLotIdx];
@@ -27,6 +28,20 @@ export default function LotsPage() {
   useEffect(() => {
     setIframeKey(prev => prev + 1);
   }, [selectedLotIdx, selectedLanguage, isEditable]);
+
+  useEffect(() => {
+    function handleResizeMessage(event: MessageEvent) {
+      if (
+        event.data &&
+        event.data.type === 'IFRAME_HEIGHT' &&
+        typeof event.data.height === 'number'
+      ) {
+        setIframeHeight(event.data.height);
+      }
+    }
+    window.addEventListener('message', handleResizeMessage);
+    return () => window.removeEventListener('message', handleResizeMessage);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col">
@@ -98,7 +113,7 @@ export default function LotsPage() {
             ref={iframeRef}
             src={iframeSrc}
             className="w-full border-0 rounded-lg"
-            style={{ height: '676px', display: 'block' }}
+            style={{ minHeight: 400, height: iframeHeight, display: 'block' }}
             title="Lots"
           />
         </div>

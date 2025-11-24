@@ -72,7 +72,7 @@ export function LotEditor({
     loadBaseData,
     fetchItemComplete,
   } = useDimensions(isLive);
-  const { sendLotUpdated } = useIframeCommunication();
+  const { sendHeight, sendLotUpdated } = useIframeCommunication();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalNiveau, setModalNiveau] = useState(0);
   const [modalDimension, setModalDimension] = useState('');
@@ -456,6 +456,33 @@ export function LotEditor({
 
     return infos;
   }, [lot, cheminSelection, lang]);
+
+  // Calculer et envoyer la hauteur de l'iframe
+  useEffect(() => {
+    if (!lot || !containerRef.current) return;
+
+    // Calculer la hauteur en fonction du nombre de niveaux
+    // Base: 20px (padding container)
+    // Chaque niveau: 120px (header + stackbar)
+    // Gap entre niveaux: 20px
+    // Bouton Save: 60px (avec padding pr-5 pb-5)
+    const nombreNiveaux = headerInfos.length;
+    const baseHeight = 20; // Padding container
+    const hauteurParNiveau = 120; // Header + stackbar
+    const gapEntreNiveaux = 20;
+    const hauteurSaveButton = 60; // Bouton + padding
+
+    let height = baseHeight;
+    if (nombreNiveaux > 0) {
+      height += nombreNiveaux * hauteurParNiveau;
+      height += (nombreNiveaux - 1) * gapEntreNiveaux;
+      height += hauteurSaveButton;
+    } else {
+      height = 400; // Hauteur minimale si pas de contenu
+    }
+
+    sendHeight(height);
+  }, [lot, headerInfos.length, sendHeight]);
 
   // Gérer l'ajout d'un élément
   const handleAdd = async (
