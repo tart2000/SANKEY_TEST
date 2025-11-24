@@ -248,12 +248,67 @@ export function StackbarHeader({
   const frequencyIcon =
     FREQUENCY_OPTIONS[currentFrequency]?.icon || 'arrow-clockwise';
 
+  // Calculer le nombre de siblings pour masquer les flèches si un seul élément
+  const hasSiblings = (() => {
+    if (niveau === 0) return false; // Pas de flèches au niveau 0
+    if (!cheminSelection[niveau - 1]?.dimension) return false;
+
+    // Récupérer le nœud parent
+    let nodeParent: Lot | Dimension | null = lot;
+    for (let i = 0; i < niveau - 1; i++) {
+      const { dimension, valeur } = cheminSelection[i];
+      if (!valeur || !nodeParent || typeof nodeParent !== 'object') {
+        return false;
+      }
+      const nodeObj = nodeParent as Record<string, unknown>;
+      if (!(dimension in nodeObj)) {
+        return false;
+      }
+      const dimValue = nodeObj[dimension];
+      if (
+        typeof dimValue !== 'object' ||
+        dimValue === null ||
+        Array.isArray(dimValue)
+      ) {
+        return false;
+      }
+      const dimObj = dimValue as Record<string, unknown>;
+      if (!(valeur in dimObj)) {
+        return false;
+      }
+      const value = dimObj[valeur];
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return false;
+      }
+      nodeParent = value as Lot | Dimension;
+    }
+
+    // Récupérer les siblings
+    const parentDimension = cheminSelection[niveau - 1].dimension;
+    if (!nodeParent || !parentDimension) return false;
+
+    const nodeObj = nodeParent as Record<string, unknown>;
+    if (!(parentDimension in nodeObj)) return false;
+
+    const dimValue = nodeObj[parentDimension];
+    if (
+      typeof dimValue !== 'object' ||
+      dimValue === null ||
+      Array.isArray(dimValue)
+    ) {
+      return false;
+    }
+
+    const siblings = Object.keys(dimValue).filter(k => k !== 'title');
+    return siblings.length > 1; // Afficher les flèches seulement s'il y a plus d'un sibling
+  })();
+
   return (
     <div className="font-bold mb-4 flex items-center justify-between">
       <div className="flex items-center justify-between w-full">
         {/* Groupe gauche : Navigation, titre, %, kg, frequency */}
         <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-          {niveau > 0 && (
+          {niveau > 0 && hasSiblings && (
             <>
               <button
                 className="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center"
