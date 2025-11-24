@@ -449,17 +449,21 @@ export function StackbarHeader({
         {/* Groupe droite : Boutons actions */}
         {isEditable && (
           <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
-            <button
-              className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300"
-              aria-label="Ajouter"
-              onClick={onAdd}
-            >
-              <i className="ph ph-plus w-4 h-4"></i>
-            </button>
+            {availableDimensions.length > 0 && (
+              <button
+                className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300"
+                aria-label="Ajouter"
+                onClick={onAdd}
+              >
+                <i className="ph ph-plus w-4 h-4"></i>
+              </button>
+            )}
             {niveau > 0 && (
               <>
                 <button
-                  className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300"
+                  className={`h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300 ${
+                    availableDimensions.length === 0 ? 'rounded-l-lg' : ''
+                  }`}
                   aria-label="Supprimer"
                   onClick={onDelete}
                 >
