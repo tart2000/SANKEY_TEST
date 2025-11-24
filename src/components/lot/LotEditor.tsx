@@ -481,8 +481,13 @@ export function LotEditor({
       height = 400; // Hauteur minimale si pas de contenu
     }
 
+    // Appliquer un minimum de 400px quand isEditable = true (pour éviter les problèmes avec la popup d'ajout)
+    if (isEditable && height < 400) {
+      height = 400;
+    }
+
     sendHeight(height);
-  }, [lot, headerInfos.length, sendHeight]);
+  }, [lot, headerInfos.length, sendHeight, isEditable]);
 
   // Gérer l'ajout d'un élément
   const handleAdd = async (
