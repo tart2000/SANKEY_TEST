@@ -1043,6 +1043,8 @@ const transformationTypes = {
     en_gb: 'Sort by format',
     description:
       'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)',
+    description_en_gb:
+      'Select items according to their format (clothing, shoes, etc.)',
     keyList: 'formats',
     requiredKey: true,
     step: 'sorting',
@@ -1051,6 +1053,7 @@ const transformationTypes = {
     label: 'Tri par type',
     en_gb: 'Sort by type',
     description: 'Sélectionne les articles selon leur type (après format)',
+    description_en_gb: 'Select items according to their type (after format)',
     keyList: 'types',
     requiredKey: true,
     step: 'sorting',
@@ -1059,6 +1062,7 @@ const transformationTypes = {
     label: 'Tri par matière',
     en_gb: 'Sort by material',
     description: 'Sélectionne les articles selon leur matière',
+    description_en_gb: 'Select items according to their material',
     keyList: 'matieres',
     requiredKey: true,
     step: 'sorting',
@@ -1067,6 +1071,7 @@ const transformationTypes = {
     label: 'Tri par qualité',
     en_gb: 'Sort by quality',
     description: 'Sélectionne les articles selon leur qualité',
+    description_en_gb: 'Select items according to their quality',
     keyList: 'qualite',
     requiredKey: true,
     step: 'sorting',
@@ -1075,6 +1080,7 @@ const transformationTypes = {
     label: 'Tri par couleur',
     en_gb: 'Sort by color',
     description: 'Sélectionne les articles selon leur couleur',
+    description_en_gb: 'Select items according to their color',
     keyList: 'couleurs',
     requiredKey: true,
     step: 'sorting',
@@ -1083,6 +1089,7 @@ const transformationTypes = {
     label: 'Tri par fibre',
     en_gb: 'Sort by fiber',
     description: 'Sélectionne les articles selon leur composition en fibres',
+    description_en_gb: 'Select items according to their fiber composition',
     keyList: 'fibres',
     requiredKey: true,
     step: 'sorting',
@@ -1091,6 +1098,7 @@ const transformationTypes = {
     label: 'Tri par propreté',
     en_gb: 'Sort by cleanliness',
     description: 'Sélectionne les articles selon leur propreté',
+    description_en_gb: 'Select items according to their cleanliness',
     keyList: 'proprete',
     requiredKey: true,
     step: 'sorting',
@@ -1099,6 +1107,7 @@ const transformationTypes = {
     label: 'Tri par nievau de perturbation',
     en_gb: 'Sort by level of perturbation',
     description: 'Sélectionne les articles selon la présence de perturbateurs',
+    description_en_gb: 'Select items according to the presence of disruptors',
     keyList: 'perturbateurs',
     requiredKey: true,
     step: 'sorting',
@@ -1541,8 +1550,16 @@ const transformationUtils = {
   },
 
   getTransformationDescription(type) {
+    // Récupérer la langue depuis les paramètres URL
+    const params = getUrlParams();
+    const lang = params.lang || 'fr_fr';
+
     // Vérifier d'abord les transformations statiques
     if (transformationTypes[type]) {
+      // Retourner la description en fonction de la langue
+      if (lang === 'en_gb' && transformationTypes[type].description_en_gb) {
+        return transformationTypes[type].description_en_gb;
+      }
       return transformationTypes[type].description;
     }
 
