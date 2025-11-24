@@ -42,13 +42,8 @@ export function useLot(initialLot: Lot | null) {
   // Fonction pour set le lot ET marquer comme modifié (pour les modifications utilisateur)
   const setLotAndMarkModified = useCallback((newLot: Lot | null) => {
     if (newLot) {
-      console.log(
-        '[useLot] setLotAndMarkModified appelé, marquant comme modifié'
-      );
       setLot(newLot);
       setIsModified(true);
-    } else {
-      console.warn('[useLot] setLotAndMarkModified appelé avec null');
     }
   }, []);
 

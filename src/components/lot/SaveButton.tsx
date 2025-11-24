@@ -72,14 +72,6 @@ export function SaveButton({
 
   const isDisabled = !isModified || loading || saveState === 'saving';
 
-  // Log pour déboguer
-  console.log(
-    '[SaveButton] isModified:',
-    isModified,
-    'isDisabled:',
-    isDisabled
-  );
-
   return (
     <div className="flex justify-end pr-5 pb-5" id="save-btn-container">
       <button
