@@ -8,8 +8,15 @@ export function useLot(initialLot: Lot | null) {
   const initialLotRef = useRef<Lot | null>(initialLot);
 
   // Mettre à jour la référence initiale quand le lot change depuis l'extérieur
+  // On compare le contenu JSON pour éviter de réinitialiser isModified si c'est juste une nouvelle référence
   useEffect(() => {
-    if (initialLot !== initialLotRef.current) {
+    const currentJson = initialLotRef.current
+      ? JSON.stringify(initialLotRef.current)
+      : null;
+    const newJson = initialLot ? JSON.stringify(initialLot) : null;
+
+    // Seulement mettre à jour si le contenu a vraiment changé
+    if (currentJson !== newJson) {
       initialLotRef.current = initialLot ? deepCopy(initialLot) : null;
       setLot(initialLot ? deepCopy(initialLot) : null);
       setIsModified(false);
@@ -32,18 +39,34 @@ export function useLot(initialLot: Lot | null) {
     }
   }, []);
 
-  const setLotDirect = useCallback((newLot: Lot | null) => {
-    setLot(newLot);
-    initialLotRef.current = newLot ? deepCopy(newLot) : null;
-    setIsModified(false);
+  // Fonction pour set le lot ET marquer comme modifié (pour les modifications utilisateur)
+  const setLotAndMarkModified = useCallback((newLot: Lot | null) => {
+    if (newLot) {
+      console.log(
+        '[useLot] setLotAndMarkModified appelé, marquant comme modifié'
+      );
+      setLot(newLot);
+      setIsModified(true);
+    } else {
+      console.warn('[useLot] setLotAndMarkModified appelé avec null');
+    }
   }, []);
+
+  // Fonction pour marquer le lot comme sauvegardé (remet isModified à false)
+  const markAsSaved = useCallback(() => {
+    if (lot) {
+      initialLotRef.current = deepCopy(lot);
+      setIsModified(false);
+    }
+  }, [lot]);
 
   return {
     lot,
     isModified,
     updateLot,
     resetLot,
-    setLot: setLotDirect,
+    setLot: setLotAndMarkModified, // Exporter la fonction qui marque comme modifié
+    markAsSaved, // Exporter la fonction pour marquer comme sauvegardé
     setIsModified,
   };
 }

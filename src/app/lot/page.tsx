@@ -92,8 +92,11 @@ export default function LotPage() {
   }, []);
 
   // Gérer les changements de lot pour notifier le parent
+  // NOTE: Ne pas mettre à jour le state local pour éviter de réinitialiser isModified
+  // On notifie seulement le parent via postMessage
   const handleLotChange = (newLot: Lot) => {
-    setLot(newLot);
+    // Ne pas appeler setLot ici car cela réinitialiserait isModified dans useLot
+    // On notifie seulement le parent
     if (window.parent !== window) {
       window.parent.postMessage(
         {

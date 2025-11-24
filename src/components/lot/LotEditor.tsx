@@ -57,7 +57,8 @@ export function LotEditor({
   onLotChange,
   t,
 }: LotEditorProps) {
-  const { lot, isModified, updateLot, setLot } = useLot(initialLot);
+  const { lot, isModified, updateLot, setLot, markAsSaved } =
+    useLot(initialLot);
   const {
     cheminSelection,
     navigateTo,
@@ -831,7 +832,8 @@ export function LotEditor({
         isModified={isModified}
         isEditable={isEditable}
         onSaveSuccess={() => {
-          // Le lot sera mis à jour par useLot après sauvegarde
+          // Marquer le lot comme sauvegardé (remet isModified à false)
+          markAsSaved();
         }}
         t={t}
       />
