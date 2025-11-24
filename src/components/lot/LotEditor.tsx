@@ -72,7 +72,7 @@ export function LotEditor({
     loadBaseData,
     fetchItemComplete,
   } = useDimensions(isLive);
-  const { sendHeight, sendLotUpdated } = useIframeCommunication();
+  const { sendLotUpdated } = useIframeCommunication();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalNiveau, setModalNiveau] = useState(0);
   const [modalDimension, setModalDimension] = useState('');
@@ -116,14 +116,6 @@ export function LotEditor({
       userActionRef.current = false;
     }
   }, [lot, onLotChange, sendLotUpdated]);
-
-  // Envoyer la hauteur au parent
-  useEffect(() => {
-    if (containerRef.current) {
-      const height = containerRef.current.scrollHeight;
-      sendHeight(height);
-    }
-  }, [lot, cheminSelection, sendHeight]);
 
   // Calculer les infos de header pour chaque niveau
   const headerInfos = useMemo((): HeaderInfo[] => {

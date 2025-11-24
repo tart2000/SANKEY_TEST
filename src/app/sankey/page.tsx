@@ -37,7 +37,6 @@ export default function SankeyPage() {
   const [selectedLanguage, setSelectedLanguage] =
     useState<LanguageCode>('fr_fr');
   const [iframeKey, setIframeKey] = useState(0);
-  const [iframeHeight, setIframeHeight] = useState<number>(800);
 
   // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
@@ -50,21 +49,6 @@ export default function SankeyPage() {
     isEditable,
     selectedLanguage,
   ]);
-
-  // Gérer le redimensionnement de l'iframe
-  useEffect(() => {
-    function handleResizeMessage(event: MessageEvent) {
-      if (
-        event.data &&
-        event.data.type === 'IFRAME_HEIGHT' &&
-        typeof event.data.height === 'number'
-      ) {
-        setIframeHeight(event.data.height);
-      }
-    }
-    window.addEventListener('message', handleResizeMessage);
-    return () => window.removeEventListener('message', handleResizeMessage);
-  }, []);
 
   // Gérer les messages de l'iframe pour visualiser les lots
   useEffect(() => {
@@ -215,9 +199,7 @@ export default function SankeyPage() {
             className="w-full border-0"
             style={{
               minHeight: 400,
-              height: iframeHeight,
               display: 'block',
-              overflow: 'hidden', // Pas de scrollbar interne - la hauteur est calculée précisément
             }}
             title="Visualisation Sankey"
           />

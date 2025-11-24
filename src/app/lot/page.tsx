@@ -111,7 +111,10 @@ export default function LotPage() {
   return (
     <>
       {!d3Loaded && <div style={{ display: 'none' }}>Chargement...</div>}
-      <div className="lot-container" style={{ position: 'relative' }}>
+      <div
+        className="lot-container"
+        style={{ position: 'relative', margin: 0, padding: 0 }}
+      >
         {loading ? (
           <SkeletonLoader />
         ) : lot ? (

@@ -15,7 +15,6 @@ export default function LotsPage() {
   const [selectedLotIdx, setSelectedLotIdx] = useState(0);
   const [selectedLanguage, setSelectedLanguage] =
     useState<LanguageCode>('fr_fr');
-  const [iframeHeight, setIframeHeight] = useState<number>(400);
   const [isEditable, setIsEditable] = useState(true);
   const [iframeKey, setIframeKey] = useState(0);
   const lot = lots[selectedLotIdx];
@@ -28,20 +27,6 @@ export default function LotsPage() {
   useEffect(() => {
     setIframeKey(prev => prev + 1);
   }, [selectedLotIdx, selectedLanguage, isEditable]);
-
-  useEffect(() => {
-    function handleResizeMessage(event: MessageEvent) {
-      if (
-        event.data &&
-        event.data.type === 'IFRAME_HEIGHT' &&
-        typeof event.data.height === 'number'
-      ) {
-        setIframeHeight(event.data.height);
-      }
-    }
-    window.addEventListener('message', handleResizeMessage);
-    return () => window.removeEventListener('message', handleResizeMessage);
-  }, []);
 
   return (
     <div className="h-screen flex flex-col">
@@ -106,14 +91,14 @@ export default function LotsPage() {
           </label>
         </div>
       </div>
-      <div className="flex-1 min-h-0 p-6 bg-gray-50">
+      <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
         <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border">
           <iframe
             key={`${iframeKey}-${selectedLanguage}`}
             ref={iframeRef}
             src={iframeSrc}
-            className="w-full h-full border-0 rounded-lg"
-            style={{ minHeight: 400, height: iframeHeight }}
+            className="w-full border-0 rounded-lg"
+            style={{ height: '676px', display: 'block' }}
             title="Lots"
           />
         </div>

@@ -187,8 +187,17 @@ export function useNavigation(lot: Lot | null) {
           node = value as Lot | Dimension;
         }
 
-        // Ne pas ajouter automatiquement de dimension enfant lors de la navigation entre siblings
-        // L'utilisateur doit cliquer explicitement sur un bouton de dimension pour naviguer plus profondément
+        // Ajouter automatiquement le niveau suivant s'il y a des dimensions disponibles
+        if (node && typeof node === 'object' && !Array.isArray(node)) {
+          const dimensions = getDimensionsFromNode(node);
+          if (dimensions.length > 0) {
+            // Ajouter automatiquement la première dimension disponible
+            newChemin.push({
+              dimension: dimensions[0],
+              valeur: null, // Pas de valeur sélectionnée, on affiche juste la stackbar
+            });
+          }
+        }
 
         return newChemin;
       });

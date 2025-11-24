@@ -249,7 +249,7 @@ export function StackbarHeader({
     FREQUENCY_OPTIONS[currentFrequency]?.icon || 'arrow-clockwise';
 
   return (
-    <div className="font-bold mt-2 mb-4 flex items-center justify-between">
+    <div className="font-bold mb-4 flex items-center justify-between">
       <div className="flex items-center justify-between w-full">
         {/* Groupe gauche : Navigation, titre, %, kg, frequency */}
         <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
