@@ -483,6 +483,27 @@ export function LotEditor({
 
     userActionRef.current = true; // Marquer comme action utilisateur
     setLot(newLot);
+
+    // Naviguer vers l'élément ajouté
+    const newChemin = [...cheminSelection.slice(0, modalNiveau + 1)];
+    newChemin[modalNiveau] = {
+      dimension: modalDimension,
+      valeur: nomLisible,
+    };
+
+    // Vérifier si l'élément ajouté a des dimensions enfants et naviguer vers la première
+    const nodeAdded = getNodeAtPath(newLot, newChemin);
+    if (nodeAdded) {
+      const dimensions = getDimensionsFromNode(nodeAdded);
+      if (dimensions.length > 0) {
+        newChemin.push({
+          dimension: dimensions[0],
+          valeur: null, // Afficher la stackbar sans sélectionner de segment
+        });
+      }
+    }
+
+    setChemin(newChemin);
   };
 
   // Gérer la suppression

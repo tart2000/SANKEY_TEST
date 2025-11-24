@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Lot } from '@/types/lot';
 import { LotEditor } from '@/components/lot/LotEditor';
@@ -8,7 +8,7 @@ import { SkeletonLoader } from '@/components/lot/SkeletonLoader';
 import { useLotAPI } from '@/hooks/lot/useLotAPI';
 import { useTranslation } from '@/lib/i18n';
 
-export default function LotPage() {
+function LotPageContent() {
   const searchParams = useSearchParams();
   const [lot, setLot] = useState<Lot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,5 +132,13 @@ export default function LotPage() {
         )}
       </div>
     </>
+  );
+}
+
+export default function LotPage() {
+  return (
+    <Suspense fallback={<SkeletonLoader />}>
+      <LotPageContent />
+    </Suspense>
   );
 }
