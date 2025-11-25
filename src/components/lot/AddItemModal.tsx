@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { BaseData, BaseDataItem, DimensionValue } from '@/types/lot';
 import { getTitreAffiche } from '@/services/lot/dimensionUtils';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -8,7 +15,8 @@ interface AddItemModalProps {
   onAdd: (
     bubbleId: string,
     pourcentage: number,
-    donneesBase: BaseDataItem
+    donneesBase: BaseDataItem,
+    poidsKg?: number
   ) => void;
   dimension: string;
   dimensionLabel: string;
@@ -17,6 +25,7 @@ interface AddItemModalProps {
   lang: string;
   fetchItemComplete: (bubbleId: string) => Promise<BaseDataItem | null>;
   t: (key: string, params?: Record<string, string>) => string;
+  poidsNiveau?: number;
 }
 
 export function AddItemModal({
@@ -30,9 +39,11 @@ export function AddItemModal({
   lang,
   fetchItemComplete,
   t,
+  poidsNiveau = 0,
 }: AddItemModalProps) {
   const [selectedElement, setSelectedElement] = useState<string>('');
-  const [pourcentage, setPourcentage] = useState<string>('');
+  const [valeur, setValeur] = useState<string>('');
+  const [unite, setUnite] = useState<'percentage' | 'weight'>('percentage');
   const [isValid, setIsValid] = useState(false);
   const [baseData, setBaseData] = useState<BaseData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,23 +87,34 @@ export function AddItemModal({
 
   const isFirstElement = existingKeys.length === 0;
 
+  // Réinitialiser le champ valeur quand on change d'unité
+  useEffect(() => {
+    setValeur('');
+  }, [unite]);
+
   // Valider le formulaire
   useEffect(() => {
     let valid = !!selectedElement;
 
     if (!isFirstElement) {
-      const pct = parseFloat(pourcentage);
-      valid = valid && !isNaN(pct) && pct >= 0 && pct <= 100;
+      const val = parseFloat(valeur);
+      if (unite === 'percentage') {
+        valid = valid && !isNaN(val) && val >= 0 && val <= 100;
+      } else {
+        // Pour les kg, on accepte n'importe quelle valeur positive
+        valid = valid && !isNaN(val) && val >= 0;
+      }
     }
 
     setIsValid(valid);
-  }, [selectedElement, pourcentage, isFirstElement]);
+  }, [selectedElement, valeur, isFirstElement, unite]);
 
   // Réinitialiser quand la modal s'ouvre
   useEffect(() => {
     if (isOpen) {
       setSelectedElement('');
-      setPourcentage('');
+      setValeur('');
+      setUnite('percentage');
       setIsValid(false);
     }
   }, [isOpen]);
@@ -100,7 +122,25 @@ export function AddItemModal({
   const handleAdd = async () => {
     if (!isValid || !baseData || !selectedElement) return;
 
-    const pct = isFirstElement ? 100 : parseFloat(pourcentage);
+    let pct: number;
+    let poidsKg: number | undefined;
+
+    if (isFirstElement) {
+      pct = 100;
+    } else if (unite === 'percentage') {
+      pct = parseFloat(valeur);
+      poidsKg = undefined;
+    } else {
+      // Mode kg : on calcule le pourcentage
+      poidsKg = parseFloat(valeur);
+      if (poidsNiveau > 0) {
+        pct = (poidsKg / poidsNiveau) * 100;
+      } else {
+        // Si poids du niveau = 0, on met à 100%
+        pct = 100;
+      }
+    }
+
     const bubbleId = baseData[selectedElement]?.bubble_id || selectedElement;
 
     // Essayer de récupérer l'élément complet
@@ -109,12 +149,12 @@ export function AddItemModal({
       // Extraire la clé et la valeur
       const nomLisible = Object.keys(elementComplet)[0];
       const data = elementComplet[nomLisible] as BaseDataItem;
-      onAdd(nomLisible, pct, data);
+      onAdd(nomLisible, pct, data, poidsKg);
     } else {
       // Fallback : utiliser les données de base
       const baseItem = baseData[selectedElement];
       if (baseItem) {
-        onAdd(selectedElement, pct, baseItem);
+        onAdd(selectedElement, pct, baseItem, poidsKg);
       }
     }
 
@@ -231,27 +271,38 @@ export function AddItemModal({
           {!isFirstElement && (
             <div>
               <label
-                htmlFor="pourcentage"
+                htmlFor="valeur"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                {t('percentage')}
+                {unite === 'percentage' ? t('percentage') : t('weight')}
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  id="pourcentage"
-                  value={pourcentage}
-                  onChange={e => setPourcentage(e.target.value)}
-                  className="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  id="valeur"
+                  value={valeur}
+                  onChange={e => setValeur(e.target.value)}
+                  className="block w-full px-3 py-2.5 pr-20 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                   placeholder="0"
                   min="0"
-                  max="100"
-                  step="0.1"
+                  max={unite === 'percentage' ? '100' : undefined}
+                  step={unite === 'percentage' ? '0.1' : '0.01'}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-                  <span className="bg-white border border-gray-200 rounded-md px-2 py-0.5 text-gray-500 text-sm font-medium">
-                    %
-                  </span>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-1">
+                  <Select
+                    value={unite}
+                    onValueChange={(value: 'percentage' | 'weight') =>
+                      setUnite(value)
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-16 border border-gray-200 shadow-none bg-white hover:bg-gray-50 focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="weight">kg</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

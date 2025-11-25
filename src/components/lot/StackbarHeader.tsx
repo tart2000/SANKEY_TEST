@@ -311,14 +311,14 @@ export function StackbarHeader({
           {niveau > 0 && hasSiblings && (
             <>
               <button
-                className="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center"
+                className="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center cursor-pointer"
                 aria-label="Précédent"
                 onClick={() => onNavigateSibling(niveau - 1, -1)}
               >
                 <i className="ph ph-caret-left w-4 h-4"></i>
               </button>
               <button
-                className="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center"
+                className="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center cursor-pointer"
                 aria-label="Suivant"
                 onClick={() => onNavigateSibling(niveau - 1, 1)}
               >
@@ -418,7 +418,7 @@ export function StackbarHeader({
           {niveau === 0 && (
             <div className="relative" ref={frequencyDropdownRef}>
               <button
-                className="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center"
+                className="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center cursor-pointer"
                 aria-label="Actualiser"
                 onClick={e => {
                   if (isEditable) {
@@ -485,7 +485,7 @@ export function StackbarHeader({
                 return (
                   <button
                     key={dim}
-                    className={`h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${
+                    className={`h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none cursor-pointer ${
                       isSelected
                         ? 'bg-blue-50 text-blue-600 border-blue-200 shadow'
                         : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
@@ -506,7 +506,7 @@ export function StackbarHeader({
           <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
             {availableDimensions.length > 0 && (
               <button
-                className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300"
+                className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300 cursor-pointer"
                 aria-label="Ajouter"
                 onClick={onAdd}
               >
@@ -516,7 +516,7 @@ export function StackbarHeader({
             {niveau > 0 && (
               <>
                 <button
-                  className={`h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300 ${
+                  className={`h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300 cursor-pointer ${
                     availableDimensions.length === 0 ? 'rounded-l-lg' : ''
                   }`}
                   aria-label="Supprimer"
@@ -525,7 +525,7 @@ export function StackbarHeader({
                   <i className="ph ph-trash w-4 h-4"></i>
                 </button>
                 <button
-                  className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg"
+                  className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg cursor-pointer"
                   aria-label="Fermer"
                   onClick={onClose}
                 >

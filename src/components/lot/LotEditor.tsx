@@ -16,7 +16,7 @@ import {
   getNodeAtPath,
   getDimensionLabel,
 } from '@/services/lot/dimensionUtils';
-import { getPercent } from '@/services/lot/lotUtils';
+import { getPercent, calculerPoidsNiveau } from '@/services/lot/lotUtils';
 import {
   ajouterElementEtRepartir,
   supprimerNoeudEtRepartir,
@@ -493,7 +493,8 @@ export function LotEditor({
   const handleAdd = async (
     bubbleId: string,
     pourcentage: number,
-    donneesBase: BaseDataItem
+    donneesBase: BaseDataItem,
+    poidsKg?: number
   ) => {
     if (!lot) return;
 
@@ -503,15 +504,53 @@ export function LotEditor({
         ? Object.keys(donneesBase)[0]
         : bubbleId;
 
-    const newLot = ajouterElementEtRepartir(
-      lot,
-      cheminSelection,
-      modalNiveau,
-      modalDimension,
-      nomLisible,
-      pourcentage,
-      donneesBase
-    );
+    let newLot: Lot;
+
+    // Si on ajoute en kg, il faut :
+    // 1. Ajouter le poids au total du lot
+    // 2. Calculer le pourcentage par rapport au poids du niveau
+    // 3. Normaliser les pourcentages
+    if (poidsKg !== undefined && poidsKg > 0) {
+      // Calculer le poids du niveau avant ajout
+      const poidsNiveauAvant = calculerPoidsNiveau(
+        lot,
+        cheminSelection,
+        modalNiveau
+      );
+
+      // Ajouter le poids au total du lot
+      const nouveauTotal = (lot.total || 0) + poidsKg;
+      const lotAvecNouveauTotal = { ...lot, total: nouveauTotal };
+
+      // Calculer le nouveau poids du niveau
+      const nouveauPoidsNiveau = poidsNiveauAvant + poidsKg;
+
+      // Calculer le nouveau pourcentage
+      const nouveauPourcentage =
+        nouveauPoidsNiveau > 0 ? (poidsKg / nouveauPoidsNiveau) * 100 : 100;
+
+      // Ajouter l'élément avec le nouveau pourcentage
+      newLot = ajouterElementEtRepartir(
+        lotAvecNouveauTotal,
+        cheminSelection,
+        modalNiveau,
+        modalDimension,
+        nomLisible,
+        nouveauPourcentage,
+        donneesBase
+      );
+    } else {
+      // Comportement normal en pourcentage
+      newLot = ajouterElementEtRepartir(
+        lot,
+        cheminSelection,
+        modalNiveau,
+        modalDimension,
+        nomLisible,
+        pourcentage,
+        donneesBase
+      );
+    }
 
     userActionRef.current = true; // Marquer comme action utilisateur
     setLot(newLot);
@@ -866,6 +905,10 @@ export function LotEditor({
           lang={lang}
           fetchItemComplete={fetchItemComplete}
           t={t}
+          poidsNiveau={(() => {
+            if (!lot) return 0;
+            return calculerPoidsNiveau(lot, cheminSelection, modalNiveau);
+          })()}
         />
       )}
 

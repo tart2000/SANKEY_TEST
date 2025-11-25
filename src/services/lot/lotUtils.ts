@@ -1,4 +1,9 @@
-import type { Dimension, DimensionValue } from '@/types/lot';
+import type {
+  Dimension,
+  DimensionValue,
+  Lot,
+  CheminSelection,
+} from '@/types/lot';
 
 /**
  * Deep copy d'un objet
@@ -99,4 +104,65 @@ export function setPercent(
     return { ...item, pourcentage: percent };
   }
   return percent;
+}
+
+/**
+ * Calcule le poids total d'un niveau de dimension
+ * @param lot Le lot complet
+ * @param cheminSelection Le chemin de sélection actuel
+ * @param niveau Le niveau auquel on veut calculer le poids
+ * @returns Le poids total en kg du niveau
+ */
+export function calculerPoidsNiveau(
+  lot: Lot,
+  cheminSelection: CheminSelection,
+  niveau: number
+): number {
+  const totalKg = lot.total || 0;
+
+  // Si niveau 0, retourner le total du lot
+  if (niveau === 0) {
+    return totalKg;
+  }
+
+  // Calculer le pourcentage cumulé jusqu'au niveau parent
+  let nodeTmp: Lot | Dimension | null = lot;
+  let pctCumulTmp = 100;
+
+  for (let i = 0; i < niveau; i++) {
+    const { dimension: dim, valeur: val } = cheminSelection[i];
+    if (!val || !nodeTmp || typeof nodeTmp !== 'object') break;
+
+    const nodeObj = nodeTmp as Record<string, unknown>;
+    if (!(dim in nodeObj)) break;
+
+    const dimValue = nodeObj[dim];
+    if (
+      typeof dimValue !== 'object' ||
+      dimValue === null ||
+      Array.isArray(dimValue)
+    ) {
+      break;
+    }
+
+    const dimObj = dimValue as Record<string, unknown>;
+    if (!(val in dimObj)) break;
+
+    const n = dimObj[val];
+    if (
+      typeof n === 'object' &&
+      n !== null &&
+      !Array.isArray(n) &&
+      'pourcentage' in n
+    ) {
+      pctCumulTmp =
+        (pctCumulTmp * (n as { pourcentage: number }).pourcentage) / 100;
+    } else if (typeof n === 'number') {
+      pctCumulTmp = (pctCumulTmp * n) / 100;
+    }
+
+    nodeTmp = n as Lot | Dimension;
+  }
+
+  return (totalKg * pctCumulTmp) / 100;
 }
