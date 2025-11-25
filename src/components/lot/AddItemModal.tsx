@@ -177,7 +177,7 @@ export function AddItemModal({
         }}
       >
         <div className="bg-white rounded-lg shadow-2xl p-8">
-          <div className="text-center">Chargement...</div>
+          <div className="text-center">{t('loading')}</div>
         </div>
       </div>
     );
@@ -208,7 +208,7 @@ export function AddItemModal({
           </h3>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-500 focus:outline-none"
+            className="text-gray-400 hover:text-gray-500 focus:outline-none cursor-pointer"
             onClick={onClose}
             aria-label={t('close')}
           >
@@ -295,7 +295,7 @@ export function AddItemModal({
                       setUnite(value)
                     }
                   >
-                    <SelectTrigger className="h-8 w-16 border border-gray-200 shadow-none bg-white hover:bg-gray-50 focus:ring-0">
+                    <SelectTrigger className="h-8 w-16 border border-gray-200 shadow-none bg-white hover:bg-gray-50 focus:ring-0 cursor-pointer">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -313,7 +313,7 @@ export function AddItemModal({
         <div className="flex items-center justify-end gap-3 p-4 border-t">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
             onClick={onClose}
           >
             {t('cancel')}
@@ -323,7 +323,7 @@ export function AddItemModal({
             disabled={!isValid}
             className={`px-4 py-2 text-sm font-medium border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
               isValid
-                ? 'text-white bg-blue-600 hover:bg-blue-700'
+                ? 'text-white bg-blue-600 hover:bg-blue-700 cursor-pointer'
                 : 'text-gray-400 bg-gray-200 cursor-not-allowed'
             }`}
             onClick={handleAdd}
