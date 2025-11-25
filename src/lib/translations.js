@@ -138,6 +138,7 @@ export const translations = {
   en_gb: {
     translation: {
       dimension: 'Dimension:',
+      loading: 'Loading...',
       save: 'Save',
       saving: 'Saving...',
       saved: 'Saved!',
@@ -268,6 +269,7 @@ export const translations = {
   es_es: {
     translation: {
       dimension: 'Dimensión:',
+      loading: 'Cargando...',
       save: 'Guardar',
       saving: 'Guardando...',
       saved: '¡Guardado!',
@@ -401,6 +403,7 @@ export const translations = {
   de_de: {
     translation: {
       dimension: 'Dimension:',
+      loading: 'Laden...',
       save: 'Speichern',
       saving: 'Speichern...',
       saved: 'Gespeichert!',
