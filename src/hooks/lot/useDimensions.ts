@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { DimensionLabels, BaseData, BaseDataItem } from '@/types/lot';
 
 // Mapping entre les noms des dimensions et les endpoints API
@@ -22,6 +22,9 @@ export function useDimensions() {
   const [loadingLabels, setLoadingLabels] = useState(false);
   const [errorLabels, setErrorLabels] = useState<string | null>(null);
 
+  // Ref pour logger la valeur actuelle sans dépendre du state dans useCallback
+  const dimensionsLabelsRef = useRef<DimensionLabels | null>(null);
+
   // Cache pour les données de base par dimension
   const baseDataCache = useRef<Map<string, BaseData>>(new Map());
   const [loadingBaseData, setLoadingBaseData] = useState<Set<string>>(
@@ -31,21 +34,46 @@ export function useDimensions() {
     new Map()
   );
 
+  // Mettre à jour la ref quand dimensionsLabels change
+  useEffect(() => {
+    dimensionsLabelsRef.current = dimensionsLabels;
+  }, [dimensionsLabels]);
+
   // Charger les labels des dimensions
   const loadDimensionsLabels = useCallback(async (isLive: boolean) => {
+    console.log('[useDimensions] loadDimensionsLabels appelé', {
+      isLive,
+      dimensionsLabelsActuelles: dimensionsLabelsRef.current,
+      timestamp: new Date().toISOString(),
+    });
+
     // Charger les dimensions à chaque appel pour avoir les dernières valeurs depuis l'API
     setLoadingLabels(true);
     setErrorLabels(null);
 
     try {
+      const requestBody = {
+        endpoint: 'dimensions',
+        params: { isLive },
+        method: 'GET',
+      };
+
+      console.log('[useDimensions] Appel API /api/bubble', {
+        body: requestBody,
+        isLive,
+      });
+
       const response = await fetch('/api/bubble', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: 'dimensions',
-          params: { isLive },
-          method: 'GET',
-        }),
+        cache: 'no-store',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('[useDimensions] Réponse API reçue', {
+        status: response.status,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
       });
 
       if (!response.ok) {
@@ -53,14 +81,49 @@ export function useDimensions() {
       }
 
       const data = await response.json();
+      console.log("[useDimensions] Données dimensions reçues de l'API", {
+        data,
+        keys: Object.keys(data),
+        sample: Object.keys(data)
+          .slice(0, 3)
+          .reduce(
+            (acc, key) => {
+              acc[key] = data[key];
+              return acc;
+            },
+            {} as Record<string, unknown>
+          ),
+      });
+
+      console.log('[useDimensions] Mise à jour du state dimensionsLabels', {
+        ancien: dimensionsLabelsRef.current,
+        nouveau: data,
+      });
+
       setDimensionsLabels(data as DimensionLabels);
+      dimensionsLabelsRef.current = data as DimensionLabels;
+
+      console.log('[useDimensions] State dimensionsLabels mis à jour', {
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Erreur inconnue';
       setErrorLabels(errorMessage);
-      console.error('[Lot] Erreur lors du chargement des dimensions:', err);
+      console.error(
+        '[useDimensions] Erreur lors du chargement des dimensions:',
+        {
+          error: err,
+          message: errorMessage,
+          isLive,
+        }
+      );
     } finally {
       setLoadingLabels(false);
+      console.log('[useDimensions] loadDimensionsLabels terminé', {
+        isLive,
+        timestamp: new Date().toISOString(),
+      });
     }
   }, []);
 

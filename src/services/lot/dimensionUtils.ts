@@ -95,6 +95,15 @@ export function getDimensionLabel(
 ): string {
   // Si les dimensions ne sont pas encore chargées, fallback sur la clé formatée
   if (!dimensionsLabels || !dimensionsLabels[dimKey]) {
+    console.log(
+      '[getDimensionLabel] Fallback - dimensionsLabels non disponibles',
+      {
+        dimKey,
+        dimensionsLabels: dimensionsLabels ? 'existe' : 'null',
+        hasKey: dimensionsLabels ? dimKey in dimensionsLabels : false,
+        lang,
+      }
+    );
     return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
   }
 
@@ -105,6 +114,12 @@ export function getDimensionLabel(
   }
 
   // Fallback sur la clé formatée
+  console.log('[getDimensionLabel] Fallback - label vide ou non trouvé', {
+    dimKey,
+    lang,
+    availableLabels: dimensionsLabels[dimKey],
+    label,
+  });
   return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
 }
 

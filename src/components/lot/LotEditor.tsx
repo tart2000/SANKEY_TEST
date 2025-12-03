@@ -82,8 +82,22 @@ export function LotEditor({
 
   // Charger les labels de dimensions au montage
   useEffect(() => {
+    console.log('[LotEditor] useEffect loadDimensionsLabels déclenché', {
+      isLive,
+      lotId,
+      timestamp: new Date().toISOString(),
+    });
     loadDimensionsLabels(isLive);
   }, [loadDimensionsLabels, isLive]);
+
+  // Logger quand dimensionsLabels change
+  useEffect(() => {
+    console.log('[LotEditor] dimensionsLabels a changé', {
+      dimensionsLabels,
+      keys: dimensionsLabels ? Object.keys(dimensionsLabels) : null,
+      timestamp: new Date().toISOString(),
+    });
+  }, [dimensionsLabels]);
 
   // Initialiser le chemin si vide
   useEffect(() => {
