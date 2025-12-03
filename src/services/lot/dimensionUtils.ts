@@ -6,6 +6,17 @@ import type {
 } from '@/types/lot';
 
 /**
+ * Normalise une clé de dimension en retirant les accents et en mettant en minuscule
+ * Pour correspondre aux clés de l'API (ex: "qualité" -> "qualite")
+ */
+function normalizeDimensionKey(key: string): string {
+  return key
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire les diacritiques (accents)
+    .toLowerCase();
+}
+
+/**
  * Obtient les dimensions accessibles à partir d'un nœud
  * Exclut les propriétés spéciales (pourcentage, total, title, etc.)
  */
@@ -94,13 +105,41 @@ export function getDimensionLabel(
   lang: string = 'fr_fr'
 ): string {
   // Si les dimensions ne sont pas encore chargées, fallback sur la clé formatée
-  if (!dimensionsLabels || !dimensionsLabels[dimKey]) {
+  if (!dimensionsLabels) {
     console.log(
       '[getDimensionLabel] Fallback - dimensionsLabels non disponibles',
       {
         dimKey,
-        dimensionsLabels: dimensionsLabels ? 'existe' : 'null',
-        hasKey: dimensionsLabels ? dimKey in dimensionsLabels : false,
+        dimensionsLabels: 'null',
+        lang,
+      }
+    );
+    return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
+  }
+
+  // Normaliser la clé pour la correspondance (retirer les accents)
+  const normalizedKey = normalizeDimensionKey(dimKey);
+
+  // Chercher d'abord avec la clé exacte, puis avec la clé normalisée
+  let labelData = dimensionsLabels[dimKey] || dimensionsLabels[normalizedKey];
+
+  // Si toujours pas trouvé, chercher dans toutes les clés avec normalisation
+  if (!labelData) {
+    const matchingKey = Object.keys(dimensionsLabels).find(
+      key => normalizeDimensionKey(key) === normalizedKey
+    );
+    if (matchingKey) {
+      labelData = dimensionsLabels[matchingKey];
+    }
+  }
+
+  if (!labelData) {
+    console.log(
+      '[getDimensionLabel] Fallback - clé non trouvée dans dimensionsLabels',
+      {
+        dimKey,
+        normalizedKey,
+        availableKeys: Object.keys(dimensionsLabels),
         lang,
       }
     );
@@ -108,7 +147,7 @@ export function getDimensionLabel(
   }
 
   // Retourne le label dans la langue appropriée
-  const label = dimensionsLabels[dimKey][lang];
+  const label = labelData[lang];
   if (label && label.trim() !== '') {
     return label;
   }
@@ -116,8 +155,9 @@ export function getDimensionLabel(
   // Fallback sur la clé formatée
   console.log('[getDimensionLabel] Fallback - label vide ou non trouvé', {
     dimKey,
+    normalizedKey,
     lang,
-    availableLabels: dimensionsLabels[dimKey],
+    availableLabels: labelData,
     label,
   });
   return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
