@@ -33,8 +33,7 @@ export function useDimensions(isLive: boolean) {
 
   // Charger les labels des dimensions
   const loadDimensionsLabels = useCallback(async () => {
-    if (dimensionsLabels) return; // Déjà chargé
-
+    // Charger les dimensions à chaque appel pour avoir les dernières valeurs depuis l'API
     setLoadingLabels(true);
     setErrorLabels(null);
 
@@ -63,7 +62,7 @@ export function useDimensions(isLive: boolean) {
     } finally {
       setLoadingLabels(false);
     }
-  }, [isLive, dimensionsLabels]);
+  }, [isLive]);
 
   // Charger les données de base pour une dimension
   const loadBaseData = useCallback(
