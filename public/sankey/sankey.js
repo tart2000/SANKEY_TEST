@@ -2201,7 +2201,15 @@ function getTransformationStep(transformation) {
     return window.transformationTypes[type].step || 'sorting';
   }
 
-  // 3. Fallback par défaut
+  // 3. Chercher dans translationTypes
+  if (type.startsWith('translation_')) {
+    const translationKey = type.replace('translation_', '');
+    if (window.translationTypes && window.translationTypes[translationKey]) {
+      return window.translationTypes[translationKey].step || 'sorting';
+    }
+  }
+
+  // 4. Fallback par défaut
   return 'sorting';
 }
 
@@ -4486,6 +4494,32 @@ function applyScenario(
             coProductLot: resteLot,
           };
         }
+      } else if (type.startsWith('translation_')) {
+        const translationKey = type.replace('translation_', '');
+        const translationConfig =
+          window.translationTypes && window.translationTypes[translationKey];
+        if (!translationConfig) {
+          throw new Error(`Translation non trouvée: ${translationKey}`);
+        }
+
+        // Ajouter le titre et la step de la translation
+        const params = getUrlParams();
+        const lang = params.lang || 'fr_fr';
+        const translationTitle =
+          lang === 'en_gb' && translationConfig.en_gb
+            ? translationConfig.en_gb
+            : translationConfig.label;
+        transfo.title = translationTitle || 'Translation';
+        if (translationConfig.step) {
+          transfo.step = translationConfig.step;
+        } else if (!transfo.step) {
+          transfo.step = 'sorting';
+        }
+
+        result = window.processes['executeTranslation'](
+          resteLot,
+          translationConfig
+        );
       } else if (window.processes && window.processes[type]) {
         const params = { yield: transfo.yield };
         const { targetLot, coProductLot } = window.processes[type](

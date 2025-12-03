@@ -1114,6 +1114,32 @@ const transformationTypes = {
   },
 };
 
+// Table de correspondance pour les transformations "translations"
+const translationTypes = {
+  cleaning: {
+    label: 'Nettoyage',
+    en_gb: 'Cleaning',
+    description: 'Transforme le lot en propre',
+    description_en_gb: 'Transform the lot into clean',
+    dimension: 'proprete',
+    output_id_test: '1751363332290x936743758301757400',
+    output_id_live: '1751363332290x936743758301757400',
+    step: 'preparation',
+  },
+  decoloration: {
+    label: 'Décoloration',
+    en_gb: 'Bleaching',
+    description: 'Transforme le lot en blanc',
+    description_en_gb: 'Transform the lot into white',
+    description_en_gb:
+      'Overwrites all color values into a single normalized value',
+    dimension: 'couleurs',
+    output_id_test: '1751446409161x466100660519829500',
+    output_id_live: '1751446409161x466100660519829500',
+    step: 'preparation',
+  },
+};
+
 // Cache pour les transformations dynamiques
 let dynamicTransfosCache = new Map();
 let dynamicTransfosLoaded = false;
@@ -1539,6 +1565,18 @@ const transformationUtils = {
       return transformationTypes[type].label;
     }
 
+    // Vérifier les translations
+    if (type.startsWith('translation_')) {
+      const translationKey = type.replace('translation_', '');
+      const translation = translationTypes[translationKey];
+      if (translation) {
+        if (lang === 'en_gb' && translation.en_gb) {
+          return translation.en_gb;
+        }
+        return translation.label;
+      }
+    }
+
     // Vérifier les transformations dynamiques
     if (type.startsWith('dynamic_transfo_')) {
       const bubbleId = type.replace('dynamic_transfo_', '');
@@ -1563,6 +1601,18 @@ const transformationUtils = {
       return transformationTypes[type].description;
     }
 
+    // Vérifier les translations
+    if (type.startsWith('translation_')) {
+      const translationKey = type.replace('translation_', '');
+      const translation = translationTypes[translationKey];
+      if (translation) {
+        if (lang === 'en_gb' && translation.description_en_gb) {
+          return translation.description_en_gb;
+        }
+        return translation.description || '';
+      }
+    }
+
     // Vérifier les transformations dynamiques
     if (type.startsWith('dynamic_transfo_')) {
       const bubbleId = type.replace('dynamic_transfo_', '');
@@ -1574,7 +1624,7 @@ const transformationUtils = {
   },
 
   async getAvailableTransformations() {
-    // Transformations statiques
+    // Transformations statiques (selectBy)
     const staticTransformations = Object.entries(transformationTypes).map(
       ([value, info]) => ({
         value,
@@ -1582,6 +1632,20 @@ const transformationUtils = {
         en_gb: info.en_gb,
         description: info.description,
         isStatic: true,
+      })
+    );
+
+    // Transformations translations
+    const translationTransformations = Object.entries(translationTypes).map(
+      ([key, info]) => ({
+        value: `translation_${key}`,
+        label: info.label,
+        en_gb: info.en_gb,
+        description: info.description,
+        description_en_gb: info.description_en_gb,
+        isTranslation: true,
+        dimension: info.dimension,
+        step: info.step,
       })
     );
 
@@ -1622,12 +1686,17 @@ const transformationUtils = {
       console.warn(
         "[processes] i18next n'est pas initialisé pour le séparateur des transformations dynamiques"
       );
-      return [...staticTransformations, ...dynamicTransformations];
+      return [
+        ...staticTransformations,
+        ...translationTransformations,
+        ...dynamicTransformations,
+      ];
     }
 
     // Retourner avec séparateur
     return [
       ...staticTransformations,
+      ...translationTransformations,
       {
         value: 'separator',
         label: window.i18next.t('dynamicTransformationsSeparator'),
@@ -1738,6 +1807,398 @@ function executeDynamicTransfo(lot, transfoDetails) {
   );
 }
 
+// Fonction pour exécuter les transformations "translations"
+function executeTranslation(lot, translationConfig) {
+  console.log('executeTranslation appelée avec:', { lot, translationConfig });
+
+  // 1. Récupération de la configuration
+  const { dimension, output_id_test, output_id_live } = translationConfig;
+  const params = getUrlParams();
+  const isLive = params.isLive;
+  const outputId = isLive ? output_id_live : output_id_test;
+
+  if (
+    !outputId ||
+    outputId === 'PLACEHOLDER_TEST_ID' ||
+    outputId === 'PLACEHOLDER_LIVE_ID'
+  ) {
+    console.error('executeTranslation: output_id non défini ou placeholder');
+    return {
+      targetLot: JSON.parse(JSON.stringify(lot)),
+      coProductLot: null,
+    };
+  }
+
+  // 2. Appel API synchrone
+  const itemData = fetchItemMiniSync(outputId);
+  if (!itemData || !itemData.fr_fr) {
+    console.error(
+      "executeTranslation: impossible de récupérer les données de l'item",
+      outputId
+    );
+    return {
+      targetLot: JSON.parse(JSON.stringify(lot)),
+      coProductLot: null,
+    };
+  }
+
+  const { bubble_id, fr_fr, en_gb, color } = itemData;
+
+  // Deep clone du lot
+  const processedLot = JSON.parse(JSON.stringify(lot));
+
+  // 3. Vérifier si la dimension existe (au niveau racine ou dans les sous-structures)
+  const dimensionHierarchy = window.DIMENSION_HIERARCHY || {};
+  const dimensionConfig = dimensionHierarchy[dimension];
+  const hasParent = dimensionConfig && dimensionConfig.parent;
+
+  // Si la dimension a un parent, elle n'existe pas au niveau racine
+  // Sinon, vérifier qu'elle existe au niveau racine
+  if (!hasParent) {
+    if (
+      !processedLot[dimension] ||
+      typeof processedLot[dimension] !== 'object'
+    ) {
+      console.warn(
+        `executeTranslation: dimension ${dimension} absente ou invalide au niveau racine`
+      );
+      return {
+        targetLot: processedLot,
+        coProductLot: null,
+      };
+    }
+  } else {
+    // Pour les dimensions imbriquées, vérifier qu'elles existent quelque part dans le lot
+    let found = false;
+    const checkDimensionExists = obj => {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      if (obj[dimension] && typeof obj[dimension] === 'object') {
+        found = true;
+        return;
+      }
+      Object.values(obj).forEach(value => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          checkDimensionExists(value);
+        }
+      });
+    };
+    checkDimensionExists(processedLot);
+    if (!found) {
+      console.warn(
+        `executeTranslation: dimension ${dimension} absente dans le lot`
+      );
+      return {
+        targetLot: processedLot,
+        coProductLot: null,
+      };
+    }
+  }
+
+  // 4. Gestion des sous-dimensions
+  const childDimensions = dimensionConfig ? dimensionConfig.children || [] : [];
+  const aggregatedChildren = {};
+
+  // Si la dimension a des enfants, agréger les sous-dimensions
+  if (childDimensions.length > 0) {
+    // Collecter toutes les occurrences de la dimension dans le lot
+    const allDimensionOccurrences = [];
+
+    // Si la dimension existe au niveau racine (pas de parent), l'utiliser directement
+    if (
+      !hasParent &&
+      processedLot[dimension] &&
+      typeof processedLot[dimension] === 'object'
+    ) {
+      allDimensionOccurrences.push({ data: processedLot[dimension], path: [] });
+    }
+
+    // Pour les dimensions imbriquées (avec parent), chercher récursivement
+    // Pour les dimensions de niveau racine avec enfants, on a déjà ajouté au-dessus
+    // mais on peut aussi chercher récursivement pour être sûr (même si normalement elles n'existent qu'au niveau racine)
+    const collectDimensionOccurrences = (obj, path = [], skipRoot = false) => {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+
+      // Si on est au niveau racine et qu'on a déjà ajouté cette dimension, ne pas la rajouter
+      if (skipRoot && path.length === 0 && obj[dimension]) {
+        // Déjà ajouté, continuer récursivement
+      } else if (obj[dimension] && typeof obj[dimension] === 'object') {
+        // Vérifier qu'on ne l'a pas déjà ajouté (pour éviter les doublons)
+        const alreadyAdded = allDimensionOccurrences.some(
+          occ =>
+            occ.data === obj[dimension] ||
+            (path.length === 0 && occ.path.length === 0)
+        );
+        if (!alreadyAdded) {
+          allDimensionOccurrences.push({ data: obj[dimension], path });
+        }
+      }
+
+      Object.keys(obj).forEach(key => {
+        if (key !== dimension) {
+          const value = obj[key];
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            collectDimensionOccurrences(value, [...path, key], skipRoot);
+          }
+        }
+      });
+    };
+
+    // Collecter récursivement (skipRoot = true si on a déjà ajouté au niveau racine)
+    collectDimensionOccurrences(
+      processedLot,
+      [],
+      !hasParent && processedLot[dimension]
+    );
+
+    if (allDimensionOccurrences.length === 0) {
+      console.warn(
+        `executeTranslation: aucune occurrence de ${dimension} trouvée`
+      );
+      return {
+        targetLot: processedLot,
+        coProductLot: null,
+      };
+    }
+
+    // Pour chaque sous-dimension
+    childDimensions.forEach(childDim => {
+      const aggregated = {};
+
+      // Parcourir toutes les occurrences de la dimension
+      allDimensionOccurrences.forEach(({ data: dimensionData }) => {
+        const allKeys = Object.keys(dimensionData);
+
+        allKeys.forEach(key => {
+          const parentValue = dimensionData[key];
+          if (!parentValue || typeof parentValue !== 'object') return;
+
+          const childData = parentValue[childDim];
+          if (!childData || typeof childData !== 'object') return;
+
+          const parentWeight = Math.max(
+            Number(parentValue.pourcentage) || 0,
+            0
+          );
+
+          // Agréger les valeurs de la sous-dimension en pondérant par le pourcentage du parent
+          Object.entries(childData).forEach(([childKey, childValue]) => {
+            if (!childValue || typeof childValue !== 'object') return;
+
+            const childWeight =
+              (Number(childValue.pourcentage) || 0) * (parentWeight / 100);
+
+            if (!aggregated[childKey]) {
+              aggregated[childKey] = {
+                ...childValue,
+                pourcentage: 0,
+              };
+            }
+            aggregated[childKey].pourcentage += childWeight;
+
+            // Préserver les propriétés importantes
+            if (childValue.bubble_id)
+              aggregated[childKey].bubble_id = childValue.bubble_id;
+            if (childValue.color) aggregated[childKey].color = childValue.color;
+            if (childValue.en_gb) aggregated[childKey].en_gb = childValue.en_gb;
+
+            // Appliquer la couleur officielle depuis window.colorById si disponible
+            if (
+              window.colorById &&
+              childValue.bubble_id &&
+              window.colorById.has(childValue.bubble_id)
+            ) {
+              aggregated[childKey].color = window.colorById.get(
+                childValue.bubble_id
+              );
+            }
+
+            // Gérer les sous-dimensions récursives (ex: fibres sous matieres)
+            const childDimConfig = dimensionHierarchy[childDim];
+            const grandChildDims = childDimConfig
+              ? childDimConfig.children || []
+              : [];
+            grandChildDims.forEach(grandChildDim => {
+              if (childValue[grandChildDim]) {
+                if (!aggregated[childKey][grandChildDim]) {
+                  aggregated[childKey][grandChildDim] = {};
+                }
+                Object.entries(childValue[grandChildDim]).forEach(
+                  ([gcKey, gcValue]) => {
+                    if (!gcValue || typeof gcValue !== 'object') return;
+                    const gcWeight =
+                      (Number(gcValue.pourcentage) || 0) * (childWeight / 100);
+                    if (!aggregated[childKey][grandChildDim][gcKey]) {
+                      aggregated[childKey][grandChildDim][gcKey] = {
+                        ...gcValue,
+                        pourcentage: 0,
+                      };
+                    }
+                    aggregated[childKey][grandChildDim][gcKey].pourcentage +=
+                      gcWeight;
+                  }
+                );
+              }
+            });
+          });
+        });
+      });
+
+      // Normaliser la sous-dimension à 100%
+      const normalize = obj => {
+        const sum = Object.values(obj).reduce(
+          (acc, v) => acc + (Number(v.pourcentage) || 0),
+          0
+        );
+        if (sum > 0) {
+          Object.values(obj).forEach(v => {
+            v.pourcentage = (Number(v.pourcentage) || 0) * (100 / sum);
+          });
+        }
+      };
+
+      normalize(aggregated);
+
+      // Normaliser les sous-dimensions récursives
+      Object.values(aggregated).forEach(item => {
+        if (item && typeof item === 'object') {
+          childDimensions.forEach(childDim => {
+            const childDimConfig = dimensionHierarchy[childDim];
+            const grandChildDims = childDimConfig
+              ? childDimConfig.children || []
+              : [];
+            grandChildDims.forEach(grandChildDim => {
+              if (item[grandChildDim]) {
+                normalize(item[grandChildDim]);
+              }
+            });
+          });
+        }
+      });
+
+      aggregatedChildren[childDim] = aggregated;
+    });
+  }
+
+  // 5. Écrasement de la dimension
+  const newDimensionValue = {
+    bubble_id,
+    color:
+      color ||
+      (window.colorById && window.colorById.has(bubble_id)
+        ? window.colorById.get(bubble_id)
+        : undefined),
+    en_gb: en_gb || '',
+    pourcentage: 100,
+  };
+
+  // Ajouter les sous-dimensions agrégées
+  Object.keys(aggregatedChildren).forEach(childDim => {
+    newDimensionValue[childDim] = aggregatedChildren[childDim];
+  });
+
+  // Fonction récursive pour écraser la dimension partout où elle apparaît
+  const overwriteDimensionRecursive = (
+    obj,
+    targetDimension,
+    newValue,
+    newKey
+  ) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+
+    // Si cette dimension existe à ce niveau, l'écraser
+    if (obj[targetDimension] && typeof obj[targetDimension] === 'object') {
+      obj[targetDimension] = {
+        [newKey]: newValue,
+      };
+    }
+
+    // Parcourir récursivement toutes les propriétés
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        // Ne pas parcourir la dimension qu'on vient d'écraser
+        if (key !== targetDimension) {
+          overwriteDimensionRecursive(value, targetDimension, newValue, newKey);
+        }
+      }
+    });
+  };
+
+  // 5. Écrasement de la dimension
+  // Si la dimension n'a pas de parent, l'écraser au niveau racine
+  if (!hasParent) {
+    processedLot[dimension] = {
+      [fr_fr]: newDimensionValue,
+    };
+  }
+
+  // Écraser récursivement la dimension dans toutes les sous-structures
+  // (toujours faire ça pour s'assurer qu'on écrase toutes les occurrences)
+  overwriteDimensionRecursive(
+    processedLot,
+    dimension,
+    newDimensionValue,
+    fr_fr
+  );
+
+  console.log(`executeTranslation: dimension ${dimension} écrasée avec:`, {
+    key: fr_fr,
+    value: newDimensionValue,
+    result: processedLot[dimension],
+  });
+
+  // 6. Normalisation récursive (seulement pour les sous-dimensions agrégées, pas pour la dimension principale)
+  // La dimension principale a déjà pourcentage: 100 et une seule clé, donc pas besoin de normaliser
+  // Mais on doit normaliser les sous-dimensions agrégées si elles existent
+  if (
+    Object.keys(aggregatedChildren).length > 0 &&
+    processedLot[dimension] &&
+    processedLot[dimension][fr_fr]
+  ) {
+    const mainValue = processedLot[dimension][fr_fr];
+    // Normaliser chaque sous-dimension agrégée
+    Object.keys(aggregatedChildren).forEach(childDim => {
+      if (mainValue[childDim] && typeof mainValue[childDim] === 'object') {
+        if (window.genericTransformationEngine) {
+          window.genericTransformationEngine.normalizeDimensionPercentages(
+            mainValue[childDim]
+          );
+        } else {
+          // Fallback de normalisation
+          const normalize = dimData => {
+            if (!dimData || typeof dimData !== 'object') return;
+            const total = Object.values(dimData).reduce((sum, v) => {
+              return (
+                sum +
+                (v && typeof v === 'object' && v.pourcentage !== undefined
+                  ? v.pourcentage
+                  : 0)
+              );
+            }, 0);
+            if (total > 0) {
+              Object.values(dimData).forEach(v => {
+                if (v && typeof v === 'object' && v.pourcentage !== undefined) {
+                  v.pourcentage = (v.pourcentage / total) * 100;
+                }
+              });
+            }
+          };
+          normalize(mainValue[childDim]);
+        }
+      }
+    });
+  }
+
+  // 7. Préservation des autres dimensions (déjà fait avec le deep clone)
+  // Le lot est déjà une copie complète, donc toutes les autres dimensions sont préservées
+
+  // 8. Retour
+  return {
+    targetLot: processedLot,
+    coProductLot: null,
+  };
+}
+
 window.processes = {
   selectByFormat,
   selectByType,
@@ -1748,10 +2209,12 @@ window.processes = {
   selectByProprete,
   selectByPerturbateur,
   executeDynamicTransfo,
+  executeTranslation,
 };
 
 window.transformationUtils = transformationUtils;
 window.transformationTypes = transformationTypes;
+window.translationTypes = translationTypes;
 
 window.fetchItemMiniSync = fetchItemMiniSync;
 window.fetchItemCompleteSync = fetchItemCompleteSync;
