@@ -71,7 +71,7 @@ export function LotEditor({
     loadDimensionsLabels,
     loadBaseData,
     fetchItemComplete,
-  } = useDimensions(isLive);
+  } = useDimensions();
   const { sendHeight, sendLotUpdated } = useIframeCommunication();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalNiveau, setModalNiveau] = useState(0);
@@ -82,8 +82,8 @@ export function LotEditor({
 
   // Charger les labels de dimensions au montage
   useEffect(() => {
-    loadDimensionsLabels();
-  }, [loadDimensionsLabels]);
+    loadDimensionsLabels(isLive);
+  }, [loadDimensionsLabels, isLive]);
 
   // Initialiser le chemin si vide
   useEffect(() => {
@@ -882,7 +882,7 @@ export function LotEditor({
             dimensionsLabels,
             lang
           )}
-          loadBaseData={loadBaseData}
+          loadBaseData={dimension => loadBaseData(dimension, isLive)}
           existingKeys={(() => {
             if (!lot) return [];
             const node = getNodeAtPath(
@@ -903,7 +903,7 @@ export function LotEditor({
             return Object.keys(dimValue).filter(k => k !== 'title');
           })()}
           lang={lang}
-          fetchItemComplete={fetchItemComplete}
+          fetchItemComplete={bubbleId => fetchItemComplete(bubbleId, isLive)}
           t={t}
           poidsNiveau={(() => {
             if (!lot) return 0;

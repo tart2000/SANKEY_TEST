@@ -16,7 +16,7 @@ function getEndpointForDimension(dimension: string): string {
   return mapping[dimension] || dimension;
 }
 
-export function useDimensions(isLive: boolean) {
+export function useDimensions() {
   const [dimensionsLabels, setDimensionsLabels] =
     useState<DimensionLabels | null>(null);
   const [loadingLabels, setLoadingLabels] = useState(false);
@@ -32,7 +32,7 @@ export function useDimensions(isLive: boolean) {
   );
 
   // Charger les labels des dimensions
-  const loadDimensionsLabels = useCallback(async () => {
+  const loadDimensionsLabels = useCallback(async (isLive: boolean) => {
     // Charger les dimensions à chaque appel pour avoir les dernières valeurs depuis l'API
     setLoadingLabels(true);
     setErrorLabels(null);
@@ -62,25 +62,28 @@ export function useDimensions(isLive: boolean) {
     } finally {
       setLoadingLabels(false);
     }
-  }, [isLive]);
+  }, []);
 
   // Charger les données de base pour une dimension
   const loadBaseData = useCallback(
-    async (dimension: string): Promise<BaseData | null> => {
+    async (dimension: string, isLive: boolean): Promise<BaseData | null> => {
+      // Créer une clé composite pour le cache (dimension + isLive)
+      const cacheKey = `${dimension}_${isLive ? 'live' : 'test'}`;
+
       // Vérifier le cache
-      if (baseDataCache.current.has(dimension)) {
-        return baseDataCache.current.get(dimension) || null;
+      if (baseDataCache.current.has(cacheKey)) {
+        return baseDataCache.current.get(cacheKey) || null;
       }
 
       // Vérifier si déjà en cours de chargement
-      if (loadingBaseData.has(dimension)) {
+      if (loadingBaseData.has(cacheKey)) {
         // Attendre que le chargement se termine
         return new Promise(resolve => {
           const checkInterval = setInterval(() => {
-            if (baseDataCache.current.has(dimension)) {
+            if (baseDataCache.current.has(cacheKey)) {
               clearInterval(checkInterval);
-              resolve(baseDataCache.current.get(dimension) || null);
-            } else if (!loadingBaseData.has(dimension)) {
+              resolve(baseDataCache.current.get(cacheKey) || null);
+            } else if (!loadingBaseData.has(cacheKey)) {
               clearInterval(checkInterval);
               resolve(null);
             }
@@ -88,10 +91,10 @@ export function useDimensions(isLive: boolean) {
         });
       }
 
-      setLoadingBaseData(prev => new Set(prev).add(dimension));
+      setLoadingBaseData(prev => new Set(prev).add(cacheKey));
       setErrorBaseData(prev => {
         const newMap = new Map(prev);
-        newMap.delete(dimension);
+        newMap.delete(cacheKey);
         return newMap;
       });
 
@@ -113,12 +116,12 @@ export function useDimensions(isLive: boolean) {
 
         const data = await response.json();
         const baseData: BaseData = data as BaseData;
-        baseDataCache.current.set(dimension, baseData);
+        baseDataCache.current.set(cacheKey, baseData);
         return baseData;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Erreur inconnue';
-        setErrorBaseData(prev => new Map(prev).set(dimension, errorMessage));
+        setErrorBaseData(prev => new Map(prev).set(cacheKey, errorMessage));
         console.error(
           `Erreur lors du chargement des données pour ${dimension}:`,
           err
@@ -127,18 +130,17 @@ export function useDimensions(isLive: boolean) {
       } finally {
         setLoadingBaseData(prev => {
           const newSet = new Set(prev);
-          newSet.delete(dimension);
+          newSet.delete(cacheKey);
           return newSet;
         });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isLive]
+    []
   );
 
   // Récupérer un élément complet depuis l'API
   const fetchItemComplete = useCallback(
-    async (bubbleId: string): Promise<BaseDataItem | null> => {
+    async (bubbleId: string, isLive: boolean): Promise<BaseDataItem | null> => {
       try {
         const response = await fetch('/api/bubble', {
           method: 'POST',
@@ -167,7 +169,7 @@ export function useDimensions(isLive: boolean) {
         return null;
       }
     },
-    [isLive]
+    []
   );
 
   return {
