@@ -282,6 +282,27 @@ class TransformationPopup {
       lastTransfo && lastTransfo._displayNames
         ? lastTransfo._displayNames[0]
         : keys;
+
+    // Initialiser selectedKeys avant de créer le HTML (pour getThresholdHTML)
+    if (keyListData && keys.length > 0) {
+      this.selectedKeys = keys.map((id, i) => {
+        const name = displayNames[i] || id;
+        // Trouver l'objet data correspondant dans keyListData
+        const data = Object.entries(keyListData).find(
+          ([k, v]) => v.bubble_id === id
+        )?.[1];
+        return { id, name, data };
+      });
+    } else {
+      this.selectedKeys = keys.map((id, i) => ({
+        id,
+        name: displayNames[i] || id,
+      }));
+    }
+
+    // Initialiser threshold avant de créer le HTML
+    this.initializeThreshold();
+
     const pills = displayNames
       .map((name, i) => {
         // Vérifier si c'est un ID Bubble (format: nombrexnombre)
@@ -314,10 +335,12 @@ class TransformationPopup {
           `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${value.bubble_id}">${translatedName}</div>`
       )
       .join('');
+    // Masquer et désactiver l'input si threshold est actif
+    const shouldHideKeyInput = this.threshold !== null && this.condition;
     const keyInputHTML = keyList
       ? `
-      <div class="relative mt-2">
-        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+      <div class="relative mt-2" ${shouldHideKeyInput ? 'style="display: none;"' : ''}>
+        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" ${shouldHideKeyInput ? 'disabled' : ''} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
         <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-[60] max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
@@ -391,6 +414,7 @@ class TransformationPopup {
           <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
           <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
           ${keyInputHTML}
+          <div id="threshold-container">${this.getThresholdHTML(lastType)}</div>
         </div>
       </div>
       <div class="mt-6 flex justify-end space-x-3">
@@ -401,6 +425,19 @@ class TransformationPopup {
 
     // Attacher les listeners directement (plus besoin de charger les transformations)
     this.attachEventListeners();
+
+    // Masquer et désactiver l'input si threshold est actif (après création du HTML)
+    if (this.threshold !== null && this.condition) {
+      const keyInputWrapper =
+        this.modal.querySelector('#key-input')?.parentElement;
+      const keyInput = this.modal.querySelector('#key-input');
+      if (keyInputWrapper) {
+        keyInputWrapper.style.display = 'none';
+      }
+      if (keyInput) {
+        keyInput.disabled = true;
+      }
+    }
   }
 
   // Nouvelle méthode pour charger les transformations et créer la popup complète sans keyList
@@ -660,6 +697,79 @@ class TransformationPopup {
     this.condition = transfo.condition || null;
   }
 
+  // Fonction pour générer le HTML du threshold
+  getThresholdHTML(selectedType = null) {
+    // Si selectedType n'est pas fourni, essayer de le récupérer depuis le modal
+    if (!selectedType && this.modal) {
+      selectedType = this.modal.querySelector('#transfo-type')?.value;
+    }
+    const supportsThreshold =
+      selectedType &&
+      window.transformationTypes &&
+      window.transformationTypes[selectedType] &&
+      window.transformationTypes[selectedType].supportsThreshold === true;
+
+    // Le bouton n'est visible que si un seul élément est sélectionné et que le type supporte le threshold
+    const showAddButton =
+      supportsThreshold &&
+      this.selectedKeys.length === 1 &&
+      (this.threshold === null || this.condition === null);
+
+    // La ligne threshold est visible si threshold et condition sont définis
+    const showThresholdRow = this.threshold !== null && this.condition !== null;
+
+    let html = '';
+
+    // Bouton "Ajouter un seuil"
+    if (showAddButton) {
+      html += `
+        <div class="mt-2">
+          <button
+            type="button"
+            id="add-threshold-btn"
+            class="text-sm text-blue-600 hover:text-blue-700 underline focus:outline-none"
+          >
+            ${i18next.t('addThreshold')}
+          </button>
+        </div>
+      `;
+    }
+
+    // Ligne threshold (dropdown + input)
+    if (showThresholdRow) {
+      html += `
+        <div id="threshold-row" class="mt-2 flex items-center gap-2">
+          <select
+            id="threshold-condition"
+            class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          >
+            <option value="over" ${this.condition === 'over' ? 'selected' : ''}>${i18next.t('thresholdGreaterThan')}</option>
+            <option value="under" ${this.condition === 'under' ? 'selected' : ''}>${i18next.t('thresholdLessThan')}</option>
+          </select>
+          <input
+            type="number"
+            id="threshold-value"
+            min="0"
+            max="100"
+            value="${this.threshold || 0}"
+            class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+            placeholder="0"
+          />
+          <span class="text-sm text-gray-700">%</span>
+          <button
+            type="button"
+            id="remove-threshold-btn"
+            class="text-sm text-red-600 hover:text-red-700 underline focus:outline-none ml-auto"
+          >
+            ${i18next.t('removeThreshold')}
+          </button>
+        </div>
+      `;
+    }
+
+    return html;
+  }
+
   attachEventListeners() {
     const cancelBtn = this.modal.querySelector('#cancel-btn');
     const saveBtn = this.modal.querySelector('#save-btn');
@@ -671,6 +781,9 @@ class TransformationPopup {
     // Pour garder la liste des keys sélectionnées
     // Initialiser avec les keys existantes si on édite une transformation
     this.selectedKeys = this.initializeSelectedKeys();
+
+    // Initialiser threshold et condition depuis la transformation existante
+    this.initializeThreshold();
 
     // Fonction pour vérifier si le bouton de sauvegarde doit être activé
     const updateSaveButtonState = () => {
@@ -793,6 +906,16 @@ class TransformationPopup {
           keys: selectedIds, // IDs pour les calculs
           _displayNames: [selectedNames], // Noms pour l'affichage
         };
+
+        // Ajouter threshold/condition si présents (et une seule key)
+        if (
+          this.threshold !== null &&
+          this.condition &&
+          selectedIds.length === 1
+        ) {
+          transformation.threshold = this.threshold;
+          transformation.condition = this.condition;
+        }
       }
 
       if (this.currentRef) {
@@ -929,7 +1052,18 @@ class TransformationPopup {
                 btn.dataset.keyIndex = newIndex;
               });
 
+              // Si on revient à une seule key après suppression, on peut réactiver le threshold
+              // mais on le laisse à null par défaut (l'utilisateur doit le réactiver manuellement)
+
+              // Si on supprime la dernière fibre et qu'on a un threshold, le désactiver
+              if (this.selectedKeys.length === 0 && this.threshold !== null) {
+                this.threshold = null;
+                this.condition = null;
+              }
+
               updateSaveButtonState();
+              // Mettre à jour l'affichage du threshold si nécessaire
+              this.updateThresholdDisplay(updateSaveButtonState);
             }
           }
         }
@@ -952,6 +1086,16 @@ class TransformationPopup {
         // Charger les données de base si pas encore fait
         chargerDonneesBaseAPI(keyList)
           .then(keyListData => {
+            // S'assurer que l'input reste masqué si threshold est actif (après chargement des données)
+            if (this.threshold !== null && this.condition) {
+              const keyInputWrapper = keyInput?.parentElement;
+              if (keyInputWrapper) {
+                keyInputWrapper.style.display = 'none';
+              }
+              if (keyInput) {
+                keyInput.disabled = true;
+              }
+            }
             // Fonction pour récupérer les clés déjà utilisées par cette transformation spécifique
             const getUsedKeysForThisTransformation = () => {
               const usedKeys = new Set();
@@ -1024,14 +1168,49 @@ class TransformationPopup {
               }
             };
 
-            // Listener pour le focus sur l'input
+            // S'assurer que l'input est masqué si threshold est actif (après chargement des données)
+            const ensureInputHidden = () => {
+              if (this.threshold !== null && this.condition) {
+                const keyInputWrapper = keyInput?.parentElement;
+                if (keyInputWrapper) {
+                  keyInputWrapper.style.display = 'none';
+                }
+                if (keyInput) {
+                  keyInput.disabled = true;
+                }
+              }
+            };
+
+            // Masquer immédiatement si threshold est actif
+            ensureInputHidden();
+
+            // Réappliquer après chaque interaction pour garantir que ça reste masqué
+            const originalShowFilteredOptions = showFilteredOptions;
+            showFilteredOptions = (searchValue = '') => {
+              if (this.threshold === null || !this.condition) {
+                originalShowFilteredOptions(searchValue);
+              }
+            };
+
+            // Listener pour le focus sur l'input (seulement si pas de threshold actif)
             keyInput.addEventListener('focus', () => {
-              showFilteredOptions();
+              if (this.threshold === null || !this.condition) {
+                showFilteredOptions();
+              } else {
+                // Empêcher l'ouverture du dropdown si threshold actif
+                keyInput.blur();
+              }
             });
 
             // Listener pour le clic sur l'input (pour rouvrir le dropdown même si déjà focus)
-            keyInput.addEventListener('click', () => {
-              showFilteredOptions();
+            keyInput.addEventListener('click', e => {
+              if (this.threshold === null || !this.condition) {
+                showFilteredOptions();
+              } else {
+                // Empêcher l'ouverture du dropdown si threshold actif
+                e.preventDefault();
+                e.stopPropagation();
+              }
             });
 
             // Listener pour la saisie
@@ -1050,6 +1229,15 @@ class TransformationPopup {
 
                   const name = e.target.dataset.name;
                   const id = e.target.dataset.id;
+
+                  // Empêcher l'ajout si threshold est actif (on ne peut avoir qu'une seule fibre)
+                  if (
+                    this.threshold !== null &&
+                    this.condition &&
+                    this.selectedKeys.length >= 1
+                  ) {
+                    return;
+                  }
 
                   if (
                     !this.selectedKeys.some(k => k.name === name && k.id === id)
@@ -1070,7 +1258,15 @@ class TransformationPopup {
                       keysContainer.appendChild(pill);
                     }
 
+                    // Si on passe à plus d'une key, désactiver le threshold
+                    if (this.selectedKeys.length > 1) {
+                      this.threshold = null;
+                      this.condition = null;
+                    }
+
                     updateSaveButtonState();
+                    // Mettre à jour l'affichage du threshold
+                    this.updateThresholdDisplay(updateSaveButtonState);
                   }
 
                   keyDropdown.classList.add('hidden');
@@ -1103,6 +1299,100 @@ class TransformationPopup {
             );
           });
       }
+    }
+
+    // Gestion du threshold
+    this.attachThresholdListeners(updateSaveButtonState);
+
+    // S'assurer que l'input reste masqué si threshold est actif (après tous les listeners)
+    // Utiliser setTimeout pour s'assurer que c'est exécuté après toutes les initialisations
+    setTimeout(() => {
+      if (this.threshold !== null && this.condition) {
+        const keyInputWrapper =
+          this.modal.querySelector('#key-input')?.parentElement;
+        const keyInput = this.modal.querySelector('#key-input');
+        if (keyInputWrapper) {
+          keyInputWrapper.style.display = 'none';
+        }
+        if (keyInput) {
+          keyInput.disabled = true;
+        }
+      }
+    }, 0);
+  }
+
+  // Méthode pour mettre à jour l'affichage du threshold
+  updateThresholdDisplay(updateSaveButtonState) {
+    const thresholdContainer = this.modal.querySelector('#threshold-container');
+    const selectedType = this.modal.querySelector('#transfo-type')?.value;
+    const keyInputWrapper =
+      this.modal.querySelector('#key-input')?.parentElement;
+
+    if (thresholdContainer) {
+      thresholdContainer.innerHTML = this.getThresholdHTML(selectedType);
+      // Réattacher les listeners après mise à jour du HTML
+      this.attachThresholdListeners(updateSaveButtonState);
+    }
+
+    // Masquer et désactiver l'input de recherche si threshold actif
+    const keyInput = this.modal.querySelector('#key-input');
+    if (keyInputWrapper && keyInput) {
+      if (this.threshold !== null && this.condition) {
+        keyInputWrapper.style.display = 'none';
+        keyInput.disabled = true;
+      } else {
+        keyInputWrapper.style.display = 'block';
+        keyInput.disabled = false;
+      }
+    }
+  }
+
+  // Méthode pour attacher les listeners du threshold
+  attachThresholdListeners(updateSaveButtonState) {
+    const addThresholdBtn = this.modal.querySelector('#add-threshold-btn');
+    const removeThresholdBtn = this.modal.querySelector(
+      '#remove-threshold-btn'
+    );
+    const thresholdCondition = this.modal.querySelector('#threshold-condition');
+    const thresholdValue = this.modal.querySelector('#threshold-value');
+
+    // Bouton "Ajouter un seuil"
+    if (addThresholdBtn) {
+      addThresholdBtn.addEventListener('click', () => {
+        this.threshold = 0;
+        this.condition = 'over';
+        this.updateThresholdDisplay(updateSaveButtonState);
+        if (updateSaveButtonState) updateSaveButtonState();
+      });
+    }
+
+    // Bouton "Supprimer le seuil"
+    if (removeThresholdBtn) {
+      removeThresholdBtn.addEventListener('click', () => {
+        this.threshold = null;
+        this.condition = null;
+        this.updateThresholdDisplay(updateSaveButtonState);
+        if (updateSaveButtonState) updateSaveButtonState();
+      });
+    }
+
+    // Dropdown condition
+    if (thresholdCondition) {
+      thresholdCondition.addEventListener('change', e => {
+        this.condition = e.target.value;
+        if (updateSaveButtonState) updateSaveButtonState();
+      });
+    }
+
+    // Input threshold value
+    if (thresholdValue) {
+      thresholdValue.addEventListener('input', e => {
+        const value = parseInt(e.target.value, 10);
+        if (!isNaN(value) && value >= 0 && value <= 100) {
+          this.threshold = value;
+        }
+        if (updateSaveButtonState) updateSaveButtonState();
+      });
     }
   }
 
@@ -1184,10 +1474,30 @@ class TransformationPopup {
       keysContainer.style.display = 'block';
     }
     if (keyInputWrapper) {
-      keyInputWrapper.style.display = 'block';
+      // Ne pas réafficher l'input si threshold est actif
+      if (this.threshold === null || !this.condition) {
+        keyInputWrapper.style.display = 'block';
+      } else {
+        keyInputWrapper.style.display = 'none';
+      }
     }
     if (transfoDescription) {
       transfoDescription.style.display = 'block';
+    }
+
+    // Réinitialiser threshold si changement de type (mais pas lors du chargement initial)
+    if (!isInitialLoad) {
+      this.threshold = null;
+      this.condition = null;
+      // Si on change de type, réafficher l'input (threshold désactivé)
+      if (keyInputWrapper) {
+        keyInputWrapper.style.display = 'block';
+      }
+    }
+
+    // Mettre à jour l'affichage du threshold après changement de type
+    if (typeof updateSaveButtonState === 'function') {
+      this.updateThresholdDisplay(updateSaveButtonState);
     }
 
     // Nettoyer les éventuels éléments spécifiques aux dynamiques
