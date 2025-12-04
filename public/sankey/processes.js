@@ -1432,9 +1432,6 @@ async function loadDynamicTransformations() {
 
     // Vérifier si le mode isLive a changé
     if (lastLoadedIsLive !== null && lastLoadedIsLive !== isLive) {
-      console.log(
-        'Mode isLive changé, réinitialisation du cache des transformations dynamiques'
-      );
       dynamicTransfosCache.clear();
       dynamicTransfosLoaded = false;
     }
@@ -1465,7 +1462,6 @@ async function loadDynamicTransformations() {
     }
 
     const data = await response.json();
-    console.log('Liste des transformations dynamiques chargée:', data);
 
     // Vider le cache
     dynamicTransfosCache.clear();
@@ -1513,7 +1509,6 @@ async function getDetailedTransfo(bubbleId, isLive) {
   // ✅ Vérifier le cache d'abord avec clé composite
   const cacheKey = `${bubbleId}_${isLive}`;
   if (dynamicTransfosCache.has(cacheKey)) {
-    console.log(`Cache hit pour ${bubbleId} (${isLive ? 'live' : 'dev'})`);
     return dynamicTransfosCache.get(cacheKey);
   }
 
@@ -1535,7 +1530,6 @@ async function getDetailedTransfo(bubbleId, isLive) {
     }
 
     const data = await response.json();
-    console.log(`Détails complets pour ${bubbleId}:`, data);
 
     // ✅ Mettre en cache immédiatement avec clé composite
     dynamicTransfosCache.set(cacheKey, data);
@@ -1760,7 +1754,6 @@ const transformationUtils = {
     }
 
     // Si pas en cache, charger MAINTENANT de manière synchrone
-    console.log('Chargement synchrone des détails pour:', bubbleId);
 
     try {
       // Utiliser XMLHttpRequest pour un appel synchrone
@@ -1779,7 +1772,6 @@ const transformationUtils = {
       if (xhr.status === 200) {
         const data = JSON.parse(xhr.responseText);
         dynamicTransfosCache.set(cacheKey, data);
-        console.log('Détails chargés et mis en cache pour:', bubbleId);
         return data;
       } else {
         console.error('Erreur lors du chargement synchrone:', xhr.status);
@@ -1794,8 +1786,6 @@ const transformationUtils = {
 
 // Fonction pour exécuter les transformations dynamiques
 function executeDynamicTransfo(lot, transfoDetails) {
-  console.log('executeDynamicTransfo appelée avec:', { lot, transfoDetails });
-
   // Utiliser le nouveau moteur de transformation simplifié
   if (!window.simpleDynamicTransformationEngine) {
     window.simpleDynamicTransformationEngine =
@@ -1810,8 +1800,6 @@ function executeDynamicTransfo(lot, transfoDetails) {
 
 // Fonction pour exécuter les transformations "translations"
 function executeTranslation(lot, translationConfig) {
-  console.log('executeTranslation appelée avec:', { lot, translationConfig });
-
   // 1. Récupération de la configuration
   const { dimension, output_id_test, output_id_live } = translationConfig;
   const params = getUrlParams();
@@ -2141,12 +2129,6 @@ function executeTranslation(lot, translationConfig) {
     newDimensionValue,
     fr_fr
   );
-
-  console.log(`executeTranslation: dimension ${dimension} écrasée avec:`, {
-    key: fr_fr,
-    value: newDimensionValue,
-    result: processedLot[dimension],
-  });
 
   // 6. Normalisation récursive (seulement pour les sous-dimensions agrégées, pas pour la dimension principale)
   // La dimension principale a déjà pourcentage: 100 et une seule clé, donc pas besoin de normaliser
@@ -2511,28 +2493,10 @@ class SimpleDynamicTransformationEngine {
     // S'il en a pas OU qu'elle est vide, appliquer celles du lot d'entrée (agrégées)
     const targetFormat = targetLot.formats[targetFormatName];
 
-    console.log('🔵 [createTargetLot] AVANT boucle processingOrder');
-    console.log('🔵 [createTargetLot] targetFormat:', targetFormat);
-
     // Pour chaque dimension enfant de formats
     this.processingOrder.forEach(dimension => {
       const dimensionConfig = this.dimensionHierarchy[dimension];
       if (!dimensionConfig || dimensionConfig.parent !== 'formats') return;
-
-      console.log('🔵 [createTargetLot] Dimension:', dimension);
-      console.log(
-        '🔵 [createTargetLot] targetFormat[dimension]:',
-        targetFormat[dimension]
-      );
-      console.log(
-        '🔵 [createTargetLot] targetFormat[dimension] existe?',
-        !!targetFormat[dimension]
-      );
-      console.log(
-        '🔵 [createTargetLot] targetFormat[dimension] a du contenu?',
-        targetFormat[dimension] &&
-          Object.keys(targetFormat[dimension]).length > 0
-      );
 
       // Si le format de référence n'a pas cette dimension OU qu'elle est vide, prendre celle du lot d'entrée
       if (
@@ -2541,35 +2505,15 @@ class SimpleDynamicTransformationEngine {
         sourceLot &&
         sourceLot.formats
       ) {
-        console.log(
-          '🔵 [createTargetLot] Agréger dimension',
-          dimension,
-          'depuis sourceLot'
-        );
         const aggregated = this.aggregateDimensionFromFormats(
           sourceLot,
           dimension
         );
-        console.log('🔵 [createTargetLot] Aggregated:', aggregated);
         if (aggregated && Object.keys(aggregated).length > 0) {
           targetFormat[dimension] = aggregated;
-          console.log(
-            '🔵 [createTargetLot] Dimension',
-            dimension,
-            'ajoutée depuis sourceLot'
-          );
         }
-      } else {
-        console.log(
-          '🔵 [createTargetLot] Garder dimension',
-          dimension,
-          'du format de référence'
-        );
       }
     });
-
-    console.log('🔵 [createTargetLot] APRÈS boucle processingOrder');
-    console.log('🔵 [createTargetLot] targetFormat:', targetFormat);
 
     // Normaliser toutes les distributions
     this.normalizeAllDistributions(targetLot);
@@ -2695,37 +2639,10 @@ class SimpleDynamicTransformationEngine {
     }
 
     // Appliquer les distributions filles (remplacement conditionnel)
-    console.log('🟡 [createCoproductLot] AVANT applyChildDistributions');
-    console.log(
-      '🟡 [createCoproductLot] formats:',
-      Object.keys(coproductLot.formats || {})
-    );
-    console.log(
-      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
-      coproductLot.formats[coproductFormatName]
-    );
     this.applyChildDistributions(coproductLot, coproductItem, sourceLot);
-    console.log('🟡 [createCoproductLot] APRÈS applyChildDistributions');
-    console.log(
-      '🟡 [createCoproductLot] formats:',
-      Object.keys(coproductLot.formats || {})
-    );
-    console.log(
-      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
-      coproductLot.formats[coproductFormatName]
-    );
 
     // Normaliser toutes les distributions
     this.normalizeAllDistributions(coproductLot);
-    console.log('🟡 [createCoproductLot] APRÈS normalizeAllDistributions');
-    console.log(
-      '🟡 [createCoproductLot] formats:',
-      Object.keys(coproductLot.formats || {})
-    );
-    console.log(
-      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
-      coproductLot.formats[coproductFormatName]
-    );
 
     return coproductLot;
   }
@@ -2775,76 +2692,21 @@ class SimpleDynamicTransformationEngine {
           return;
         }
 
-        // Logs détaillés pour comprendre pourquoi les types sont perdus
-        console.log('🔵 [applyChildDistributions] Dimension:', dimension);
-        console.log(
-          '🔵 [applyChildDistributions] targetFormat[dimension]:',
-          targetFormat[dimension]
-        );
-        console.log(
-          '🔵 [applyChildDistributions] targetFormat[dimension] existe?',
-          !!targetFormat[dimension]
-        );
-        console.log(
-          '🔵 [applyChildDistributions] targetFormat[dimension] a du contenu?',
-          targetFormat[dimension] &&
-            Object.keys(targetFormat[dimension]).length > 0
-        );
-        console.log(
-          '🔵 [applyChildDistributions] referenceFormat[dimension]:',
-          referenceFormat[dimension]
-        );
-        console.log(
-          '🔵 [applyChildDistributions] referenceFormat[dimension] existe?',
-          !!referenceFormat[dimension]
-        );
-        console.log(
-          '🔵 [applyChildDistributions] referenceFormat[dimension] a du contenu?',
-          referenceFormat[dimension] &&
-            Object.keys(referenceFormat[dimension]).length > 0
-        );
-
         // Si le targetFormat a déjà cette dimension ET qu'elle a du contenu (copiée depuis le format de référence) → la garder
         if (
           targetFormat[dimension] &&
           Object.keys(targetFormat[dimension]).length > 0
         ) {
-          console.log(
-            '🔵 [applyChildDistributions] Garder dimension',
-            dimension,
-            'du format de référence (a du contenu)'
-          );
           // Ne rien faire, déjà copiée depuis le format de référence et elle a du contenu
         } else if (sourceLot && sourceLot.formats) {
-          console.log(
-            '🔵 [applyChildDistributions] Agréger dimension',
-            dimension,
-            'depuis sourceLot'
-          );
           // Si le targetFormat n'a pas cette dimension OU qu'elle est vide → prendre celle du lot d'entrée (agrégée)
           const aggregated = this.aggregateDimensionFromFormats(
             sourceLot,
             dimension
           );
-          console.log('🔵 [applyChildDistributions] Aggregated:', aggregated);
           if (aggregated && Object.keys(aggregated).length > 0) {
             targetFormat[dimension] = aggregated;
-            console.log(
-              '🔵 [applyChildDistributions] Dimension',
-              dimension,
-              'ajoutée depuis sourceLot'
-            );
-          } else {
-            console.log(
-              "🔵 [applyChildDistributions] Pas d'agrégation possible pour dimension",
-              dimension
-            );
           }
-        } else {
-          console.log(
-            '🔵 [applyChildDistributions] Pas de sourceLot pour dimension',
-            dimension
-          );
         }
       });
     });

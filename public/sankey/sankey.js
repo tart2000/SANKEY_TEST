@@ -1597,165 +1597,244 @@ function createStackbarSegments(
   });
 }
 
+// Fonction générique pour obtenir les valeurs de stackbar pour n'importe quelle dimension
+function getStackValuesGeneric(lot, dimension) {
+  const dimConfig =
+    window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[dimension];
+  if (!dimConfig) return {};
+
+  // Cas 1 : Dimension racine (pas de parent)
+  if (!dimConfig.parent) {
+    if (!lot[dimension]) return {};
+    const values = {};
+    Object.entries(lot[dimension]).forEach(([key, valueObj]) => {
+      const pourcentage =
+        typeof valueObj === 'number'
+          ? valueObj
+          : valueObj && typeof valueObj.pourcentage === 'number'
+            ? valueObj.pourcentage
+            : 0;
+      if (pourcentage > 0) {
+        values[key] = {
+          pourcentage: pourcentage,
+          color:
+            valueObj && typeof valueObj === 'object'
+              ? valueObj.color
+              : undefined,
+        };
+      }
+    });
+    return values;
+  }
+
+  // Cas 2 : Dimension enfant - construire le chemin depuis la racine
+  const path = [];
+  let currentDim = dimension;
+  while (currentDim) {
+    path.unshift(currentDim);
+    const config =
+      window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[currentDim];
+    currentDim = config ? config.parent : null;
+  }
+
+  const values = {};
+  let totalLot = 0;
+  let totalSansDimension = 0;
+
+  // Fonction récursive pour parcourir la structure
+  function traverse(node, pathIndex, accumulatedMass) {
+    if (pathIndex >= path.length) return;
+
+    const currentDimName = path[pathIndex];
+    const isLastDim = pathIndex === path.length - 1;
+
+    // Vérifier si la dimension existe à ce niveau
+    if (node[currentDimName]) {
+      const dimData = node[currentDimName];
+      const hasContent = Object.keys(dimData).length > 0;
+
+      if (isLastDim) {
+        // On est à la dimension cible
+        if (hasContent) {
+          totalLot += accumulatedMass;
+          let sumDimension = 0;
+          Object.entries(dimData).forEach(([key, valueObj]) => {
+            let pct = 0;
+            if (typeof valueObj === 'object' && valueObj !== null) {
+              pct =
+                valueObj.pourcentage !== undefined
+                  ? valueObj.pourcentage
+                  : valueObj.masse !== undefined
+                    ? valueObj.masse
+                    : 0;
+            } else if (typeof valueObj === 'number') {
+              pct = valueObj;
+            }
+
+            const mass = (pct / 100) * accumulatedMass;
+            values[key] = (values[key] || 0) + mass;
+            sumDimension += mass;
+          });
+
+          // Si la somme ne couvre pas toute la masse, le reste est inconnu
+          if (sumDimension < accumulatedMass) {
+            totalSansDimension += accumulatedMass - sumDimension;
+          }
+        } else {
+          // Dimension vide - tout va dans totalSansDimension
+          totalSansDimension += accumulatedMass;
+        }
+      } else {
+        // On continue à descendre dans la hiérarchie
+        if (hasContent) {
+          Object.values(dimData).forEach(childObj => {
+            const pctChild =
+              typeof childObj === 'object' && childObj !== null
+                ? typeof childObj.pourcentage === 'number'
+                  ? childObj.pourcentage
+                  : 100
+                : 100;
+            const childMass = (accumulatedMass * pctChild) / 100;
+            traverse(childObj, pathIndex + 1, childMass);
+          });
+        } else {
+          // Dimension intermédiaire vide, on compte comme "sans dimension"
+          totalSansDimension += accumulatedMass;
+        }
+      }
+    } else {
+      // La dimension n'existe pas à ce niveau
+      totalSansDimension += accumulatedMass;
+    }
+  }
+
+  // Démarrer la traversée depuis le lot
+  // Pour les dimensions enfants, le chemin commence toujours par 'formats'
+  if (path[0] === 'formats' && lot.formats) {
+    // Itérer sur chaque format avec son pourcentage
+    Object.values(lot.formats).forEach(formatObj => {
+      const pctFormat =
+        typeof formatObj.pourcentage === 'number' ? formatObj.pourcentage : 100;
+      traverse(formatObj, 1, pctFormat);
+    });
+  } else {
+    // Cas par défaut (ne devrait pas arriver pour les dimensions enfants)
+    traverse(lot, 0, 100);
+  }
+
+  // Ajouter la part sans dimension AVANT normalisation
+  const total = totalLot + totalSansDimension;
+  if (totalSansDimension > 0 && total > 0) {
+    values['N/A'] = (totalSansDimension / total) * 100;
+  } else if (totalSansDimension > 0 && totalLot === 0) {
+    // Tout le lot est sans cette dimension
+    values['N/A'] = 100;
+  }
+
+  // Normalisation pour que la somme fasse 100%
+  const sum = Object.values(values).reduce((a, b) => {
+    const val = typeof b === 'object' && b !== null ? b.pourcentage : b;
+    return a + val;
+  }, 0);
+  if (sum > 0) {
+    Object.keys(values).forEach(k => {
+      const currentVal = values[k];
+      const newVal =
+        ((typeof currentVal === 'object' && currentVal !== null
+          ? currentVal.pourcentage
+          : currentVal) /
+          sum) *
+        100;
+      values[k] =
+        typeof currentVal === 'object' && currentVal !== null
+          ? { ...currentVal, pourcentage: newVal }
+          : newVal;
+    });
+  }
+
+  // Conserver les couleurs depuis la structure originale
+  function findColorInStructure(lot, dimension, key) {
+    const dimConfig =
+      window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[dimension];
+    if (!dimConfig || !dimConfig.parent) return null;
+
+    // Construire le chemin
+    const colorPath = [];
+    let currentDim = dimension;
+    while (currentDim) {
+      colorPath.unshift(currentDim);
+      const config =
+        window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[currentDim];
+      currentDim = config ? config.parent : null;
+    }
+
+    function searchColor(node, pathIndex) {
+      if (pathIndex >= colorPath.length) return null;
+      const currentDimName = colorPath[pathIndex];
+      const isLastDim = pathIndex === colorPath.length - 1;
+
+      if (node[currentDimName]) {
+        if (isLastDim) {
+          if (node[currentDimName][key] && node[currentDimName][key].color) {
+            return node[currentDimName][key].color;
+          }
+        } else {
+          for (const childObj of Object.values(node[currentDimName])) {
+            const found = searchColor(childObj, pathIndex + 1);
+            if (found) return found;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Pour les dimensions enfants, commencer depuis lot.formats
+    if (colorPath[0] === 'formats' && lot.formats) {
+      for (const formatObj of Object.values(lot.formats)) {
+        const found = searchColor(formatObj, 1);
+        if (found) return found;
+      }
+      return null;
+    } else {
+      return searchColor(lot, 0);
+    }
+  }
+
+  // Appliquer les couleurs trouvées
+  Object.keys(values).forEach(key => {
+    if (key !== 'N/A') {
+      const foundColor = findColorInStructure(lot, dimension, key);
+      if (foundColor) {
+        const currentVal = values[key];
+        values[key] =
+          typeof currentVal === 'object' && currentVal !== null
+            ? { ...currentVal, color: foundColor }
+            : { pourcentage: currentVal, color: foundColor };
+      }
+    }
+  });
+
+  return values;
+}
+
 // Components pour stackbars et tooltips selon la dimension
 const stackbarComponents = {
   formats: {
-    getStackValues: lot => {
-      if (!lot.formats) return {};
-      const values = {};
-      Object.entries(lot.formats).forEach(([key, obj]) => {
-        if (typeof obj.pourcentage === 'number') {
-          values[key] = {
-            pourcentage: obj.pourcentage,
-            color: obj.color, // Conserver la couleur
-          };
-        }
-      });
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'formats'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   types: {
-    getStackValues: lot => {
-      if (!lot.formats) return {};
-      const values = {};
-      let totalWithType = 0;
-      Object.values(lot.formats).forEach(formatObj => {
-        if (formatObj.types) {
-          Object.entries(formatObj.types).forEach(([type, typeObj]) => {
-            if (typeof typeObj.pourcentage === 'number') {
-              // On ne prend en compte que les types qui ont une part > 0
-              const typePct =
-                typeObj.pourcentage * (formatObj.pourcentage / 100);
-              if (typePct > 0) {
-                values[type] = (values[type] || 0) + typePct;
-                totalWithType += typePct;
-              }
-            }
-          });
-        }
-      });
-      // Normalisation pour que la somme fasse 100% de la part du lot qui a des types
-      if (totalWithType > 0) {
-        Object.keys(values).forEach(k => {
-          values[k] = (values[k] / totalWithType) * 100;
-        });
-      }
-
-      // Conserver les couleurs des types
-      Object.keys(values).forEach(key => {
-        if (key !== 'N/A') {
-          // Chercher la couleur dans la structure originale
-          let foundColor = null;
-          Object.values(lot.formats).forEach(formatObj => {
-            if (
-              formatObj.types &&
-              formatObj.types[key] &&
-              formatObj.types[key].color
-            ) {
-              foundColor = formatObj.types[key].color;
-            }
-          });
-          if (foundColor) {
-            values[key] = {
-              pourcentage: values[key],
-              color: foundColor,
-            };
-          }
-        }
-      });
-
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'types'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   matieres: {
-    getStackValues: lot => {
-      if (!lot.formats) return {};
-      const values = {};
-      let totalLot = 0;
-      let totalSansMatiere = 0;
-      Object.values(lot.formats).forEach(formatObj => {
-        const pctFormat =
-          typeof formatObj.pourcentage === 'number'
-            ? formatObj.pourcentage
-            : 100;
-        if (formatObj.types) {
-          Object.values(formatObj.types).forEach(typeObj => {
-            const poidsType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
-            totalLot += poidsType;
-            if (typeObj.matieres && Object.keys(typeObj.matieres).length > 0) {
-              let sumMatiere = 0;
-              Object.entries(typeObj.matieres).forEach(
-                ([matiere, matiereObj]) => {
-                  let pctMatiere =
-                    typeof matiereObj === 'object' && matiereObj !== null
-                      ? matiereObj.pourcentage !== undefined
-                        ? matiereObj.pourcentage
-                        : 0
-                      : matiereObj;
-                  values[matiere] =
-                    (values[matiere] || 0) + (pctMatiere / 100) * poidsType;
-                  sumMatiere += (pctMatiere / 100) * poidsType;
-                }
-              );
-              if (sumMatiere < poidsType) {
-                totalSansMatiere += poidsType - sumMatiere;
-              }
-            } else {
-              // Pas de matière renseignée pour ce type
-              totalSansMatiere += poidsType;
-            }
-          });
-        }
-      });
-      // Ajouter la part sans matière AVANT normalisation
-      if (totalSansMatiere > 0 && totalLot > 0) {
-        values['N/A'] = (totalSansMatiere / totalLot) * 100;
-      }
-      // Normalisation pour que la somme fasse 100%
-      const sum = Object.values(values).reduce((a, b) => a + b, 0);
-      if (sum > 0) {
-        Object.keys(values).forEach(k => {
-          values[k] = (values[k] / sum) * 100;
-        });
-      }
-
-      // Conserver les couleurs des matières
-      Object.keys(values).forEach(key => {
-        if (key !== '_missing') {
-          // Chercher la couleur dans la structure originale
-          let foundColor = null;
-          Object.values(lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (
-                  typeObj.matieres &&
-                  typeObj.matieres[key] &&
-                  typeObj.matieres[key].color
-                ) {
-                  foundColor = typeObj.matieres[key].color;
-                }
-              });
-            }
-          });
-          if (foundColor) {
-            values[key] = {
-              pourcentage: values[key],
-              color: foundColor,
-            };
-          }
-        }
-      });
-
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'matieres'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       // Trouver la matière dans le lot courant
@@ -1802,298 +1881,35 @@ const stackbarComponents = {
     },
   },
   fibres: {
-    getStackValues: lot => {
-      if (!lot.formats) return {};
-      const values = {};
-      let totalLot = 0;
-      let totalSansFibre = 0;
-      Object.values(lot.formats).forEach(formatObj => {
-        const pctFormat =
-          typeof formatObj.pourcentage === 'number'
-            ? formatObj.pourcentage
-            : 100;
-        if (formatObj.types) {
-          Object.values(formatObj.types).forEach(typeObj => {
-            const poidsType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
-            totalLot += poidsType;
-            if (typeObj.matieres && Object.keys(typeObj.matieres).length > 0) {
-              Object.values(typeObj.matieres).forEach(matiereObj => {
-                const pctMatiere =
-                  typeof matiereObj.pourcentage === 'number'
-                    ? matiereObj.pourcentage
-                    : 100;
-                const poidsMatiere = (poidsType * pctMatiere) / 100;
-                if (
-                  matiereObj.fibres &&
-                  Object.keys(matiereObj.fibres).length > 0
-                ) {
-                  let sumFibre = 0;
-                  Object.entries(matiereObj.fibres).forEach(([fibre, val]) => {
-                    let pctFibre =
-                      typeof val === 'object' && val !== null
-                        ? val.pourcentage !== undefined
-                          ? val.pourcentage
-                          : val.masse !== undefined
-                            ? val.masse
-                            : 0
-                        : val;
-                    values[fibre] =
-                      (values[fibre] || 0) + (pctFibre / 100) * poidsMatiere;
-                    sumFibre += (pctFibre / 100) * poidsMatiere;
-                  });
-                  if (sumFibre < poidsMatiere) {
-                    totalSansFibre += poidsMatiere - sumFibre;
-                  }
-                } else {
-                  // Pas de fibre renseignée pour cette matière
-                  totalSansFibre += poidsMatiere;
-                }
-              });
-            } else {
-              // Pas de matière renseignée pour ce type
-              totalSansFibre += poidsType;
-            }
-          });
-        }
-      });
-      // Ajouter la part sans fibre AVANT normalisation
-      if (totalSansFibre > 0 && totalLot > 0) {
-        values['N/A'] = (totalSansFibre / totalLot) * 100;
-      }
-      // Normalisation pour que la somme fasse 100%
-      const sum = Object.values(values).reduce((a, b) => a + b, 0);
-      if (sum > 0) {
-        Object.keys(values).forEach(k => {
-          values[k] = (values[k] / sum) * 100;
-        });
-      }
-
-      // Conserver les couleurs des fibres
-      Object.keys(values).forEach(key => {
-        if (key !== '_missing') {
-          // Chercher la couleur dans la structure originale
-          let foundColor = null;
-          Object.values(lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (typeObj.matieres) {
-                  Object.values(typeObj.matieres).forEach(matiereObj => {
-                    if (
-                      matiereObj.fibres &&
-                      matiereObj.fibres[key] &&
-                      matiereObj.fibres[key].color
-                    ) {
-                      foundColor = matiereObj.fibres[key].color;
-                    }
-                  });
-                }
-              });
-            }
-          });
-          if (foundColor) {
-            values[key] = {
-              pourcentage: values[key],
-              color: foundColor,
-            };
-          }
-        }
-      });
-
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'fibres'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
   couleurs: {
-    getStackValues: lot => {
-      if (!lot.formats) return {};
-      const values = {};
-      let totalLot = 0;
-      let totalSansCouleur = 0;
-      Object.values(lot.formats).forEach(formatObj => {
-        const pctFormat =
-          typeof formatObj.pourcentage === 'number'
-            ? formatObj.pourcentage
-            : 100;
-        if (formatObj.types) {
-          Object.values(formatObj.types).forEach(typeObj => {
-            const masseType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
-            totalLot += masseType;
-            if (typeObj.couleurs && Object.keys(typeObj.couleurs).length > 0) {
-              let sumCouleur = 0;
-              Object.entries(typeObj.couleurs).forEach(
-                ([couleur, couleurObj]) => {
-                  let pct = 0;
-                  if (
-                    typeof couleurObj === 'object' &&
-                    typeof couleurObj.pourcentage === 'number'
-                  ) {
-                    pct = couleurObj.pourcentage;
-                  } else if (typeof couleurObj === 'number') {
-                    pct = couleurObj;
-                  }
-                  values[couleur] =
-                    (values[couleur] || 0) + (pct / 100) * masseType;
-                  sumCouleur += (pct / 100) * masseType;
-                }
-              );
-              // Si la somme des couleurs ne couvre pas toute la masse du type, le reste est inconnu
-              if (sumCouleur < masseType) {
-                totalSansCouleur += masseType - sumCouleur;
-              }
-            } else {
-              // Pas de couleur renseignée pour ce type
-              totalSansCouleur += masseType;
-            }
-          });
-        }
-      });
-      // Ajouter la part sans couleur AVANT normalisation
-      if (totalSansCouleur > 0 && totalLot > 0) {
-        values['N/A'] = (totalSansCouleur / totalLot) * 100;
-      }
-      // Normalisation pour que la somme fasse 100%
-      const sum = Object.values(values).reduce((a, b) => a + b, 0);
-      if (sum > 0) {
-        Object.keys(values).forEach(k => {
-          values[k] = (values[k] / sum) * 100;
-        });
-      }
-
-      // Conserver les couleurs des couleurs
-      Object.keys(values).forEach(key => {
-        if (key !== 'N/A') {
-          // Chercher la couleur dans la structure originale
-          let foundColor = null;
-          Object.values(lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (
-                  typeObj.couleurs &&
-                  typeObj.couleurs[key] &&
-                  typeObj.couleurs[key].color
-                ) {
-                  foundColor = typeObj.couleurs[key].color;
-                }
-              });
-            }
-          });
-          if (foundColor) {
-            values[key] = {
-              pourcentage: values[key],
-              color: foundColor,
-            };
-          }
-        }
-      });
-
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'couleurs'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   qualite: {
-    getStackValues: lot => {
-      if (!lot.qualite) return {};
-      const values = {};
-      Object.entries(lot.qualite).forEach(([qual, pct]) => {
-        // pct peut être un nombre ou un objet (selon la structure)
-        const pourcentage =
-          typeof pct === 'number' ? pct : pct.pourcentage || 0;
-        values[qual] = {
-          pourcentage: pourcentage,
-          color: pct.color, // Conserver la couleur si elle existe
-        };
-      });
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'qualite'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   proprete: {
-    getStackValues: lot => {
-      if (!lot.proprete) return {};
-      const values = {};
-      Object.entries(lot.proprete).forEach(([prop, pct]) => {
-        // pct peut être un nombre ou un objet (selon la structure)
-        const pourcentage =
-          typeof pct === 'number' ? pct : pct.pourcentage || 0;
-        values[prop] = {
-          pourcentage: pourcentage,
-          color: pct.color, // Conserver la couleur si elle existe
-        };
-      });
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'proprete'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
   perturbateurs: {
-    getStackValues: lot => {
-      // On cherche les perturbateurs dans chaque type de chaque format
-      if (!lot.formats) return {};
-      const values = {};
-      let totalLot = 0;
-      let totalSansPerturbateur = 0;
-      Object.values(lot.formats).forEach(formatObj => {
-        const pctFormat =
-          typeof formatObj.pourcentage === 'number'
-            ? formatObj.pourcentage
-            : 100;
-        if (formatObj.types) {
-          Object.values(formatObj.types).forEach(typeObj => {
-            const masseType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
-            totalLot += masseType;
-            if (
-              typeObj.perturbateurs &&
-              Object.keys(typeObj.perturbateurs).length > 0
-            ) {
-              let sumPert = 0;
-              Object.entries(typeObj.perturbateurs).forEach(
-                ([pert, pertObj]) => {
-                  let pct =
-                    typeof pertObj === 'object' &&
-                    pertObj.pourcentage !== undefined
-                      ? pertObj.pourcentage
-                      : typeof pertObj === 'number'
-                        ? pertObj
-                        : 0;
-                  values[pert] = (values[pert] || 0) + (pct / 100) * masseType;
-                  sumPert += (pct / 100) * masseType;
-                }
-              );
-              // Si la somme des perturbateurs ne couvre pas toute la masse du type, le reste est inconnu
-              if (sumPert < masseType) {
-                totalSansPerturbateur += masseType - sumPert;
-              }
-            } else {
-              // Pas de perturbateur renseigné pour ce type
-              totalSansPerturbateur += masseType;
-            }
-          });
-        }
-      });
-      // Ajouter la part sans perturbateur AVANT normalisation
-      if (totalSansPerturbateur > 0 && totalLot > 0) {
-        values['N/A'] = (totalSansPerturbateur / totalLot) * 100;
-      }
-      // Normalisation pour que la somme fasse 100%
-      const sum = Object.values(values).reduce((a, b) => a + b, 0);
-      if (sum > 0) {
-        Object.keys(values).forEach(k => {
-          values[k] = (values[k] / sum) * 100;
-        });
-      }
-      return values;
-    },
+    getStackValues: lot => getStackValuesGeneric(lot, 'perturbateurs'),
     getTooltipContent: (lot, key, value, total, fullObject) => {
       const titre = getTitreAffiche(key, fullObject);
       return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
