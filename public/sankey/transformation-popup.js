@@ -296,10 +296,20 @@ class TransformationPopup {
       .join('');
 
     // Générer les options du dropdown à partir de keyListData avec bubble_id
+    // Trier par ordre alphabétique en utilisant les noms traduits
     const keyOptions = Object.entries(keyListData || {})
+      .map(([name, value]) => {
+        const translatedName = this.getTitreAffiche(name, value);
+        return { name, value, translatedName };
+      })
+      .sort((a, b) =>
+        a.translatedName.localeCompare(b.translatedName, undefined, {
+          sensitivity: 'base',
+        })
+      )
       .map(
-        ([name, value]) =>
-          `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${value.bubble_id}">${name}</div>`
+        ({ name, value, translatedName }) =>
+          `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${value.bubble_id}">${translatedName}</div>`
       )
       .join('');
     const keyInputHTML = keyList
@@ -972,12 +982,25 @@ class TransformationPopup {
               );
 
               if (filtered.length > 0) {
-                keyDropdown.innerHTML = filtered
+                // Calculer les traductions et trier par ordre alphabétique
+                const optionsWithTranslations = filtered
                   .map(([name, itemData]) => {
-                    // Utiliser la traduction pour l'affichage
                     const translatedName = this.getTitreAffiche(name, itemData);
-                    return `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${translatedName}</div>`;
+                    return { name, itemData, translatedName };
                   })
+                  .sort((a, b) =>
+                    a.translatedName.localeCompare(
+                      b.translatedName,
+                      undefined,
+                      { sensitivity: 'base' }
+                    )
+                  );
+
+                keyDropdown.innerHTML = optionsWithTranslations
+                  .map(
+                    ({ name, itemData, translatedName }) =>
+                      `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${translatedName}</div>`
+                  )
                   .join('');
                 keyDropdown.classList.remove('hidden');
               } else {
