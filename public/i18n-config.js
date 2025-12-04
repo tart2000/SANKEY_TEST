@@ -107,6 +107,11 @@ window.i18nConfig = {
         techsUpdated: 'Techs mises à jour',
         techsUpToDate: 'Toutes les techs sont à jour',
         errorUpdatingTechs: 'Erreur lors de la mise à jour des techs',
+        addThreshold: 'Ajouter un seuil',
+        removeThreshold: 'Supprimer le seuil',
+        thresholdGreaterThan: 'Supérieur à',
+        thresholdLessThan: 'Inférieur à',
+        thresholdPercentage: 'Pourcentage',
       },
     },
     en_gb: {
@@ -212,6 +217,11 @@ window.i18nConfig = {
         techsUpdated: 'Techs updated',
         techsUpToDate: 'All techs are up to date',
         errorUpdatingTechs: 'Error updating techs',
+        addThreshold: 'Add threshold',
+        removeThreshold: 'Remove threshold',
+        thresholdGreaterThan: 'Greater than',
+        thresholdLessThan: 'Less than',
+        thresholdPercentage: 'Percentage',
       },
     },
     es_es: {

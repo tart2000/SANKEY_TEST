@@ -9,7 +9,6 @@ export async function POST(request: Request) {
       status,
       headers: {
         'Content-Type': 'application/json',
-        'X-Frame-Options': 'ALLOWALL',
         'Content-Security-Policy':
           "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
       },
@@ -20,7 +19,6 @@ export async function POST(request: Request) {
         status: err.status,
         headers: {
           'Content-Type': 'application/json',
-          'X-Frame-Options': 'ALLOWALL',
           'Content-Security-Policy':
             "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
         },
@@ -37,7 +35,6 @@ export async function POST(request: Request) {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'X-Frame-Options': 'ALLOWALL',
           'Content-Security-Policy':
             "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
         },

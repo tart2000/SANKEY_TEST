@@ -6,7 +6,6 @@ import { buildCheckResponse, runValidators } from '@/services/check';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
-  'X-Frame-Options': 'ALLOWALL',
   'Content-Security-Policy':
     "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
 };

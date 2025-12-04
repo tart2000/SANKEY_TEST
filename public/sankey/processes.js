@@ -41,9 +41,12 @@ function buildPathToDimension(dimensionName) {
  * @param {Object} lot - Le lot d'entrée à séparer
  * @param {string} dimensionName - Nom de la dimension (ex: 'formats', 'matieres', 'proprete')
  * @param {string[]} selectedBubbleIds - Array des bubble_id à sélectionner
+ * @param {Object} options - Options supplémentaires (threshold, condition, etc.)
  * @returns {{targetLot: Object, coProductLot: Object}} Deux lots : sélectionné et reste
  */
-function selectBy(lot, dimensionName, selectedBubbleIds) {
+function selectBy(lot, dimensionName, selectedBubbleIds, options = {}) {
+  const { threshold = null, condition = null } = options;
+
   // 1. VALIDATION DES PARAMÈTRES
   if (
     !window.DIMENSION_HIERARCHY ||
@@ -90,17 +93,28 @@ function selectBy(lot, dimensionName, selectedBubbleIds) {
   // 4. APPLIQUER LA LOGIQUE SELON LE TYPE DE DIMENSION
   if (isLevel1Direct) {
     // Niveau 1 direct (formats, qualite, proprete)
-    return selectByLevel1Direct(lot, dimensionName, normalizedIds);
+    return selectByLevel1Direct(lot, dimensionName, normalizedIds, options);
   } else {
     // Niveaux imbriqués (types, matieres, couleurs, perturbateurs, fibres)
-    return selectByNestedLevel(lot, dimensionName, path, normalizedIds);
+    return selectByNestedLevel(
+      lot,
+      dimensionName,
+      path,
+      normalizedIds,
+      options
+    );
   }
 }
 
 /**
  * Sélection pour les dimensions de niveau 1 direct (formats, qualite, proprete)
  */
-function selectByLevel1Direct(lot, dimensionName, selectedBubbleIds) {
+function selectByLevel1Direct(
+  lot,
+  dimensionName,
+  selectedBubbleIds,
+  options = {}
+) {
   const dist = lot[dimensionName];
   if (!dist) {
     console.warn(`[selectBy] Lot sans dimension ${dimensionName}`);
@@ -184,7 +198,13 @@ function selectByLevel1Direct(lot, dimensionName, selectedBubbleIds) {
 /**
  * Sélection pour les dimensions imbriquées (types, matieres, couleurs, etc.)
  */
-function selectByNestedLevel(lot, dimensionName, path, selectedBubbleIds) {
+function selectByNestedLevel(
+  lot,
+  dimensionName,
+  path,
+  selectedBubbleIds,
+  options = {}
+) {
   const targetLot = JSON.parse(JSON.stringify(lot));
   const coProductLot = JSON.parse(JSON.stringify(lot));
   let selectedMassTotal = 0;
@@ -212,7 +232,8 @@ function selectByNestedLevel(lot, dimensionName, path, selectedBubbleIds) {
         dimensionName,
         selectedBubbleIds,
         lot.total,
-        formatMass
+        formatMass,
+        options
       );
 
       if (result.selectedMass > 0) {
@@ -280,7 +301,8 @@ function traverseAndSeparate(
   targetDimension,
   selectedBubbleIds,
   totalLotMass,
-  parentMass
+  parentMass,
+  options = {}
 ) {
   // Si on est arrivé au parent de la dimension cible, on sépare
   if (pathRemaining.length === 0) {
@@ -289,7 +311,8 @@ function traverseAndSeparate(
       targetDimension,
       selectedBubbleIds,
       totalLotMass,
-      parentMass
+      parentMass,
+      options
     );
   }
 
@@ -345,7 +368,8 @@ function traverseAndSeparate(
       targetDimension,
       selectedBubbleIds,
       totalLotMass,
-      elementMass
+      elementMass,
+      options
     );
 
     // Traiter les résultats de la récursion
@@ -450,8 +474,11 @@ function separateByBubbleId(
   dimensionName,
   selectedBubbleIds,
   totalLotMass,
-  parentMass
+  parentMass,
+  options = {}
 ) {
+  const { threshold = null, condition = null } = options;
+
   const dist = obj[dimensionName] || {};
   let selected = {};
   let rest = {};
@@ -477,11 +504,27 @@ function separateByBubbleId(
           : 0
         : value || 0;
 
+    // Vérification bubble_id
+    const matchesBubbleId =
+      value && value.bubble_id && selectedBubbleIds.includes(value.bubble_id);
+
+    // Vérification threshold (seulement si une seule fibre sélectionnée)
+    let matchesThreshold = true;
     if (
-      value &&
-      value.bubble_id &&
-      selectedBubbleIds.includes(value.bubble_id)
+      threshold !== null &&
+      threshold !== undefined &&
+      condition &&
+      selectedBubbleIds.length === 1
     ) {
+      if (condition === 'over') {
+        matchesThreshold = pct >= threshold;
+      } else if (condition === 'under') {
+        matchesThreshold = pct <= threshold;
+      }
+    }
+
+    // Sélectionner si les deux conditions sont remplies
+    if (matchesBubbleId && matchesThreshold) {
       selected[key] = JSON.parse(JSON.stringify(value));
       if (value.color) selected[key].color = value.color;
       selectedPct += pct;
@@ -603,14 +646,25 @@ function selectByFibre(
   condition = null
 ) {
   // Normaliser le paramètre : accepter tableau ou valeur unique
-  // Note: threshold et condition sont ignorés pour l'instant (pour plus tard)
   const normalizedIds = Array.isArray(selectedFibres)
     ? selectedFibres.filter(id => id !== null && id !== undefined)
     : selectedFibres
       ? [selectedFibres]
       : [];
 
-  return selectBy(lot, 'fibres', normalizedIds);
+  // Construire les options (threshold/condition seulement si une seule fibre)
+  const options = {};
+  if (
+    threshold !== null &&
+    threshold !== undefined &&
+    condition &&
+    normalizedIds.length === 1
+  ) {
+    options.threshold = threshold;
+    options.condition = condition;
+  }
+
+  return selectBy(lot, 'fibres', normalizedIds, options);
 }
 
 function selectByProprete(lot, selectedProprete) {
@@ -648,6 +702,7 @@ const transformationTypes = {
     keyList: 'formats',
     requiredKey: true,
     step: 'sorting',
+    supportsThreshold: false, // Masqué pour l'instant
   },
   selectByType: {
     label: 'Tri par type',
@@ -693,6 +748,7 @@ const transformationTypes = {
     keyList: 'fibres',
     requiredKey: true,
     step: 'sorting',
+    supportsThreshold: true,
   },
   selectByProprete: {
     label: 'Tri par propreté',

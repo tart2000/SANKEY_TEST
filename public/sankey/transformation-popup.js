@@ -11,6 +11,8 @@ class TransformationPopup {
     this.isLoadingData = false; // Flag pour tracker le chargement des données API
     this._selectedDynamic = null; // Informations sur la transformation dynamique sélectionnée
     this._availableTransformations = null; // Cache local des transformations proposées
+    this.threshold = null; // Pour stocker le seuil (nombre)
+    this.condition = null; // Pour stocker la condition ('over' ou 'under')
   }
 
   async getI18nInstance(maxAttempts = 60, interval = 50) {
@@ -643,6 +645,19 @@ class TransformationPopup {
 
     // Sinon, utiliser les keys comme noms (fallback)
     return keys.map(id => ({ id, name: id }));
+  }
+
+  // Fonction pour initialiser threshold et condition avec les données existantes
+  initializeThreshold() {
+    if (!this.currentRef?.transformation) {
+      this.threshold = null;
+      this.condition = null;
+      return;
+    }
+
+    const transfo = this.currentRef.transformation;
+    this.threshold = transfo.threshold !== undefined ? transfo.threshold : null;
+    this.condition = transfo.condition || null;
   }
 
   attachEventListeners() {

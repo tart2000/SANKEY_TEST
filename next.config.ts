@@ -15,10 +15,6 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: [
           {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          },
-          {
             key: 'Content-Security-Policy',
             value:
               "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
