@@ -1796,12 +1796,13 @@ const transformationUtils = {
 function executeDynamicTransfo(lot, transfoDetails) {
   console.log('executeDynamicTransfo appelée avec:', { lot, transfoDetails });
 
-  // Utiliser le moteur de transformation générique unifié
-  if (!window.genericTransformationEngine) {
-    window.genericTransformationEngine = new GenericTransformationEngine();
+  // Utiliser le nouveau moteur de transformation simplifié
+  if (!window.simpleDynamicTransformationEngine) {
+    window.simpleDynamicTransformationEngine =
+      new SimpleDynamicTransformationEngine();
   }
 
-  return window.genericTransformationEngine.executeTransformation(
+  return window.simpleDynamicTransformationEngine.executeTransformation(
     lot,
     transfoDetails
   );
@@ -2231,8 +2232,8 @@ if (typeof mergeLots !== 'function') {
   );
 }
 
-// MOTEUR GÉNÉRIQUE UNIFIÉ : Une seule logique pour TOUTES les transformations dynamiques
-class GenericTransformationEngine {
+// Nouveau moteur de transformation simplifié pour les transformations dynamiques
+class SimpleDynamicTransformationEngine {
   constructor() {
     // Import de la Bible des dimensions depuis config/dimensions.js
     this.dimensionHierarchy = window.DIMENSION_HIERARCHY;
@@ -2256,51 +2257,19 @@ class GenericTransformationEngine {
     }
   }
 
-  // Méthode principale qui orchestre la transformation avec décrochage hiérarchique
+  // Méthode principale qui orchestre la transformation
   executeTransformation(lot, transfoDetails) {
-    console.log(
-      'GenericTransformationEngine.executeTransformation (hiérarchique) appelée pour:',
-      transfoDetails.title
-    );
-
     // Vérifications de base
-    if (!transfoDetails || !transfoDetails.dimensions) {
-      console.error('transfoDetails ou dimensions manquants:', transfoDetails);
+    if (!transfoDetails || !transfoDetails.select) {
       throw new Error('Configuration de transformation invalide');
     }
 
-    // 1. Identifier la dimension primaire selon les règles du .md
-    const primaryDimension = this.identifyPrimaryDimension(
-      transfoDetails.dimensions
-    );
-    console.log('Dimension primaire identifiée:', primaryDimension);
+    // 1. Extraire les bubble_id des types à sélectionner
+    const selectedTypeIds = Object.values(transfoDetails.select)
+      .map(item => item.bubble_id)
+      .filter(Boolean);
 
-    if (!primaryDimension) {
-      throw new Error(
-        'Aucune dimension primaire identifiée pour la transformation'
-      );
-    }
-
-    // 2. Collecter TOUS les critères d'input de toutes les dimensions
-    const allInputCriteria = {};
-    for (const [dimension, config] of Object.entries(
-      transfoDetails.dimensions
-    )) {
-      if (config.input && Object.keys(config.input).length > 0) {
-        allInputCriteria[dimension] = config.input;
-      }
-    }
-
-    // 3. Trouver tous les éléments qui matchent dans la hiérarchie
-    const matchingElements = this.findMatchingElements(
-      lot,
-      allInputCriteria,
-      primaryDimension
-    );
-    console.log('Éléments à décrocher:', matchingElements);
-
-    if (matchingElements.length === 0) {
-      console.log('Aucun élément ne matche les critères - lot cible vide');
+    if (selectedTypeIds.length === 0) {
       return {
         targetLot: {
           total: 0,
@@ -2310,1193 +2279,683 @@ class GenericTransformationEngine {
       };
     }
 
-    // 4. Décrocher tous les éléments trouvés
-    const primaryCfg = transfoDetails.dimensions[primaryDimension] || {};
-    const targetConfig = {
-      key: Object.keys(primaryCfg.target || {})[0],
-      value: Object.values(primaryCfg.target || {})[0],
+    // 2. Filtrer le lot avec selectByType
+    const { targetLot: filteredLot, coProductLot: nonMatchingLot } =
+      selectByType(lot, selectedTypeIds);
+
+    // 3. Normaliser les distributions du reste (non-matching)
+    if (nonMatchingLot && nonMatchingLot.total > 0) {
+      this.normalizeAllDistributions(nonMatchingLot);
+    }
+
+    // Si aucun élément ne matche, retourner directement
+    if (!filteredLot || filteredLot.total === 0) {
+      return {
+        targetLot: {
+          total: 0,
+          title: transfoDetails.title || 'Transformation dynamique',
+        },
+        coProductLot: nonMatchingLot || JSON.parse(JSON.stringify(lot)),
+      };
+    }
+
+    // 4. Charger les items complets pour target, loss, coproduct (avec cache)
+    // La structure est { "nom français": { bubble_id, en_gb } }
+    const getItemDataFromStructure = itemObj => {
+      if (!itemObj) return { bubbleId: null, itemData: null, formatName: null };
+      // La structure est { "nom français": { bubble_id, en_gb } }
+      const firstKey = Object.keys(itemObj)[0];
+      if (firstKey && itemObj[firstKey]?.bubble_id) {
+        return {
+          bubbleId: itemObj[firstKey].bubble_id,
+          itemData: itemObj[firstKey],
+          formatName: firstKey, // Le nom français est la clé
+        };
+      }
+      return { bubbleId: null, itemData: null, formatName: null };
     };
 
-    if (!targetConfig.key || !targetConfig.value) {
+    const targetItemInfo = getItemDataFromStructure(transfoDetails.target);
+    const lossItemInfo = getItemDataFromStructure(transfoDetails.loss);
+    const coproductItemInfo = getItemDataFromStructure(
+      transfoDetails.coproduct
+    );
+
+    const targetItemBubbleId = targetItemInfo.bubbleId;
+    const lossItemBubbleId = lossItemInfo.bubbleId;
+    const coproductItemBubbleId = coproductItemInfo.bubbleId;
+
+    if (!targetItemBubbleId) {
       throw new Error(
-        'Configuration target manquante pour la dimension primaire'
+        `Item target introuvable: bubble_id manquant dans transfoDetails.target`
       );
     }
 
-    const { filteredLot, remainingLot } = this.filterLotByCriteria(
-      lot,
-      matchingElements,
-      primaryDimension
+    const targetItem = targetItemBubbleId
+      ? fetchItemCompleteSync(targetItemBubbleId)
+      : null;
+    const lossItem =
+      lossItemBubbleId && transfoDetails.loss_percent > 0
+        ? fetchItemCompleteSync(lossItemBubbleId)
+        : null;
+    const coproductItem = coproductItemBubbleId
+      ? fetchItemCompleteSync(coproductItemBubbleId)
+      : null;
+
+    if (!targetItem) {
+      throw new Error(`Item target introuvable: ${targetItemBubbleId}`);
+    }
+
+    // 5. Calculer les volumes
+    const inputMass = filteredLot.total;
+    const {
+      lossMass,
+      transformableMass,
+      targetMass,
+      coproductFromTransformable,
+    } = this.calculateVolumes(
+      inputMass,
+      transfoDetails.loss_percent || 0,
+      transfoDetails.yield || 100
     );
-    const decrochedMass = this.calculateLotTotalMass(filteredLot);
 
-    this.applyPrimaryTarget(filteredLot, primaryDimension, {
-      [targetConfig.key]: targetConfig.value,
-    });
-    filteredLot.total = this.calculateLotTotalMass(filteredLot);
-
-    const targetLot = {
-      [primaryDimension]: JSON.parse(
-        JSON.stringify(filteredLot[primaryDimension] || {})
-      ),
-    };
-    targetLot.title = transfoDetails.title || 'Transformation dynamique';
-    this.copySiblingDimensions(targetLot, filteredLot, primaryDimension);
-
-    // 6. Calculer la masse totale décrochée
-    const totalDecrochedMass = decrochedMass;
-    console.log('Masse totale décrochée:', totalDecrochedMass);
-
-    // 7. Appliquer le yield sur la masse totale décrochée
-    const yieldPercent = transfoDetails.yield || 100;
-    const targetMass = (totalDecrochedMass * yieldPercent) / 100;
-    const coproFromDecroched = Math.max(totalDecrochedMass - targetMass, 0);
-    const remainderMass = Math.max((lot.total || 0) - totalDecrochedMass, 0);
-    targetLot.total = targetMass;
-
-    // 8. Créer le co-produit
-    const coProductLot = this.finalizeCoProductLot(
-      remainingLot,
-      coproFromDecroched,
-      primaryCfg,
-      primaryDimension,
-      remainderMass
+    // 6. Créer targetLot avec écrasement du format et application des distributions filles
+    const targetLot = this.createTargetLot(
+      filteredLot,
+      targetItem,
+      targetMass,
+      transfoDetails,
+      targetItemInfo
     );
-    if (coProductLot) {
-      coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
-      this.copySiblingDimensions(
-        coProductLot,
-        remainingLot || lot,
-        primaryDimension
+
+    // 7. Créer lossLot si nécessaire
+    let lossLot = null;
+    if (lossMass > 0 && lossItem) {
+      lossLot = this.createLossLot(
+        lossItem,
+        lossMass,
+        transfoDetails,
+        lossItemInfo
       );
     }
 
-    // 9. Appliquer les targets enfants éventuels
-    this.applyChildTargets(
-      targetLot,
-      transfoDetails.dimensions,
-      primaryDimension
-    );
+    // 8. Créer coproductFromTransformableLot si nécessaire
+    let coproductFromTransformableLot = null;
+    if (coproductFromTransformable > 0 && coproductItem) {
+      coproductFromTransformableLot = this.createCoproductLot(
+        filteredLot,
+        coproductItem,
+        coproductFromTransformable,
+        transfoDetails,
+        coproductItemInfo
+      );
+    }
 
-    // 10. Recalculer les pourcentages pour maintenir la cohérence
-    this.recalculatePercentagesAfterDecrochage(targetLot);
-    if (coProductLot) {
-      this.recalculatePercentagesAfterDecrochage(coProductLot);
+    // 9. Fusionner les lots pour le coproductLot final
+    const lotsToMerge = [];
+    if (nonMatchingLot && nonMatchingLot.total > 0) {
+      lotsToMerge.push(nonMatchingLot);
+    }
+    if (lossLot && lossLot.total > 0) {
+      lotsToMerge.push(lossLot);
+    }
+    if (
+      coproductFromTransformableLot &&
+      coproductFromTransformableLot.total > 0
+    ) {
+      lotsToMerge.push(coproductFromTransformableLot);
+    }
+
+    let coProductLot = null;
+    if (lotsToMerge.length > 0) {
+      coProductLot = lotsToMerge[0];
+      for (let i = 1; i < lotsToMerge.length; i++) {
+        coProductLot = mergeLots([coProductLot, lotsToMerge[i]]);
+      }
     }
 
     return { targetLot, coProductLot };
   }
 
-  // Identifier la dimension primaire selon les règles du .md
-  identifyPrimaryDimension(dimensions) {
-    // Règle 1: Dimension avec co-produit défini
-    for (const [dimension, config] of Object.entries(dimensions)) {
-      if (this.hasCoproduct(config.coproduct)) {
-        console.log(`Dimension primaire trouvée par co-produit: ${dimension}`);
-        return dimension;
-      }
-    }
+  // Calculer les volumes
+  calculateVolumes(inputMass, lossPercent, yieldPercent) {
+    const lossMass = (inputMass * lossPercent) / 100;
+    const transformableMass = inputMass - lossMass;
+    const targetMass = (transformableMass * yieldPercent) / 100;
+    const coproductFromTransformable = transformableMass - targetMass;
 
-    // Règle 2: Première dimension avec target défini selon DIMENSION_PROCESSING_ORDER
-    // de config/dimensions.js
-    for (const dimension of this.processingOrder) {
-      if (this.hasTarget(dimensions[dimension]?.target)) {
-        console.log(`Dimension primaire trouvée par target: ${dimension}`);
-        return dimension;
-      }
-    }
-
-    console.log('Aucune dimension primaire identifiée');
-    return null;
-  }
-
-  // Appliquer la transformation selon la hiérarchie
-  applyHierarchicalTransformation(lot, transfoDetails, primaryDimension) {
-    console.log(
-      'Application de la transformation hiérarchique selon:',
-      this.processingOrder
-    );
-
-    // 1. PRÉSERVER LA STRUCTURE COMPLÈTE du lot d'origine avec deep clone
-    let processedLot = JSON.parse(JSON.stringify(lot));
-
-    // 2. Traitement séquentiel selon DIMENSION_PROCESSING_ORDER de config/dimensions.js
-    for (const dimension of this.processingOrder) {
-      const dimensionConfig = transfoDetails.dimensions[dimension];
-
-      if (this.hasConfiguration(dimensionConfig)) {
-        console.log(`Traitement de la dimension: ${dimension}`);
-        processedLot = this.processDimension(
-          processedLot,
-          dimensionConfig,
-          dimension
-        );
-      }
-    }
-
-    return processedLot;
-  }
-
-  // Traiter une dimension spécifique
-  processDimension(lot, dimensionConfig, dimensionName) {
-    const { input, target, coproduct } = dimensionConfig;
-
-    // Recherche d'éléments correspondants (pour information, pas de filtrage ici)
-    if (this.hasInputCriteria(input)) {
-      console.log(`Recherche d'éléments correspondants pour ${dimensionName}`);
-      const matchingElements = this.findMatchingElements(
-        lot,
-        input,
-        dimensionName
-      );
-      console.log(`Éléments trouvés:`, matchingElements);
-      // Note: Le filtrage sera fait plus tard dans executeTransformation
-    }
-
-    // Application de la transformation cible
-    if (this.hasTarget(target)) {
-      console.log(
-        `Application de la transformation cible pour ${dimensionName}`
-      );
-      lot = this.applyTargetTransformation(lot, target, dimensionName);
-    }
-
-    // Gestion des co-produits
-    if (this.hasCoproduct(coproduct)) {
-      console.log(`Gestion des co-produits pour ${dimensionName}`);
-      lot = this.handleCoproducts(lot, coproduct, dimensionName);
-    }
-
-    return lot;
-  }
-
-  // Vérifier si une dimension a une configuration
-  hasConfiguration(dimensionConfig) {
-    return (
-      dimensionConfig &&
-      (this.hasInputCriteria(dimensionConfig.input) ||
-        this.hasTarget(dimensionConfig.target) ||
-        this.hasCoproduct(dimensionConfig.coproduct))
-    );
-  }
-
-  // Vérifier si des critères d'entrée sont définis
-  hasInputCriteria(input) {
-    return input && Object.keys(input).length > 0;
-  }
-
-  // Vérifier si une transformation cible est définie
-  hasTarget(target) {
-    return target && Object.keys(target).length > 0;
-  }
-
-  // Vérifier si des co-produits sont définis
-  hasCoproduct(coproduct) {
-    return coproduct && Object.keys(coproduct).length > 0;
-  }
-
-  // Trouver tous les éléments qui matchent les critères d'input dans la hiérarchie
-  findMatchingElements(lot, inputCriteria) {
-    const criteria = {};
-    if (!inputCriteria || Object.keys(inputCriteria).length === 0) {
-      return criteria;
-    }
-
-    this.processingOrder.forEach(dimension => {
-      const dimensionInput = inputCriteria[dimension];
-      if (!dimensionInput || typeof dimensionInput !== 'object') return;
-      const ids = new Set();
-      Object.values(dimensionInput).forEach(entry => {
-        if (entry && entry.bubble_id) {
-          ids.add(entry.bubble_id);
-        }
-      });
-      if (ids.size > 0) {
-        criteria[dimension] = ids;
-      }
-    });
-
-    console.log(
-      'Critères normalisés pour la transformation dynamique:',
-      Object.fromEntries(
-        Object.entries(criteria).map(([dim, set]) => [dim, Array.from(set)])
-      )
-    );
-
-    return criteria;
-  }
-
-  getSelectorForDimension(dimension) {
-    const map = {
-      formats: selectByFormat,
-      types: selectByType,
-      matieres: selectByMatiere,
-      fibres: selectByFibre,
-      couleurs: selectByCouleur,
-      perturbateurs: selectByPerturbateur,
-      proprete: selectByProprete,
-      qualite: selectByQualite,
+    return {
+      lossMass,
+      transformableMass,
+      targetMass,
+      coproductFromTransformable,
     };
-    return map[dimension] || null;
   }
 
-  filterLotByCriteria(lot, criteria, primaryDimension) {
-    let filteredLot = JSON.parse(JSON.stringify(lot));
-    const remainderLots = [];
-
-    this.processingOrder.forEach(dimension => {
-      const ids = criteria[dimension];
-      if (!ids || ids.size === 0) return;
-      const selector = this.getSelectorForDimension(dimension);
-      if (!selector) return;
-
-      const idsArray = Array.from(ids);
-      if (idsArray.length === 0) return;
-
-      const result = selector(filteredLot, idsArray);
-      if (result && result.targetLot) {
-        filteredLot = result.targetLot;
-      }
-      if (result && result.coProductLot && result.coProductLot.total) {
-        remainderLots.push(result.coProductLot);
-      }
-    });
-
-    filteredLot.total = this.calculateLotTotalMass(filteredLot);
-
-    let remainingLot = null;
-    if (remainderLots.length > 0) {
-      const validLots = remainderLots.filter(
-        lotPart =>
-          lotPart &&
-          (typeof lotPart.total === 'number'
-            ? lotPart.total > 0
-            : this.calculateLotTotalMass(lotPart) > 0)
-      );
-      if (validLots.length > 0) {
-        remainingLot = mergeLots(validLots);
-        remainingLot.total = this.calculateLotTotalMass(remainingLot);
-      }
-    }
-
-    return { filteredLot, remainingLot };
-  }
-
-  finalizeCoProductLot(
-    remainingLot,
-    coproFromDecroched,
-    primaryCfg,
-    primaryDimension,
-    remainderMass = 0
+  // Créer le targetLot
+  createTargetLot(
+    sourceLot,
+    targetItem,
+    targetMass,
+    transfoDetails,
+    targetItemInfo
   ) {
-    let coProductLot = remainingLot
-      ? JSON.parse(JSON.stringify(remainingLot))
-      : null;
-
-    const coproductCfg = primaryCfg && primaryCfg.coproduct;
-    if (
-      coproFromDecroched > 0 &&
-      coproductCfg &&
-      Object.keys(coproductCfg).length > 0
-    ) {
-      if (!coProductLot) {
-        coProductLot = { total: 0 };
-        coProductLot[primaryDimension] = {};
-      }
-      this.addCoproductDistribution(
-        coProductLot,
-        coproFromDecroched,
-        coproductCfg,
-        primaryDimension
-      );
-    }
-
-    const remainder = Math.max(Number(remainderMass) || 0, 0);
-    if (!coProductLot && (remainder > 0 || coproFromDecroched > 0)) {
-      coProductLot = { total: 0 };
-      coProductLot[primaryDimension] = {};
-    }
-
-    if (!coProductLot) {
-      return null;
-    }
-
-    coProductLot.total =
-      this.calculateLotTotalMass(coProductLot) +
-      Math.max(coproFromDecroched || 0, 0) +
-      remainder;
-
-    if (!coProductLot.total || coProductLot.total <= 0.1) {
-      return null;
-    }
-
-    return coProductLot;
-  }
-
-  // Appliquer la transformation cible
-  applyTargetTransformation(lot, target, dimensionName) {
-    // Concaténation de toutes les clés en une seule clé cible
-    const targetBubbleId = Object.values(target)[0].bubble_id;
-    const targetKey = Object.keys(target)[0];
-
-    // Deep clone pour préserver la structure complète
-    const transformedLot = JSON.parse(JSON.stringify(lot));
-
-    // Remplacer SEULEMENT la dimension spécifiée
-    transformedLot[dimensionName] = {};
-
-    // Créer la nouvelle clé cible en préservant TOUTES les propriétés
-    const targetValue = { ...Object.values(target)[0] };
-    if (window.colorById && window.colorById.has(targetBubbleId)) {
-      targetValue.color = window.colorById.get(targetBubbleId);
-    }
-    transformedLot[dimensionName][targetKey] = targetValue;
-
-    // Cas particulier: si on remplace des formats par un format cible,
-    // reconstruire immédiatement la distribution des types en concaténant
-    // ceux des formats applicables (afin que l'étape d'agrégation de type cible fonctionne)
-    if (dimensionName === 'formats') {
-      const aggregatedTypes = this.aggregateTypesFromFormats(lot);
-      if (aggregatedTypes && Object.keys(aggregatedTypes).length > 0) {
-        transformedLot.formats[targetKey] =
-          transformedLot.formats[targetKey] || {};
-        transformedLot.formats[targetKey].types = aggregatedTypes;
-      }
-    }
-
-    // Concaténer les distributions existantes de cette dimension
-    const existingKeys = Object.keys(lot[dimensionName] || {});
-    if (existingKeys.length > 0) {
-      // Récupérer la première clé existante pour copier ses propriétés (color, etc.)
-      const firstExistingKey = existingKeys[0];
-      const firstExistingValue = lot[dimensionName][firstExistingKey];
-
-      // Préserver la couleur d'origine SEULEMENT si aucune couleur officielle n'a été posée
-      if (
-        firstExistingValue.color &&
-        !transformedLot[dimensionName][targetKey].color
-      ) {
-        transformedLot[dimensionName][targetKey].color =
-          firstExistingValue.color;
-      }
-      if (firstExistingValue.pourcentage !== undefined) {
-        // Calculer le pourcentage total concaténé
-        let totalPourcentage = 0;
-        existingKeys.forEach(key => {
-          const value = lot[dimensionName][key];
-          if (value && value.pourcentage !== undefined) {
-            totalPourcentage += value.pourcentage;
-          }
-        });
-        transformedLot[dimensionName][targetKey].pourcentage = totalPourcentage;
-      }
-    }
-
-    return transformedLot;
-  }
-
-  // Gérer les co-produits
-  handleCoproducts(lot, coproduct, dimensionName) {
-    console.log(`Co-produits à gérer pour ${dimensionName}:`, coproduct);
-    return lot;
-  }
-
-  // Appliquer la distribution du co-produit sur la dimension primaire
-  applyCoproductDistribution(
-    coProductLot,
-    nonApplicableMass,
-    coproFromApplicable,
-    primaryDimension,
-    coproductCfg,
-    applicableSourceLot // nouveau: pour reconstruire les types issus de la part applicable
-  ) {
-    const totalCopro = (nonApplicableMass || 0) + (coproFromApplicable || 0);
-    if (totalCopro <= 0) return coProductLot;
-
-    // Base: distribution existante du non-applicable sur la dimension primaire
-    const baseDist = JSON.parse(
-      JSON.stringify(coProductLot[primaryDimension] || {})
-    );
-
-    // 1) Réduire les pourcentages de la base proportionnellement à la part nonApplicableMass
-    const baseScale = nonApplicableMass / totalCopro;
-    Object.values(baseDist).forEach(v => {
-      if (v && typeof v.pourcentage === 'number') {
-        v.pourcentage = v.pourcentage * baseScale;
-      }
-    });
-
-    // 2) Ajouter la distribution définie par coproduct pour la part issue de l'applicable
-    const coproScale = coproFromApplicable / totalCopro;
-    const coproEntries = Object.entries(coproductCfg);
-    coproEntries.forEach(([name, cfg]) => {
-      const pct = (cfg.percent || 0) * coproScale;
-      if (!baseDist[name]) baseDist[name] = {};
-      baseDist[name].bubble_id = cfg.bubble_id;
-      baseDist[name].pourcentage = (baseDist[name].pourcentage || 0) + pct;
-      if (window.colorById && window.colorById.has(cfg.bubble_id)) {
-        baseDist[name].color = window.colorById.get(cfg.bubble_id);
-      }
-    });
-
-    // 3) Normalisation douce pour viser 100
-    const sum = Object.values(baseDist).reduce(
-      (acc, v) => acc + (typeof v.pourcentage === 'number' ? v.pourcentage : 0),
-      0
-    );
-    if (sum > 0) {
-      Object.values(baseDist).forEach(v => {
-        if (typeof v.pourcentage === 'number') {
-          v.pourcentage = (v.pourcentage / sum) * 100;
-        }
-      });
-    }
-
-    coProductLot[primaryDimension] = baseDist;
-    // Si la dimension primaire est 'formats', propager la couleur au niveau format pour l'affichage
-    if (primaryDimension === 'formats' && coProductLot.formats) {
-      Object.entries(baseDist).forEach(([fmtName, fmtObj]) => {
-        if (
-          coProductLot.formats[fmtName] &&
-          fmtObj &&
-          fmtObj.color &&
-          !coProductLot.formats[fmtName].color
-        ) {
-          coProductLot.formats[fmtName].color = fmtObj.color;
-        }
-        // Créer le format s'il n'existe pas encore (cas copro format nouveau)
-        if (!coProductLot.formats[fmtName]) {
-          coProductLot.formats[fmtName] = { pourcentage: fmtObj.pourcentage };
-          if (fmtObj.color) coProductLot.formats[fmtName].color = fmtObj.color;
-        } else {
-          coProductLot.formats[fmtName].pourcentage = fmtObj.pourcentage;
-        }
-        // Reconstruire les types du co-produit:
-        // concaténation des types de la part applicable (plan A)
-        if (applicableSourceLot && applicableSourceLot.formats) {
-          const aggTypes = this.aggregateTypesFromFormats(applicableSourceLot);
-          if (aggTypes && Object.keys(aggTypes).length > 0) {
-            coProductLot.formats[fmtName].types = JSON.parse(
-              JSON.stringify(aggTypes)
-            );
-          }
-        }
-      });
-    }
-    return coProductLot;
-  }
-
-  // Concaténer tous les types présents sous les formats du lot courant
-  // Pondération: pour chaque type, masse = format.pourcentage * type.pourcentage
-  // Puis normalisation à 100
-  aggregateTypesFromFormats(lot) {
-    if (!lot || !lot.formats) return {};
-    const accMass = new Map(); // key -> { bubble_id, color, mass }
-    let total = 0;
-    Object.entries(lot.formats).forEach(([fmt, fmtObj]) => {
-      const pctFormat = Math.max(Number(fmtObj.pourcentage) || 0, 0);
-      const types = (fmtObj && fmtObj.types) || {};
-      Object.entries(types).forEach(([tName, tObj]) => {
-        const pctType = Math.max(Number(tObj.pourcentage) || 0, 0);
-        const mass = (pctFormat * pctType) / 100; // masse relative
-        total += mass;
-        if (!accMass.has(tName)) {
-          accMass.set(tName, {
-            bubble_id: tObj.bubble_id,
-            color: tObj.color,
-            mass: 0,
-            // enfants copiés à plat; l'agrégation détaillée enfants se fait plus bas si besoin
-            matieres: tObj.matieres
-              ? JSON.parse(JSON.stringify(tObj.matieres))
-              : undefined,
-            couleurs: tObj.couleurs
-              ? JSON.parse(JSON.stringify(tObj.couleurs))
-              : undefined,
-            perturbateurs: tObj.perturbateurs
-              ? JSON.parse(JSON.stringify(tObj.perturbateurs))
-              : undefined,
-          });
-        }
-        const rec = accMass.get(tName);
-        rec.mass += mass;
-        // color officielle si connue
-        if (
-          window.colorById &&
-          tObj.bubble_id &&
-          window.colorById.has(tObj.bubble_id)
-        ) {
-          rec.color = window.colorById.get(tObj.bubble_id);
-        }
-      });
-    });
-    const result = {};
-    if (total > 0) {
-      accMass.forEach((rec, name) => {
-        result[name] = {
-          bubble_id: rec.bubble_id,
-          pourcentage: (rec.mass / total) * 100,
-        };
-        if (rec.color) result[name].color = rec.color;
-        if (rec.matieres) result[name].matieres = rec.matieres;
-        if (rec.couleurs) result[name].couleurs = rec.couleurs;
-        if (rec.perturbateurs) result[name].perturbateurs = rec.perturbateurs;
-      });
-    }
-    return result;
-  }
-
-  // Récupérer une fonction de split par dimension (réutilise les sélecteurs existants)
-  getDimensionSplitter(dimensionName) {
-    const map = {
-      formats: window.processes && window.processes.selectByFormat,
-      types: window.processes && window.processes.selectByType,
-      matieres: window.processes && window.processes.selectByMatiere,
-      fibres: window.processes && window.processes.selectByFibre,
-      couleurs: window.processes && window.processes.selectByCouleur,
-      perturbateurs: window.processes && window.processes.selectByPerturbateur,
-      proprete: window.processes && window.processes.selectByProprete,
-      qualite: window.processes && window.processes.selectByQualite,
+    const targetLot = {
+      total: targetMass,
+      title: transfoDetails.title || 'Transformation dynamique',
     };
-    return map[dimensionName] || null;
-  }
 
-  // Agréger tous les types d'un format en un seul type cible et concaténer les distributions enfants
-  enforceTypesTargetAggregation(lot, typesTargetCfg) {
-    if (!lot || !lot.formats) return;
-    const targetKey = Object.keys(typesTargetCfg)[0];
-    const targetVal = Object.values(typesTargetCfg)[0];
+    // 1. Prendre le format récupéré par API en entier et le copier
+    targetLot.formats = {};
+    const targetFormatName =
+      targetItemInfo.formatName ||
+      (targetItem ? Object.keys(targetItem)[0] : 'Format inconnu');
 
-    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
-      const types = formatObj.types || {};
-      // Si déjà vide, rien à faire
-      if (Object.keys(types).length === 0) return;
+    const targetBubbleId = targetItemInfo.bubbleId;
 
-      // Accumulateurs
-      const aggMatieres = {};
-      const aggCouleurs = {};
-      const aggPerturbateurs = {};
-
-      // Agréger par pondération du pourcentage du type
-      Object.entries(types).forEach(([typeName, typeObj]) => {
-        const typeWeight = Math.max(Number(typeObj.pourcentage) || 0, 0);
-
-        // Couleurs
-        if (typeObj.couleurs) {
-          Object.entries(typeObj.couleurs).forEach(([cName, cObj]) => {
-            const add = (Number(cObj.pourcentage) || 0) * (typeWeight / 100);
-            if (!aggCouleurs[cName])
-              aggCouleurs[cName] = { ...cObj, pourcentage: 0 };
-            aggCouleurs[cName].pourcentage += add;
-            if (cObj.bubble_id) aggCouleurs[cName].bubble_id = cObj.bubble_id;
-            if (cObj.color) aggCouleurs[cName].color = cObj.color;
-
-            // Appliquer la couleur officielle depuis window.colorById si disponible
-            if (
-              window.colorById &&
-              cObj.bubble_id &&
-              window.colorById.has(cObj.bubble_id)
-            ) {
-              aggCouleurs[cName].color = window.colorById.get(cObj.bubble_id);
-            }
-          });
-        }
-
-        // Perturbateurs
-        if (typeObj.perturbateurs) {
-          Object.entries(typeObj.perturbateurs).forEach(([pName, pObj]) => {
-            const add = (Number(pObj.pourcentage) || 0) * (typeWeight / 100);
-            if (!aggPerturbateurs[pName])
-              aggPerturbateurs[pName] = { ...pObj, pourcentage: 0 };
-            aggPerturbateurs[pName].pourcentage += add;
-            if (pObj.bubble_id)
-              aggPerturbateurs[pName].bubble_id = pObj.bubble_id;
-            if (pObj.color) aggPerturbateurs[pName].color = pObj.color;
-
-            // Appliquer la couleur officielle depuis window.colorById si disponible
-            if (
-              window.colorById &&
-              pObj.bubble_id &&
-              window.colorById.has(pObj.bubble_id)
-            ) {
-              aggPerturbateurs[pName].color = window.colorById.get(
-                pObj.bubble_id
-              );
-            }
-          });
-        }
-
-        // Matières et fibres
-        if (typeObj.matieres) {
-          Object.entries(typeObj.matieres).forEach(([mName, mObj]) => {
-            const mAddBase =
-              (Number(mObj.pourcentage) || 0) * (typeWeight / 100);
-            if (!aggMatieres[mName])
-              aggMatieres[mName] = { ...mObj, pourcentage: 0 };
-            aggMatieres[mName].pourcentage += mAddBase;
-            if (mObj.bubble_id) aggMatieres[mName].bubble_id = mObj.bubble_id;
-            if (mObj.color) aggMatieres[mName].color = mObj.color;
-
-            // Fibres sous matières
-            if (mObj.fibres) {
-              if (!aggMatieres[mName].fibres) aggMatieres[mName].fibres = {};
-              Object.entries(mObj.fibres).forEach(([fName, fObj]) => {
-                const fAdd = (Number(fObj.pourcentage) || 0) * (mAddBase / 100);
-                if (!aggMatieres[mName].fibres[fName]) {
-                  aggMatieres[mName].fibres[fName] = {
-                    ...fObj,
-                    pourcentage: 0,
-                  };
-                }
-                aggMatieres[mName].fibres[fName].pourcentage += fAdd;
-                if (fObj.bubble_id)
-                  aggMatieres[mName].fibres[fName].bubble_id = fObj.bubble_id;
-                if (fObj.color)
-                  aggMatieres[mName].fibres[fName].color = fObj.color;
-              });
-            }
-          });
-        }
-      });
-
-      // Normaliser à 100
-      const normalize = obj => {
-        const sum = Object.values(obj).reduce(
-          (acc, v) => acc + (Number(v.pourcentage) || 0),
-          0
-        );
-        if (sum > 0) {
-          Object.values(obj).forEach(v => {
-            v.pourcentage = (Number(v.pourcentage) || 0) * (100 / sum);
-          });
-        }
-      };
-
-      normalize(aggCouleurs);
-      normalize(aggPerturbateurs);
-      normalize(aggMatieres);
-      // Normaliser fibres par matière
-      Object.values(aggMatieres).forEach(m => {
-        if (m.fibres) normalize(m.fibres);
-      });
-
-      // Remplacer les types par une seule entrée = target
-      lot.formats[formatKey].types = {};
-      lot.formats[formatKey].types[targetKey] = {
-        bubble_id: targetVal.bubble_id,
-        pourcentage: 100,
-        matieres: aggMatieres,
-        couleurs: aggCouleurs,
-        perturbateurs: aggPerturbateurs,
-      };
-      if (window.colorById && window.colorById.has(targetVal.bubble_id)) {
-        lot.formats[formatKey].types[targetKey].color = window.colorById.get(
-          targetVal.bubble_id
-        );
+    // Dans l'item complet, les formats sont directement les clés de l'objet
+    // Utiliser EXACTEMENT le même pattern que createLossLot
+    // Mais avec un fallback si le nom ne correspond pas (prendre la première clé)
+    let targetFormatData = {};
+    if (targetItem) {
+      if (targetItem[targetFormatName]) {
+        targetFormatData = targetItem[targetFormatName];
+      } else if (Object.keys(targetItem).length > 0) {
+        // Fallback : prendre le premier format si le nom ne correspond pas
+        const firstKey = Object.keys(targetItem)[0];
+        targetFormatData = targetItem[firstKey];
       }
-    });
-  }
+    }
 
-  // Fixer une dimension enfant d'un type (ex: perturbateurs) à une seule clé cible à 100%
-  setTypeChildDimensionToSingleKey(lot, childDimName, targetCfg) {
-    if (!lot || !lot.formats) return;
-    const targetKey = Object.keys(targetCfg)[0];
-    const targetVal = Object.values(targetCfg)[0];
-    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
-      const types = formatObj.types || {};
-      Object.entries(types).forEach(([typeKey, typeObj]) => {
-        const child = typeObj[childDimName];
-        // Remplacer par la cible à 100%
-        const newChild = {};
-        newChild[targetKey] = {
-          bubble_id: targetVal.bubble_id,
-          pourcentage: 100,
-        };
-
-        // Appliquer la couleur depuis window.colorById si disponible
-        if (window.colorById && window.colorById.has(targetVal.bubble_id)) {
-          newChild[targetKey].color = window.colorById.get(targetVal.bubble_id);
-        }
-        lot.formats[formatKey].types[typeKey][childDimName] = newChild;
-      });
-    });
-  }
-
-  setLotDimensionToSingleKey(lot, dimensionName, targetCfg) {
-    if (!lot || !targetCfg) return;
-    const targetKey = Object.keys(targetCfg)[0];
-    const targetVal = Object.values(targetCfg)[0];
-    if (!targetKey || !targetVal) return;
-
-    const entry = {
-      bubble_id: targetVal.bubble_id,
+    // Copier complètement le format de l'item complet (avec toutes ses distributions et color)
+    // Utiliser le spread comme dans createLossLot pour préserver la color
+    targetLot.formats[targetFormatName] = {
+      ...targetFormatData,
+      bubble_id: targetBubbleId,
       pourcentage: 100,
     };
-    if (
+
+    // Ajouter en_gb si disponible dans targetItemInfo.itemData
+    if (targetItemInfo.itemData?.en_gb) {
+      targetLot.formats[targetFormatName].en_gb = targetItemInfo.itemData.en_gb;
+    }
+
+    // Appliquer la color depuis le format de l'item complet (EXACTEMENT comme dans createLossLot)
+    if (targetFormatData.color) {
+      targetLot.formats[targetFormatName].color = targetFormatData.color;
+    } else if (
       window.colorById &&
-      targetVal.bubble_id &&
-      window.colorById.has(targetVal.bubble_id)
+      targetBubbleId &&
+      window.colorById.has(targetBubbleId)
     ) {
-      entry.color = window.colorById.get(targetVal.bubble_id);
-    } else if (targetVal.color) {
-      entry.color = targetVal.color;
+      targetLot.formats[targetFormatName].color =
+        window.colorById.get(targetBubbleId);
     }
-    lot[dimensionName] = { [targetKey]: entry };
-  }
 
-  setFibresToSingleKey(lot, targetCfg) {
-    if (!lot || !lot.formats || !targetCfg) return;
-    const targetKey = Object.keys(targetCfg)[0];
-    const targetVal = Object.values(targetCfg)[0];
-    if (!targetKey || !targetVal) return;
+    // Ajouter en_gb si disponible dans targetItemInfo.itemData
+    if (targetItemInfo.itemData?.en_gb) {
+      targetLot.formats[targetFormatName].en_gb = targetItemInfo.itemData.en_gb;
+    }
 
-    Object.values(lot.formats).forEach(formatObj => {
-      const types = formatObj.types || {};
-      Object.values(types).forEach(typeObj => {
-        const matieres = typeObj.matieres || {};
-        Object.values(matieres).forEach(matiereObj => {
-          const newChild = {
-            [targetKey]: {
-              bubble_id: targetVal.bubble_id,
-              pourcentage: 100,
-            },
-          };
-          if (
-            window.colorById &&
-            targetVal.bubble_id &&
-            window.colorById.has(targetVal.bubble_id)
-          ) {
-            newChild[targetKey].color = window.colorById.get(
-              targetVal.bubble_id
-            );
-          } else if (targetVal.color) {
-            newChild[targetKey].color = targetVal.color;
-          }
-          matiereObj.fibres = newChild;
-        });
-      });
-    });
-  }
+    // 2. Ajouter les qualités et propretés du lot d'entrée
+    if (sourceLot.proprete) {
+      targetLot.proprete = JSON.parse(JSON.stringify(sourceLot.proprete));
+    }
+    if (sourceLot.qualite) {
+      targetLot.qualite = JSON.parse(JSON.stringify(sourceLot.qualite));
+    }
 
-  enforceMatieresTargetAggregation(lot, targetCfg) {
-    if (!lot || !lot.formats || !targetCfg) return;
-    const targetKey = Object.keys(targetCfg)[0];
-    const targetVal = Object.values(targetCfg)[0];
-    if (!targetKey || !targetVal) return;
+    // 3. Descendre dans le format pour voir s'il a des distributions
+    // Si il en a, les garder (déjà copiées)
+    // S'il en a pas, appliquer celles du lot d'entrée (agrégées)
+    const targetFormat = targetLot.formats[targetFormatName];
 
-    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
-      const types = formatObj.types || {};
-      Object.entries(types).forEach(([typeKey, typeObj]) => {
-        const matieres = typeObj.matieres || {};
-        if (Object.keys(matieres).length === 0) return;
+    // Pour chaque dimension enfant de formats
+    this.processingOrder.forEach(dimension => {
+      const dimensionConfig = this.dimensionHierarchy[dimension];
+      if (!dimensionConfig || dimensionConfig.parent !== 'formats') return;
 
-        const aggregatedFibres = {};
-        let hasFibres = false;
-
-        Object.values(matieres).forEach(matiereObj => {
-          const matPct = Math.max(Number(matiereObj.pourcentage) || 0, 0);
-          if (matiereObj.fibres) {
-            Object.entries(matiereObj.fibres).forEach(([fKey, fObj]) => {
-              const fibrePct = Math.max(Number(fObj.pourcentage) || 0, 0);
-              if (!aggregatedFibres[fKey]) {
-                aggregatedFibres[fKey] = {
-                  bubble_id: fObj.bubble_id,
-                  pourcentage: 0,
-                };
-                if (fObj.color) aggregatedFibres[fKey].color = fObj.color;
-              }
-              aggregatedFibres[fKey].pourcentage += (matPct * fibrePct) / 100;
-              if (
-                !aggregatedFibres[fKey].color &&
-                window.colorById &&
-                fObj.bubble_id &&
-                window.colorById.has(fObj.bubble_id)
-              ) {
-                aggregatedFibres[fKey].color = window.colorById.get(
-                  fObj.bubble_id
-                );
-              }
-              hasFibres = true;
-            });
-          }
-        });
-
-        if (hasFibres) {
-          const fibreSum = Object.values(aggregatedFibres).reduce(
-            (acc, fibre) => acc + (Number(fibre.pourcentage) || 0),
-            0
-          );
-          if (fibreSum > 0) {
-            Object.values(aggregatedFibres).forEach(fibre => {
-              fibre.pourcentage =
-                (Number(fibre.pourcentage) || 0) * (100 / fibreSum);
-            });
-          }
+      // Si le format de référence n'a pas cette dimension, prendre celle du lot d'entrée
+      if (!targetFormat[dimension] && sourceLot && sourceLot.formats) {
+        const aggregated = this.aggregateDimensionFromFormats(
+          sourceLot,
+          dimension
+        );
+        if (aggregated && Object.keys(aggregated).length > 0) {
+          targetFormat[dimension] = aggregated;
         }
-
-        const newMatiere = {
-          bubble_id: targetVal.bubble_id,
-          pourcentage: 100,
-        };
-        if (
-          window.colorById &&
-          targetVal.bubble_id &&
-          window.colorById.has(targetVal.bubble_id)
-        ) {
-          newMatiere.color = window.colorById.get(targetVal.bubble_id);
-        } else if (targetVal.color) {
-          newMatiere.color = targetVal.color;
-        }
-        if (hasFibres) {
-          newMatiere.fibres = aggregatedFibres;
-        }
-
-        lot.formats[formatKey].types[typeKey].matieres = {
-          [targetKey]: newMatiere,
-        };
-      });
-    });
-  }
-
-  applyPrimaryTarget(lot, primaryDimension, targetConfig) {
-    if (!lot || !targetConfig) return;
-    switch (primaryDimension) {
-      case 'formats': {
-        const transformed = this.applyTargetTransformation(
-          lot,
-          targetConfig,
-          'formats'
-        );
-        lot.formats = transformed.formats || {};
-        break;
-      }
-      case 'types':
-        this.enforceTypesTargetAggregation(lot, targetConfig);
-        break;
-      case 'matieres':
-        this.enforceMatieresTargetAggregation(lot, targetConfig);
-        break;
-      case 'fibres':
-        this.setFibresToSingleKey(lot, targetConfig);
-        break;
-      case 'couleurs':
-        this.setTypeChildDimensionToSingleKey(lot, 'couleurs', targetConfig);
-        break;
-      case 'perturbateurs':
-        this.setTypeChildDimensionToSingleKey(
-          lot,
-          'perturbateurs',
-          targetConfig
-        );
-        break;
-      case 'proprete':
-      case 'qualite':
-        this.setLotDimensionToSingleKey(lot, primaryDimension, targetConfig);
-        break;
-      default:
-        console.warn(
-          '[DynamicTransfo] Dimension primaire non gérée:',
-          primaryDimension
-        );
-    }
-  }
-
-  // Fusionner la structure de référence avec les données de l'élément original
-  mergeWithReferenceStructure(targetElement, referenceItem, originalElement) {
-    const merged = { ...targetElement };
-
-    // Pour chaque dimension, fusionner les données
-    for (const dimension of this.processingOrder) {
-      if (referenceItem[dimension] && originalElement[dimension]) {
-        merged[dimension] = this.mergeDimensionData(
-          referenceItem[dimension],
-          originalElement[dimension]
-        );
-      }
-    }
-
-    return merged;
-  }
-
-  // Fusionner les données d'une dimension spécifique
-  mergeDimensionData(referenceData, originalData) {
-    const merged = {};
-
-    // Prendre les clés de référence comme base
-    for (const [key, value] of Object.entries(referenceData)) {
-      if (originalData[key]) {
-        // Si l'élément original a cette clé, fusionner
-        merged[key] = {
-          ...value,
-          pourcentage: originalData[key].pourcentage || value.pourcentage,
-          color: originalData[key].color || value.color,
-        };
-      } else {
-        // Sinon, utiliser la référence
-        merged[key] = { ...value };
-      }
-    }
-
-    return merged;
-  }
-
-  // Concaténer tous les éléments décrochés dans le target
-  concatenateDecrochedElements(decrochedElements, targetKey, primaryDimension) {
-    let combinedEntry = null;
-
-    decrochedElements.forEach(element => {
-      const dimensionMap = element[primaryDimension];
-      if (!dimensionMap) return;
-      const entry = dimensionMap[targetKey];
-      if (!entry) return;
-      if (!combinedEntry) {
-        combinedEntry = JSON.parse(JSON.stringify(entry));
-      } else {
-        this.mergeElementIntoTarget(combinedEntry, entry);
       }
     });
 
-    if (!combinedEntry) {
-      return {};
-    }
+    // Normaliser toutes les distributions
+    this.normalizeAllDistributions(targetLot);
 
-    return { [targetKey]: combinedEntry };
-  }
-
-  // Fusionner un élément dans le target
-  mergeElementIntoTarget(targetEntry, element) {
-    if (!targetEntry) return;
-    if (!element) return;
-
-    const currentPct = targetEntry.pourcentage || 0;
-    const elementPct = element.pourcentage || 0;
-    targetEntry.pourcentage = currentPct + elementPct;
-
-    // Fusionner les dimensions enfants
-    for (const dimension of this.processingOrder) {
-      if (element[dimension]) {
-        if (!targetEntry[dimension]) {
-          targetEntry[dimension] = {};
-        }
-        this.mergeDimensionIntoTarget(
-          targetEntry[dimension],
-          element[dimension]
-        );
-      }
-    }
-  }
-
-  // Fusionner une dimension dans le target
-  mergeDimensionIntoTarget(targetDimension, elementDimension) {
-    for (const [key, value] of Object.entries(elementDimension)) {
-      if (targetDimension[key]) {
-        // Fusionner les pourcentages
-        const currentPct = targetDimension[key].pourcentage || 0;
-        const elementPct = value.pourcentage || 0;
-        targetDimension[key].pourcentage = currentPct + elementPct;
-      } else {
-        targetDimension[key] = { ...value };
-      }
-    }
-  }
-
-  // Calculer la masse totale des éléments décrochés
-  calculateTotalMass(
-    decrochedElements,
-    sourceLotTotal,
-    primaryDimension,
-    targetKey
-  ) {
-    const baseMass = Number(sourceLotTotal) || 0;
-    let totalMass = 0;
-    for (const element of decrochedElements) {
-      const dimensionMap = element[primaryDimension];
-      if (!dimensionMap) continue;
-      const entry = dimensionMap[targetKey];
-      if (!entry || entry.pourcentage === undefined) continue;
-      const pct = Number(entry.pourcentage) || 0;
-      totalMass += (pct / 100) * baseMass;
-    }
-    return totalMass;
-  }
-
-  // Créer le lot co-produit
-  createCoProductLot(
-    originalLot,
-    matchingElements,
-    coproFromDecroched,
-    coproductCfg,
-    primaryDimension,
-    decrochedElements,
-    remainderMass
-  ) {
-    // Commencer avec le lot original
-    const coProductLot = JSON.parse(JSON.stringify(originalLot));
-
-    // Retirer les éléments qui ont été décrochés
-    this.removeDecrochedElementsFromLot(coProductLot, matchingElements);
-
-    // Ajouter la part non-yield des éléments décrochés selon la distribution coproduct
-    if (
-      coproFromDecroched > 0 &&
-      coproductCfg &&
-      Object.keys(coproductCfg).length > 0
+    // Réappliquer la color APRÈS normalisation pour être sûr qu'elle ne soit pas écrasée
+    if (targetFormatData.color) {
+      targetLot.formats[targetFormatName].color = targetFormatData.color;
+    } else if (
+      window.colorById &&
+      targetBubbleId &&
+      window.colorById.has(targetBubbleId)
     ) {
-      this.addCoproductDistribution(
-        coProductLot,
-        coproFromDecroched,
-        coproductCfg,
-        primaryDimension
-      );
+      targetLot.formats[targetFormatName].color =
+        window.colorById.get(targetBubbleId);
     }
 
-    // Calculer la masse totale du co-produit
-    const remaining = Math.max(Number(remainderMass) || 0, 0);
-    coProductLot.total = remaining + coproFromDecroched;
-
-    if (!coProductLot.total || coProductLot.total <= 0.1) {
-      return null;
-    }
-
-    return coProductLot;
+    return targetLot;
   }
 
-  // Ajouter la distribution des co-produits avec chargement des items complets
-  addCoproductDistribution(coProductLot, mass, coproductCfg, primaryDimension) {
-    if (!coproductCfg || Object.keys(coproductCfg).length === 0) return;
-    if (!mass || mass <= 0) return;
-    if (!coProductLot[primaryDimension]) {
-      coProductLot[primaryDimension] = {};
-    }
-
-    const totalPercent = Object.values(coproductCfg).reduce(
-      (sum, cfg) => sum + (cfg.percent || 0),
-      0
-    );
-    if (!totalPercent) return;
-
-    if (
-      typeof window.ensureDimensionColorsLoadedSync === 'function' &&
-      primaryDimension
-    ) {
-      window.ensureDimensionColorsLoadedSync(primaryDimension);
-    }
-
-    for (const [name, cfg] of Object.entries(coproductCfg)) {
-      const percent = (cfg.percent || 0) * (mass / totalPercent);
-
-      // Charger l'item complet pour avoir la structure de référence
-      let completeItem = null;
-      if (window.itemCompleteCache.has(cfg.bubble_id)) {
-        completeItem = window.itemCompleteCache.get(cfg.bubble_id);
-      } else if (typeof window.fetchItemCompleteSync === 'function') {
-        completeItem = window.fetchItemCompleteSync(cfg.bubble_id);
-      }
-
-      if (completeItem) {
-        // Utiliser la structure complète de l'item
-        coProductLot[primaryDimension][name] = {
-          bubble_id: cfg.bubble_id,
-          pourcentage: percent,
-          color:
-            completeItem.color ||
-            (window.colorById && window.colorById.get(cfg.bubble_id)),
-          // Ajouter toutes les dimensions de l'item complet
-          types: completeItem.types || {},
-          matieres: completeItem.matieres || {},
-          fibres: completeItem.fibres || {},
-          couleurs: completeItem.couleurs || {},
-          perturbateurs: completeItem.perturbateurs || {},
-          proprete: completeItem.proprete || {},
-          qualite: completeItem.qualite || {},
-        };
-      } else {
-        // Fallback si l'API échoue
-        coProductLot[primaryDimension][name] = {
-          bubble_id: cfg.bubble_id,
-          pourcentage: percent,
-          color: window.colorById && window.colorById.get(cfg.bubble_id),
-        };
-      }
-    }
-  }
-
-  // Calculer la masse totale d'un lot
-  calculateLotTotalMass(lot) {
-    if (lot.total !== undefined) {
-      return lot.total;
-    }
-
-    // Calculer à partir des pourcentages des formats
-    if (lot.formats) {
-      return Object.values(lot.formats).reduce((sum, format) => {
-        return sum + (format.pourcentage || 0);
-      }, 0);
-    }
-
-    return 0;
-  }
-
-  // Appliquer les targets enfants
-  applyChildTargets(targetLot, dimensions, primaryDimension) {
-    if (!dimensions) return;
-
-    const handlers = {
-      types: cfg => this.enforceTypesTargetAggregation(targetLot, cfg),
-      matieres: cfg => this.enforceMatieresTargetAggregation(targetLot, cfg),
-      fibres: cfg => this.setFibresToSingleKey(targetLot, cfg),
-      couleurs: cfg =>
-        this.setTypeChildDimensionToSingleKey(targetLot, 'couleurs', cfg),
-      perturbateurs: cfg =>
-        this.setTypeChildDimensionToSingleKey(targetLot, 'perturbateurs', cfg),
-      proprete: cfg =>
-        this.setLotDimensionToSingleKey(targetLot, 'proprete', cfg),
-      qualite: cfg =>
-        this.setLotDimensionToSingleKey(targetLot, 'qualite', cfg),
+  // Créer le lossLot
+  createLossLot(lossItem, lossMass, transfoDetails, lossItemInfo) {
+    const lossLot = {
+      total: lossMass,
+      title: `Perte ${transfoDetails.title || 'dynamique'}`,
     };
 
-    Object.entries(handlers).forEach(([dimension, handler]) => {
-      if (dimension === primaryDimension) return;
-      const dimensionCfg = dimensions[dimension];
-      if (dimensionCfg && this.hasTarget(dimensionCfg.target)) {
-        handler(dimensionCfg.target);
-      }
-    });
-  }
+    // Créer le format de perte
+    // Le nom du format est la clé française de l'objet loss
+    lossLot.formats = {};
+    const lossFormatName =
+      lossItemInfo.formatName ||
+      (lossItem ? Object.keys(lossItem)[0] : 'Format inconnu');
 
-  // Recalculer les pourcentages après décrochage pour maintenir la cohérence des totaux
-  recalculatePercentagesAfterDecrochage(lot) {
-    console.log('Recalcul des pourcentages après décrochage');
+    const lossBubbleId = lossItemInfo.bubbleId;
 
-    // Recalculer les pourcentages pour chaque dimension
-    for (const dimension of this.processingOrder) {
-      if (lot[dimension]) {
-        this.normalizeDimensionPercentages(lot[dimension]);
-      }
+    // Dans l'item complet, les formats sont directement les clés de l'objet
+    const lossFormatData =
+      lossItem && lossItem[lossFormatName] ? lossItem[lossFormatName] : {};
+
+    lossLot.formats[lossFormatName] = {
+      ...lossFormatData,
+      bubble_id: lossBubbleId,
+      pourcentage: 100,
+    };
+
+    // Ajouter en_gb si disponible dans lossItemInfo.itemData
+    if (lossItemInfo.itemData?.en_gb) {
+      lossLot.formats[lossFormatName].en_gb = lossItemInfo.itemData.en_gb;
     }
 
-    return lot;
+    // Appliquer la color depuis le format de l'item complet
+    if (lossFormatData.color) {
+      lossLot.formats[lossFormatName].color = lossFormatData.color;
+    } else if (
+      window.colorById &&
+      lossBubbleId &&
+      window.colorById.has(lossBubbleId)
+    ) {
+      lossLot.formats[lossFormatName].color =
+        window.colorById.get(lossBubbleId);
+    }
+
+    // Appliquer TOUTES les distributions filles de lossItem (pas de fusion)
+    this.applyAllChildDistributions(lossLot, lossItem);
+
+    // Normaliser toutes les distributions
+    this.normalizeAllDistributions(lossLot);
+
+    return lossLot;
   }
 
-  copySiblingDimensions(targetLot, sourceLot, primaryDimension) {
-    if (!sourceLot) return;
+  // Créer le coproductLot issu du transformable
+  createCoproductLot(
+    sourceLot,
+    coproductItem,
+    coproductMass,
+    transfoDetails,
+    coproductItemInfo
+  ) {
+    const coproductLot = {
+      total: coproductMass,
+      title: `Co-produit ${transfoDetails.title || 'dynamique'}`,
+    };
+
+    // Créer le format de coproduit
+    // Le nom du format est la clé française de l'objet coproduct
+    coproductLot.formats = {};
+    const coproductFormatName =
+      coproductItemInfo.formatName ||
+      (coproductItem ? Object.keys(coproductItem)[0] : 'Format inconnu');
+
+    const coproductBubbleId = coproductItemInfo.bubbleId;
+
+    // Dans l'item complet, les formats sont directement les clés de l'objet
+    const coproductFormatData =
+      coproductItem && coproductItem[coproductFormatName]
+        ? coproductItem[coproductFormatName]
+        : {};
+
+    coproductLot.formats[coproductFormatName] = {
+      ...coproductFormatData,
+      bubble_id: coproductBubbleId,
+      pourcentage: 100,
+    };
+
+    // Ajouter en_gb si disponible dans coproductItemInfo.itemData
+    if (coproductItemInfo.itemData?.en_gb) {
+      coproductLot.formats[coproductFormatName].en_gb =
+        coproductItemInfo.itemData.en_gb;
+    }
+
+    // Appliquer la color depuis le format de l'item complet
+    if (coproductFormatData.color) {
+      coproductLot.formats[coproductFormatName].color =
+        coproductFormatData.color;
+    } else if (
+      window.colorById &&
+      coproductBubbleId &&
+      window.colorById.has(coproductBubbleId)
+    ) {
+      coproductLot.formats[coproductFormatName].color =
+        window.colorById.get(coproductBubbleId);
+    }
+
+    // Appliquer les distributions filles (remplacement conditionnel)
+    this.applyChildDistributions(coproductLot, coproductItem, sourceLot);
+
+    // Normaliser toutes les distributions
+    this.normalizeAllDistributions(coproductLot);
+
+    return coproductLot;
+  }
+
+  // Appliquer les distributions filles conditionnellement (pour target et coproduct)
+  applyChildDistributions(targetLot, referenceItem, sourceLot) {
+    if (!targetLot.formats || !referenceItem) return;
+
+    // Parcourir tous les formats dans targetLot
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      const targetFormat = targetLot.formats[formatKey];
+      // Dans l'item complet, les formats sont directement les clés de l'objet
+      const referenceFormat = referenceItem.formats
+        ? Object.values(referenceItem.formats)[0]
+        : Object.keys(referenceItem).length > 0
+          ? Object.values(referenceItem)[0]
+          : null;
+
+      if (!referenceFormat) return;
+
+      // Pour chaque dimension enfant selon la hiérarchie
+      this.processingOrder.forEach(dimension => {
+        // Vérifier si cette dimension peut être enfant de formats
+        const dimensionConfig = this.dimensionHierarchy[dimension];
+        if (!dimensionConfig || dimensionConfig.parent !== 'formats') {
+          // Vérifier si c'est une dimension de niveau racine (proprete, qualite)
+          if (dimensionConfig && !dimensionConfig.parent) {
+            // Appliquer au niveau racine du lot
+            if (referenceItem[dimension]) {
+              // L'item de référence a une distribution → remplacer
+              targetLot[dimension] = JSON.parse(
+                JSON.stringify(referenceItem[dimension])
+              );
+            } else if (sourceLot && sourceLot[dimension]) {
+              // Sinon, prendre celle du lot d'entrée
+              targetLot[dimension] = JSON.parse(
+                JSON.stringify(sourceLot[dimension])
+              );
+            }
+          }
+          return;
+        }
+
+        // Si l'item de référence a une distribution dans cette dimension → remplacer
+        if (referenceFormat[dimension]) {
+          targetFormat[dimension] = JSON.parse(
+            JSON.stringify(referenceFormat[dimension])
+          );
+
+          // Appliquer récursivement pour copier toutes les distributions enfants
+          if (targetFormat[dimension]) {
+            this.applyAllChildDistributionsRecursive(
+              targetFormat[dimension],
+              referenceFormat[dimension],
+              dimension
+            );
+          }
+        } else if (sourceLot && sourceLot.formats) {
+          // Sinon, chercher dans le lot d'entrée
+          // Agréger les distributions de cette dimension depuis tous les formats du lot d'entrée
+          const aggregated = this.aggregateDimensionFromFormats(
+            sourceLot,
+            dimension
+          );
+          if (aggregated && Object.keys(aggregated).length > 0) {
+            targetFormat[dimension] = aggregated;
+          }
+        }
+      });
+    });
+  }
+
+  // Appliquer récursivement les distributions filles
+  applyChildDistributionsRecursive(
+    targetNode,
+    referenceNode,
+    sourceLot,
+    parentDimension
+  ) {
+    if (!targetNode || typeof targetNode !== 'object') return;
+
+    // Parcourir toutes les dimensions enfants de la dimension parent
+    const parentConfig = this.dimensionHierarchy[parentDimension];
+    if (!parentConfig || !parentConfig.children) return;
+
+    parentConfig.children.forEach(childDimension => {
+      // Parcourir tous les éléments du nœud cible
+      Object.keys(targetNode).forEach(key => {
+        const targetElement = targetNode[key];
+        const referenceElement = referenceNode?.[key];
+
+        if (!targetElement || typeof targetElement !== 'object') return;
+
+        // Si l'item de référence a une distribution dans cette dimension → remplacer
+        if (referenceElement && referenceElement[childDimension]) {
+          targetElement[childDimension] = JSON.parse(
+            JSON.stringify(referenceElement[childDimension])
+          );
+        } else if (sourceLot) {
+          // Sinon, chercher dans le lot d'entrée (logique complexe, on garde ce qui existe déjà)
+          // Pour simplifier, on garde ce qui existe déjà dans targetElement
+        }
+
+        // Appliquer récursivement pour les dimensions enfants
+        if (targetElement[childDimension]) {
+          this.applyChildDistributionsRecursive(
+            targetElement[childDimension],
+            referenceElement?.[childDimension],
+            sourceLot,
+            childDimension
+          );
+        }
+      });
+    });
+  }
+
+  // Agréger une dimension depuis tous les formats d'un lot
+  aggregateDimensionFromFormats(lot, dimension) {
+    if (!lot.formats) return null;
+
+    const aggregated = {};
+    let totalMass = 0;
+    const massMap = new Map();
+
+    Object.values(lot.formats).forEach(format => {
+      const formatPct = format.pourcentage || 0;
+      const dimensionData = format[dimension];
+
+      if (!dimensionData) return;
+
+      Object.entries(dimensionData).forEach(([key, value]) => {
+        const elementPct = value.pourcentage || 0;
+        const mass = (formatPct * elementPct) / 100;
+        totalMass += mass;
+
+        if (!massMap.has(key)) {
+          massMap.set(key, {
+            ...value,
+            mass: 0,
+          });
+        }
+        const entry = massMap.get(key);
+        entry.mass += mass;
+      });
+    });
+
+    if (totalMass === 0) return null;
+
+    massMap.forEach((entry, key) => {
+      aggregated[key] = {
+        ...entry,
+        pourcentage: (entry.mass / totalMass) * 100,
+      };
+      delete aggregated[key].mass;
+    });
+
+    return aggregated;
+  }
+
+  // Appliquer TOUTES les distributions filles de l'item de référence (pour loss)
+  applyAllChildDistributions(lot, referenceItem) {
+    if (!lot.formats || !referenceItem) return;
+
+    // Parcourir tous les formats dans lot
+    Object.keys(lot.formats).forEach(formatKey => {
+      const lotFormat = lot.formats[formatKey];
+      // Dans l'item complet, les formats sont directement les clés de l'objet
+      const referenceFormat = referenceItem.formats
+        ? Object.values(referenceItem.formats)[0]
+        : Object.keys(referenceItem).length > 0
+          ? Object.values(referenceItem)[0]
+          : null;
+
+      if (!referenceFormat) return;
+
+      // Copier toutes les dimensions de l'item de référence
+      this.processingOrder.forEach(dimension => {
+        const dimensionConfig = this.dimensionHierarchy[dimension];
+        if (!dimensionConfig) return;
+
+        // Si c'est une dimension de niveau racine
+        if (!dimensionConfig.parent) {
+          if (referenceItem[dimension]) {
+            lot[dimension] = JSON.parse(
+              JSON.stringify(referenceItem[dimension])
+            );
+          }
+          return;
+        }
+
+        // Si c'est une dimension enfant de formats
+        if (dimensionConfig.parent === 'formats') {
+          if (referenceFormat[dimension]) {
+            lotFormat[dimension] = JSON.parse(
+              JSON.stringify(referenceFormat[dimension])
+            );
+          }
+
+          // Appliquer récursivement
+          if (lotFormat[dimension]) {
+            this.applyAllChildDistributionsRecursive(
+              lotFormat[dimension],
+              referenceFormat[dimension],
+              dimension
+            );
+          }
+        }
+      });
+    });
+  }
+
+  // Appliquer récursivement toutes les distributions (pour loss)
+  applyAllChildDistributionsRecursive(
+    targetNode,
+    referenceNode,
+    parentDimension
+  ) {
+    if (!targetNode || !referenceNode || typeof targetNode !== 'object') return;
+
+    const parentConfig = this.dimensionHierarchy[parentDimension];
+    if (!parentConfig || !parentConfig.children) return;
+
+    parentConfig.children.forEach(childDimension => {
+      Object.keys(targetNode).forEach(key => {
+        const targetElement = targetNode[key];
+        const referenceElement = referenceNode[key];
+
+        if (
+          !targetElement ||
+          !referenceElement ||
+          typeof targetElement !== 'object'
+        )
+          return;
+
+        // Copier complètement la distribution de l'item de référence
+        if (referenceElement[childDimension]) {
+          targetElement[childDimension] = JSON.parse(
+            JSON.stringify(referenceElement[childDimension])
+          );
+        }
+
+        // Appliquer récursivement
+        if (targetElement[childDimension] && referenceElement[childDimension]) {
+          this.applyAllChildDistributionsRecursive(
+            targetElement[childDimension],
+            referenceElement[childDimension],
+            childDimension
+          );
+        }
+      });
+    });
+  }
+
+  // Normaliser toutes les distributions à tous les niveaux
+  normalizeAllDistributions(lot) {
+    if (!lot || typeof lot !== 'object') return;
+
+    // Normaliser les dimensions de niveau racine
     this.processingOrder.forEach(dimension => {
-      if (dimension === primaryDimension) return;
-      if (!sourceLot[dimension]) return;
-      if (!targetLot[dimension]) {
-        targetLot[dimension] = JSON.parse(JSON.stringify(sourceLot[dimension]));
-        return;
+      const dimensionConfig = this.dimensionHierarchy[dimension];
+      if (!dimensionConfig) return;
+
+      // Si c'est une dimension de niveau racine
+      if (!dimensionConfig.parent && lot[dimension]) {
+        this.normalizeDimension(lot[dimension]);
       }
-      if (typeof targetLot[dimension] === 'object') {
-        this.mergeDimensionIntoTarget(
-          targetLot[dimension],
-          sourceLot[dimension]
-        );
+    });
+
+    // Normaliser récursivement depuis formats
+    if (lot.formats) {
+      Object.values(lot.formats).forEach(format => {
+        this.normalizeFormatRecursive(format, 'formats');
+      });
+    }
+  }
+
+  // Normaliser récursivement un format et ses enfants
+  normalizeFormatRecursive(node, parentDimension) {
+    if (!node || typeof node !== 'object') return;
+
+    const parentConfig = this.dimensionHierarchy[parentDimension];
+    if (!parentConfig || !parentConfig.children) return;
+
+    parentConfig.children.forEach(childDimension => {
+      if (node[childDimension]) {
+        this.normalizeDimension(node[childDimension]);
+
+        // Normaliser récursivement les enfants
+        Object.values(node[childDimension]).forEach(childNode => {
+          if (childNode && typeof childNode === 'object') {
+            this.normalizeFormatRecursive(childNode, childDimension);
+          }
+        });
       }
     });
   }
 
-  // Normaliser les pourcentages d'une dimension pour qu'ils totalisent 100%
-  normalizeDimensionPercentages(dimensionData) {
+  // Normaliser une dimension (faire que la somme fasse 100%)
+  normalizeDimension(dimensionData) {
+    if (!dimensionData || typeof dimensionData !== 'object') return;
+
     const total = Object.values(dimensionData).reduce((sum, item) => {
       return sum + (item.pourcentage || 0);
     }, 0);
@@ -3508,19 +2967,10 @@ class GenericTransformationEngine {
         }
       });
     }
-
-    // Normaliser récursivement les dimensions enfants
-    Object.values(dimensionData).forEach(item => {
-      if (item && typeof item === 'object') {
-        for (const childDimension of this.processingOrder) {
-          if (item[childDimension]) {
-            this.normalizeDimensionPercentages(item[childDimension]);
-          }
-        }
-      }
-    });
   }
 }
 
-// Exposer le moteur de transformation générique globalement
-window.GenericTransformationEngine = GenericTransformationEngine;
+// Ancienne classe GenericTransformationEngine supprimée - remplacée par SimpleDynamicTransformationEngine
+
+// Exposer le nouveau moteur globalement
+window.SimpleDynamicTransformationEngine = SimpleDynamicTransformationEngine;

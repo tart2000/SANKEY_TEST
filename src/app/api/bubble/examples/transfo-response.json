@@ -1,68 +1,42 @@
 {
   "title": "Effilochage fin",
-  "en_gb": "Translation here",
+  "en_gb": "Light thing thing ",
   "bubble_id": "1756818350195x963851048233205800",
   "team": "1730809932159x273229509786599420",
   "step": "preparation",
   "yield": 85,
-  "version": 7,
-  "dimensions": {
-    "formats": {
-      "input": {
-        "Chiquettes": {
-          "bubble_id": "1756818412593x629569448461467600"
-        }
-      },
-      "target": {
-        "Fibre et bourre": {
-          "bubble_id": "1756818470001x850405871651389400"
-        }
-      },
-      "coproduct": {
-        "Résidu": {
-          "bubble_id": "1756818495747x785209800865087500",
-          "percent": 100
-        }
-      }
+  "loss_percent": 5,
+  "version": 13,
+  "select": {
+    "Hauts type T-shirt": {
+      "en_gb": "T-shirt-like tops",
+      "bubble_id": "1751457764929x125732767948865540"
     },
-    "types": {
-      "input": {},
-      "target": {
-        "Bourre fibre <2cm": {
-          "bubble_id": "1756818534495x159085711275065340"
-        }
-      },
-      "coproduct": {}
+    "Hauts type chemise": {
+      "en_gb": "Shirt-like tops",
+      "bubble_id": "1751458445724x379977643476910100"
     },
-    "matieres": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
-    },
-    "fibres": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
-    },
-    "couleurs": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
-    },
-    "perturbateurs": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
-    },
-    "proprete": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
-    },
-    "qualite": {
-      "input": {},
-      "target": {},
-      "coproduct": {}
+    "Hauts type pulls": {
+      "en_gb": "Sweater-style tops",
+      "bubble_id": "1751458871948x225527464850620400"
+    }
+  },
+  "target": {
+    "Morceaux de vêtements et d'étoffe": {
+      "en_gb": "Pieces of clothes",
+      "bubble_id": "1756818350195x963851048233205800"
+    }
+  },
+  "loss": {
+    "Fibre et bourre": {
+      "en_gb": "Fiber and stuffing",
+      "bubble_id": "1756818470001x850405871651389400"
+    }
+  },
+  "coproduct": {
+    "Perturbateurs fonctionnels": {
+      "en_gb": "Functional disruptors",
+      "bubble_id": "1756803539320x489844428143329300"
     }
   }
 }

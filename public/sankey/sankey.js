@@ -3314,6 +3314,7 @@ function updateSankey(dimension) {
             function (e) {
               e.stopPropagation();
               closeDropdown();
+              console.log('📦 [Visualiser le lot]', link.target.lot);
               const lotJson = JSON.stringify(link.target.lot, null, 2);
               window.parent.postMessage(
                 {

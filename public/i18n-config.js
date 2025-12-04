@@ -96,6 +96,9 @@ window.i18nConfig = {
         viewLot: 'Visualiser le lot',
         transformationDetails: 'Détails de la transformation',
         generalInfo: 'Informations générales',
+        loss: 'Perte :',
+        filters: 'Filtres :',
+        coproduct: 'Coproduit :',
         cannotLoadTransformationDetails:
           'Impossible de charger les détails de la transformation',
         errorLoadingTransformationDetails:
@@ -199,6 +202,9 @@ window.i18nConfig = {
         viewLot: 'View lot',
         transformationDetails: 'Transformation details',
         generalInfo: 'General Information',
+        loss: 'Loss :',
+        filters: 'Filters :',
+        coproduct: 'Co-product :',
         cannotLoadTransformationDetails: 'Cannot load transformation details',
         errorLoadingTransformationDetails:
           'Error loading transformation details',
@@ -302,6 +308,9 @@ window.i18nConfig = {
         viewLot: 'Ver lote',
         transformationDetails: 'Detalles de la transformación',
         generalInfo: 'Información general',
+        loss: 'Pérdida :',
+        filters: 'Filtros :',
+        coproduct: 'Coproducto :',
         cannotLoadTransformationDetails:
           'No se pueden cargar los detalles de la transformación',
         errorLoadingTransformationDetails:
@@ -407,6 +416,9 @@ window.i18nConfig = {
         viewLot: 'Los anzeigen',
         transformationDetails: 'Transformationsdetails',
         generalInfo: 'Allgemeine Informationen',
+        loss: 'Verlust :',
+        filters: 'Filter :',
+        coproduct: 'Nebenprodukt :',
         cannotLoadTransformationDetails:
           'Transformationsdetails können nicht geladen werden',
         errorLoadingTransformationDetails:

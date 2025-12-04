@@ -1328,47 +1328,87 @@ class TransformationPopup {
 
   // Fonction pour extraire les données du tableau à partir des détails de transformation
   async extractTableDataFromTransfo(transfoDetails) {
-    const rows = [];
-
-    // Extraire les informations générales (yield, step)
+    // Extraire les informations générales (yield, step, loss_percent)
     const generalInfo = {
       yield: transfoDetails.yield !== undefined ? transfoDetails.yield : null,
       step: transfoDetails.step || null,
+      lossPercent: transfoDetails.loss_percent || 0,
     };
 
-    // Parcourir toutes les dimensions
-    for (const [dimension, config] of Object.entries(
-      transfoDetails.dimensions || {}
-    )) {
-      // Vérifier si cette dimension a des configurations actives
-      const hasInput = config.input && Object.keys(config.input).length > 0;
-      const hasTarget = config.target && Object.keys(config.target).length > 0;
-      const hasCoproduct =
-        config.coproduct && Object.keys(config.coproduct).length > 0;
+    // Extraire les filtres (types depuis select)
+    const filterTypes = [];
+    if (transfoDetails.select) {
+      for (const [key, item] of Object.entries(transfoDetails.select)) {
+        if (item && item.bubble_id) {
+          const elementMini = await this.recupererElementMini(item.bubble_id);
+          if (elementMini) {
+            const nomReel = this.getTitreAffiche(key, elementMini);
+            filterTypes.push(nomReel);
+          } else {
+            filterTypes.push(key);
+          }
+        }
+      }
+    }
 
-      if (hasInput || hasTarget || hasCoproduct) {
-        const inputTarget = hasInput
-          ? await this.getBubbleIdsAsNames(config.input)
-          : '-';
-        const targetLot = hasTarget
-          ? await this.getBubbleIdsAsNames(config.target)
-          : '-';
-        const coProductLot = hasCoproduct
-          ? await this.getBubbleIdsAsNames(config.coproduct)
-          : '-';
+    // Extraire le format cible
+    // La structure est { "nom français": { bubble_id, en_gb } }
+    let targetFormat = '-';
+    if (transfoDetails.target) {
+      const firstKey = Object.keys(transfoDetails.target)[0];
+      const targetItem = firstKey ? transfoDetails.target[firstKey] : null;
+      if (targetItem?.bubble_id) {
+        const elementMini = await this.recupererElementMini(
+          targetItem.bubble_id
+        );
+        if (elementMini) {
+          targetFormat = this.getTitreAffiche(firstKey, elementMini);
+        } else {
+          targetFormat = firstKey || '-';
+        }
+      }
+    }
 
-        rows.push({
-          dimension: this.getDimensionLabel(dimension),
-          inputTarget: inputTarget,
-          targetLot: targetLot,
-          coProductLot: coProductLot,
-        });
+    // Extraire le format coproduit
+    let coproductFormat = '-';
+    if (transfoDetails.coproduct) {
+      const firstKey = Object.keys(transfoDetails.coproduct)[0];
+      const coproductItem = firstKey
+        ? transfoDetails.coproduct[firstKey]
+        : null;
+      if (coproductItem?.bubble_id) {
+        const elementMini = await this.recupererElementMini(
+          coproductItem.bubble_id
+        );
+        if (elementMini) {
+          coproductFormat = this.getTitreAffiche(firstKey, elementMini);
+        } else {
+          coproductFormat = firstKey || '-';
+        }
+      }
+    }
+
+    // Extraire le format perte
+    let lossFormat = '-';
+    if (transfoDetails.loss) {
+      const firstKey = Object.keys(transfoDetails.loss)[0];
+      const lossItem = firstKey ? transfoDetails.loss[firstKey] : null;
+      if (lossItem?.bubble_id) {
+        const elementMini = await this.recupererElementMini(lossItem.bubble_id);
+        if (elementMini) {
+          lossFormat = this.getTitreAffiche(firstKey, elementMini);
+        } else {
+          lossFormat = firstKey || '-';
+        }
       }
     }
 
     return {
       generalInfo,
-      dimensions: rows,
+      filterTypes: filterTypes.join(', ') || '-',
+      targetFormat,
+      coproductFormat,
+      lossFormat,
     };
   }
 
@@ -1517,18 +1557,26 @@ class TransformationPopup {
       return;
     }
 
-    // Vérifier si on a des données (ancien format array ou nouveau format objet)
-    const dimensions = Array.isArray(data) ? data : data.dimensions || [];
+    // Vérifier si on a des données
     const generalInfo = data.generalInfo || null;
+    const filterTypes = data.filterTypes || '-';
+    const targetFormat = data.targetFormat || '-';
+    const coproductFormat = data.coproductFormat || '-';
+    const lossFormat = data.lossFormat || '-';
 
-    if (dimensions.length === 0 && !generalInfo) {
+    if (!generalInfo) {
       console.log('Aucune donnée à afficher dans le tableau');
       return;
     }
 
     // Construire la section des informations générales
     let generalInfoHTML = '';
-    if (generalInfo && (generalInfo.yield !== null || generalInfo.step)) {
+    if (
+      generalInfo &&
+      (generalInfo.yield !== null ||
+        generalInfo.step ||
+        generalInfo.lossPercent > 0)
+    ) {
       generalInfoHTML = `
         <div id="transfo-general-info" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div id="general-info-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
@@ -1540,55 +1588,19 @@ class TransformationPopup {
           <div id="general-info-body" class="px-3 py-2">
             <div class="space-y-2 text-sm">
               ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
+              ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${generalInfo.lossPercent}%</span></div>` : ''}
               ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
+              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('filters')}</span><span class="text-gray-900">${filterTypes}</span></div>
+              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('target')}</span><span class="text-gray-900">${targetFormat}</span></div>
+              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('coproduct')}</span><span class="text-gray-900">${coproductFormat}</span></div>
+              ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${lossFormat}</span></div>` : ''}
             </div>
           </div>
         </div>
       `;
     }
 
-    // Construire la section des dimensions
-    let dimensionsHTML = '';
-    if (dimensions.length > 0) {
-      dimensionsHTML = `
-        <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div id="table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
-            <h4 class="text-sm font-medium text-gray-900">${i18next.t('transformationDetails')}</h4>
-            <svg id="collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </div>
-          <div id="table-body" class="overflow-x-auto max-h-64 overflow-y-auto">
-            <table class="min-w-full text-xs">
-              <thead class="bg-white sticky top-0 z-10">
-                <tr>
-                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
-                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
-                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
-                  <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-100">
-                ${dimensions
-                  .map(
-                    row => `
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-2 py-1.5 font-medium text-gray-900">${row.dimension}</td>
-                    <td class="px-2 py-1.5 text-gray-700">${row.inputTarget}</td>
-                    <td class="px-2 py-1.5 text-gray-700">${row.targetLot}</td>
-                    <td class="px-2 py-1.5 text-gray-700">${row.coProductLot}</td>
-                  </tr>
-                `
-                  )
-                  .join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    const combinedHTML = generalInfoHTML + dimensionsHTML;
+    const combinedHTML = generalInfoHTML;
 
     // Supprimer l'ancien contenu s'il existe
     const existingGeneralInfo = this.modal.querySelector(
@@ -1627,27 +1639,6 @@ class TransformationPopup {
             } else {
               generalInfoBody.style.display = 'none';
               generalInfoIcon.style.transform = 'rotate(-90deg)';
-            }
-          });
-        }
-      }
-
-      // Ajouter les listeners pour le collapse/expand du tableau des dimensions
-      if (dimensionsHTML) {
-        const tableHeader = this.modal.querySelector('#table-header');
-        const tableBody = this.modal.querySelector('#table-body');
-        const collapseIcon = this.modal.querySelector('#collapse-icon');
-
-        if (tableHeader && tableBody && collapseIcon) {
-          tableHeader.addEventListener('click', () => {
-            const isCollapsed = tableBody.style.display === 'none';
-
-            if (isCollapsed) {
-              tableBody.style.display = 'block';
-              collapseIcon.style.transform = 'rotate(0deg)';
-            } else {
-              tableBody.style.display = 'none';
-              collapseIcon.style.transform = 'rotate(-90deg)';
             }
           });
         }
