@@ -2392,18 +2392,19 @@ class SimpleDynamicTransformationEngine {
     }
 
     // 9. Fusionner les lots pour le coproductLot final
+    // IMPORTANT: mettre coproductFromTransformableLot en premier pour que son format soit la base
     const lotsToMerge = [];
-    if (nonMatchingLot && nonMatchingLot.total > 0) {
-      lotsToMerge.push(nonMatchingLot);
-    }
-    if (lossLot && lossLot.total > 0) {
-      lotsToMerge.push(lossLot);
-    }
     if (
       coproductFromTransformableLot &&
       coproductFromTransformableLot.total > 0
     ) {
       lotsToMerge.push(coproductFromTransformableLot);
+    }
+    if (nonMatchingLot && nonMatchingLot.total > 0) {
+      lotsToMerge.push(nonMatchingLot);
+    }
+    if (lossLot && lossLot.total > 0) {
+      lotsToMerge.push(lossLot);
     }
 
     let coProductLot = null;
@@ -2507,25 +2508,68 @@ class SimpleDynamicTransformationEngine {
 
     // 3. Descendre dans le format pour voir s'il a des distributions
     // Si il en a, les garder (déjà copiées)
-    // S'il en a pas, appliquer celles du lot d'entrée (agrégées)
+    // S'il en a pas OU qu'elle est vide, appliquer celles du lot d'entrée (agrégées)
     const targetFormat = targetLot.formats[targetFormatName];
+
+    console.log('🔵 [createTargetLot] AVANT boucle processingOrder');
+    console.log('🔵 [createTargetLot] targetFormat:', targetFormat);
 
     // Pour chaque dimension enfant de formats
     this.processingOrder.forEach(dimension => {
       const dimensionConfig = this.dimensionHierarchy[dimension];
       if (!dimensionConfig || dimensionConfig.parent !== 'formats') return;
 
-      // Si le format de référence n'a pas cette dimension, prendre celle du lot d'entrée
-      if (!targetFormat[dimension] && sourceLot && sourceLot.formats) {
+      console.log('🔵 [createTargetLot] Dimension:', dimension);
+      console.log(
+        '🔵 [createTargetLot] targetFormat[dimension]:',
+        targetFormat[dimension]
+      );
+      console.log(
+        '🔵 [createTargetLot] targetFormat[dimension] existe?',
+        !!targetFormat[dimension]
+      );
+      console.log(
+        '🔵 [createTargetLot] targetFormat[dimension] a du contenu?',
+        targetFormat[dimension] &&
+          Object.keys(targetFormat[dimension]).length > 0
+      );
+
+      // Si le format de référence n'a pas cette dimension OU qu'elle est vide, prendre celle du lot d'entrée
+      if (
+        (!targetFormat[dimension] ||
+          Object.keys(targetFormat[dimension]).length === 0) &&
+        sourceLot &&
+        sourceLot.formats
+      ) {
+        console.log(
+          '🔵 [createTargetLot] Agréger dimension',
+          dimension,
+          'depuis sourceLot'
+        );
         const aggregated = this.aggregateDimensionFromFormats(
           sourceLot,
           dimension
         );
+        console.log('🔵 [createTargetLot] Aggregated:', aggregated);
         if (aggregated && Object.keys(aggregated).length > 0) {
           targetFormat[dimension] = aggregated;
+          console.log(
+            '🔵 [createTargetLot] Dimension',
+            dimension,
+            'ajoutée depuis sourceLot'
+          );
         }
+      } else {
+        console.log(
+          '🔵 [createTargetLot] Garder dimension',
+          dimension,
+          'du format de référence'
+        );
       }
     });
+
+    console.log('🔵 [createTargetLot] APRÈS boucle processingOrder');
+    console.log('🔵 [createTargetLot] targetFormat:', targetFormat);
 
     // Normaliser toutes les distributions
     this.normalizeAllDistributions(targetLot);
@@ -2651,10 +2695,37 @@ class SimpleDynamicTransformationEngine {
     }
 
     // Appliquer les distributions filles (remplacement conditionnel)
+    console.log('🟡 [createCoproductLot] AVANT applyChildDistributions');
+    console.log(
+      '🟡 [createCoproductLot] formats:',
+      Object.keys(coproductLot.formats || {})
+    );
+    console.log(
+      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
+      coproductLot.formats[coproductFormatName]
+    );
     this.applyChildDistributions(coproductLot, coproductItem, sourceLot);
+    console.log('🟡 [createCoproductLot] APRÈS applyChildDistributions');
+    console.log(
+      '🟡 [createCoproductLot] formats:',
+      Object.keys(coproductLot.formats || {})
+    );
+    console.log(
+      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
+      coproductLot.formats[coproductFormatName]
+    );
 
     // Normaliser toutes les distributions
     this.normalizeAllDistributions(coproductLot);
+    console.log('🟡 [createCoproductLot] APRÈS normalizeAllDistributions');
+    console.log(
+      '🟡 [createCoproductLot] formats:',
+      Object.keys(coproductLot.formats || {})
+    );
+    console.log(
+      '🟡 [createCoproductLot] coproductLot.formats[coproductFormatName]:',
+      coproductLot.formats[coproductFormatName]
+    );
 
     return coproductLot;
   }
@@ -2666,6 +2737,7 @@ class SimpleDynamicTransformationEngine {
     // Parcourir tous les formats dans targetLot
     Object.keys(targetLot.formats).forEach(formatKey => {
       const targetFormat = targetLot.formats[formatKey];
+
       // Dans l'item complet, les formats sont directement les clés de l'objet
       const referenceFormat = referenceItem.formats
         ? Object.values(referenceItem.formats)[0]
@@ -2677,6 +2749,11 @@ class SimpleDynamicTransformationEngine {
 
       // Pour chaque dimension enfant selon la hiérarchie
       this.processingOrder.forEach(dimension => {
+        // NE PAS traiter "formats" lui-même, on est déjà au niveau des formats
+        if (dimension === 'formats') {
+          return;
+        }
+
         // Vérifier si cette dimension peut être enfant de formats
         const dimensionConfig = this.dimensionHierarchy[dimension];
         if (!dimensionConfig || dimensionConfig.parent !== 'formats') {
@@ -2698,30 +2775,76 @@ class SimpleDynamicTransformationEngine {
           return;
         }
 
-        // Si l'item de référence a une distribution dans cette dimension → remplacer
-        if (referenceFormat[dimension]) {
-          targetFormat[dimension] = JSON.parse(
-            JSON.stringify(referenceFormat[dimension])
-          );
+        // Logs détaillés pour comprendre pourquoi les types sont perdus
+        console.log('🔵 [applyChildDistributions] Dimension:', dimension);
+        console.log(
+          '🔵 [applyChildDistributions] targetFormat[dimension]:',
+          targetFormat[dimension]
+        );
+        console.log(
+          '🔵 [applyChildDistributions] targetFormat[dimension] existe?',
+          !!targetFormat[dimension]
+        );
+        console.log(
+          '🔵 [applyChildDistributions] targetFormat[dimension] a du contenu?',
+          targetFormat[dimension] &&
+            Object.keys(targetFormat[dimension]).length > 0
+        );
+        console.log(
+          '🔵 [applyChildDistributions] referenceFormat[dimension]:',
+          referenceFormat[dimension]
+        );
+        console.log(
+          '🔵 [applyChildDistributions] referenceFormat[dimension] existe?',
+          !!referenceFormat[dimension]
+        );
+        console.log(
+          '🔵 [applyChildDistributions] referenceFormat[dimension] a du contenu?',
+          referenceFormat[dimension] &&
+            Object.keys(referenceFormat[dimension]).length > 0
+        );
 
-          // Appliquer récursivement pour copier toutes les distributions enfants
-          if (targetFormat[dimension]) {
-            this.applyAllChildDistributionsRecursive(
-              targetFormat[dimension],
-              referenceFormat[dimension],
-              dimension
-            );
-          }
+        // Si le targetFormat a déjà cette dimension ET qu'elle a du contenu (copiée depuis le format de référence) → la garder
+        if (
+          targetFormat[dimension] &&
+          Object.keys(targetFormat[dimension]).length > 0
+        ) {
+          console.log(
+            '🔵 [applyChildDistributions] Garder dimension',
+            dimension,
+            'du format de référence (a du contenu)'
+          );
+          // Ne rien faire, déjà copiée depuis le format de référence et elle a du contenu
         } else if (sourceLot && sourceLot.formats) {
-          // Sinon, chercher dans le lot d'entrée
-          // Agréger les distributions de cette dimension depuis tous les formats du lot d'entrée
+          console.log(
+            '🔵 [applyChildDistributions] Agréger dimension',
+            dimension,
+            'depuis sourceLot'
+          );
+          // Si le targetFormat n'a pas cette dimension OU qu'elle est vide → prendre celle du lot d'entrée (agrégée)
           const aggregated = this.aggregateDimensionFromFormats(
             sourceLot,
             dimension
           );
+          console.log('🔵 [applyChildDistributions] Aggregated:', aggregated);
           if (aggregated && Object.keys(aggregated).length > 0) {
             targetFormat[dimension] = aggregated;
+            console.log(
+              '🔵 [applyChildDistributions] Dimension',
+              dimension,
+              'ajoutée depuis sourceLot'
+            );
+          } else {
+            console.log(
+              "🔵 [applyChildDistributions] Pas d'agrégation possible pour dimension",
+              dimension
+            );
           }
+        } else {
+          console.log(
+            '🔵 [applyChildDistributions] Pas de sourceLot pour dimension',
+            dimension
+          );
         }
       });
     });
