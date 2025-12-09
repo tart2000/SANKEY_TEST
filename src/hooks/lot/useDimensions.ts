@@ -1,8 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { DimensionLabels, BaseData, BaseDataItem } from '@/types/lot';
 
+// Normalise une clé de dimension en retirant les accents et en mettant en minuscule
+function normalizeDimensionKey(key: string): string {
+  return key
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire les diacritiques (accents)
+    .toLowerCase();
+}
+
 // Mapping entre les noms des dimensions et les endpoints API
 function getEndpointForDimension(dimension: string): string {
+  // Normaliser la dimension pour gérer les accents et variations
+  const normalized = normalizeDimensionKey(dimension);
+
   const mapping: Record<string, string> = {
     formats: 'formats',
     matieres: 'matieres',
@@ -13,6 +24,13 @@ function getEndpointForDimension(dimension: string): string {
     proprete: 'propretes', // Le code utilise 'proprete' mais l'API attend 'propretes'
     perturbateurs: 'perturbateurs',
   };
+
+  // Chercher d'abord avec la dimension normalisée
+  if (normalized in mapping) {
+    return mapping[normalized];
+  }
+
+  // Si pas trouvé, chercher avec la dimension originale
   return mapping[dimension] || dimension;
 }
 
