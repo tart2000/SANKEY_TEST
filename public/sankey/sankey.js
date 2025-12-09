@@ -2144,6 +2144,349 @@ function renderNode(node, position, isStandalone, dimension) {
   return nodeGroup;
 }
 
+// Fonction pour trouver le bubble_id dans la structure (similaire à findColorInStructure)
+function findBubbleIdInStructure(lot, dimension, key) {
+  const dimConfig =
+    window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[dimension];
+  if (!dimConfig || !dimConfig.parent) return null;
+
+  // Construire le chemin
+  const bubbleIdPath = [];
+  let currentDim = dimension;
+  while (currentDim) {
+    bubbleIdPath.unshift(currentDim);
+    const config =
+      window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[currentDim];
+    currentDim = config ? config.parent : null;
+  }
+
+  function searchBubbleId(node, pathIndex) {
+    if (pathIndex >= bubbleIdPath.length) return null;
+    const currentDimName = bubbleIdPath[pathIndex];
+    const isLastDim = pathIndex === bubbleIdPath.length - 1;
+
+    if (node[currentDimName]) {
+      if (isLastDim) {
+        if (node[currentDimName][key] && node[currentDimName][key].bubble_id) {
+          return node[currentDimName][key].bubble_id;
+        }
+      } else {
+        for (const childObj of Object.values(node[currentDimName])) {
+          const found = searchBubbleId(childObj, pathIndex + 1);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Pour les dimensions enfants, commencer depuis lot.formats
+  if (bubbleIdPath[0] === 'formats' && lot.formats) {
+    for (const formatObj of Object.values(lot.formats)) {
+      const found = searchBubbleId(formatObj, 1);
+      if (found) return found;
+    }
+    return null;
+  } else {
+    return searchBubbleId(lot, 0);
+  }
+}
+
+// Fonction pour générer les données groupées du lot par bubble_id
+function generateGroupedLotData(lot, nodeName) {
+  const allItems = [];
+  const lotTotal = lot.total || 0;
+  const dimensions = window.DIMENSION_PROCESSING_ORDER || [
+    'formats',
+    'types',
+    'matieres',
+    'fibres',
+    'couleurs',
+    'perturbateurs',
+    'proprete',
+    'qualite',
+  ];
+
+  dimensions.forEach(dimension => {
+    const dimConfig =
+      window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[dimension];
+    if (!dimConfig) return;
+
+    // Map pour agréger par bubble_id
+    const itemsByBubbleId = new Map();
+    let totalSansDimension = 0;
+    let totalLot = 0;
+
+    // Cas 1 : Dimension racine (pas de parent)
+    if (!dimConfig.parent) {
+      if (lot[dimension]) {
+        Object.entries(lot[dimension]).forEach(([key, valueObj]) => {
+          const pourcentage =
+            typeof valueObj === 'number'
+              ? valueObj
+              : valueObj && typeof valueObj.pourcentage === 'number'
+                ? valueObj.pourcentage
+                : 0;
+
+          if (pourcentage > 0) {
+            const bubbleId =
+              valueObj && typeof valueObj === 'object'
+                ? valueObj.bubble_id
+                : null;
+            const color =
+              valueObj && typeof valueObj === 'object'
+                ? valueObj.color
+                : undefined;
+            const name = getTitreAffiche(key, valueObj);
+            const total = (lotTotal * pourcentage) / 100;
+
+            if (bubbleId) {
+              if (itemsByBubbleId.has(bubbleId)) {
+                const existing = itemsByBubbleId.get(bubbleId);
+                existing.percent += pourcentage;
+                existing.total += total;
+              } else {
+                itemsByBubbleId.set(bubbleId, {
+                  name: name,
+                  bubble_id: bubbleId,
+                  color: color,
+                  percent: pourcentage,
+                  total: total,
+                });
+              }
+              totalLot += pourcentage;
+            } else {
+              // Pas de bubble_id, on compte dans totalSansDimension
+              totalSansDimension += pourcentage;
+            }
+          }
+        });
+
+        // Normaliser les pourcentages après agrégation pour dimensions racine et recalculer les totaux
+        const total = totalLot + totalSansDimension;
+        if (total > 0) {
+          itemsByBubbleId.forEach(item => {
+            item.percent = (item.percent / total) * 100;
+            // Recalculer le total avec le pourcentage normalisé
+            item.total = (lotTotal * item.percent) / 100;
+          });
+        }
+
+        // Ajouter l'item N/A si nécessaire pour dimensions racine (après normalisation)
+        if (totalSansDimension > 0 && total > 0) {
+          const naPercent = (totalSansDimension / total) * 100;
+          const naTotal = (lotTotal * naPercent) / 100;
+          itemsByBubbleId.set(null, {
+            name: 'N/A',
+            bubble_id: null,
+            color: undefined,
+            percent: naPercent,
+            total: naTotal,
+          });
+        } else if (totalSansDimension > 0 && totalLot === 0) {
+          // Tout le lot est sans cette dimension
+          const naTotal = lotTotal;
+          itemsByBubbleId.set(null, {
+            name: 'N/A',
+            bubble_id: null,
+            color: undefined,
+            percent: 100,
+            total: naTotal,
+          });
+        }
+      }
+    } else {
+      // Cas 2 : Dimension enfant - construire le chemin depuis la racine
+      const path = [];
+      let currentDim = dimension;
+      while (currentDim) {
+        path.unshift(currentDim);
+        const config =
+          window.DIMENSION_HIERARCHY && window.DIMENSION_HIERARCHY[currentDim];
+        currentDim = config ? config.parent : null;
+      }
+
+      // Fonction récursive pour parcourir la structure
+      function traverse(node, pathIndex, accumulatedMass) {
+        if (pathIndex >= path.length) return;
+
+        const currentDimName = path[pathIndex];
+        const isLastDim = pathIndex === path.length - 1;
+
+        // Vérifier si la dimension existe à ce niveau
+        if (node[currentDimName]) {
+          const dimData = node[currentDimName];
+          const hasContent = Object.keys(dimData).length > 0;
+
+          if (isLastDim) {
+            // On est à la dimension cible
+            if (hasContent) {
+              totalLot += accumulatedMass;
+              let sumDimension = 0;
+              Object.entries(dimData).forEach(([key, valueObj]) => {
+                let pct = 0;
+                if (typeof valueObj === 'object' && valueObj !== null) {
+                  pct =
+                    valueObj.pourcentage !== undefined
+                      ? valueObj.pourcentage
+                      : valueObj.masse !== undefined
+                        ? valueObj.masse
+                        : 0;
+                } else if (typeof valueObj === 'number') {
+                  pct = valueObj;
+                }
+
+                const mass = (pct / 100) * accumulatedMass;
+                const total = (lotTotal * mass) / 100;
+                sumDimension += mass;
+
+                let bubbleId =
+                  valueObj && typeof valueObj === 'object'
+                    ? valueObj.bubble_id
+                    : null;
+                // Si pas de bubble_id direct, chercher dans la structure
+                if (!bubbleId) {
+                  bubbleId = findBubbleIdInStructure(lot, dimension, key);
+                }
+                const color =
+                  valueObj && typeof valueObj === 'object'
+                    ? valueObj.color
+                    : undefined;
+                const name = getTitreAffiche(key, valueObj);
+
+                if (bubbleId) {
+                  if (itemsByBubbleId.has(bubbleId)) {
+                    const existing = itemsByBubbleId.get(bubbleId);
+                    existing.percent += mass;
+                    existing.total += total;
+                  } else {
+                    itemsByBubbleId.set(bubbleId, {
+                      name: name,
+                      bubble_id: bubbleId,
+                      color: color,
+                      percent: mass,
+                      total: total,
+                    });
+                  }
+                } else {
+                  // Pas de bubble_id, on compte dans totalSansDimension
+                  totalSansDimension += mass;
+                }
+              });
+
+              // Si la somme ne couvre pas toute la masse, le reste est inconnu
+              if (sumDimension < accumulatedMass) {
+                totalSansDimension += accumulatedMass - sumDimension;
+              }
+            } else {
+              // Dimension vide - tout va dans totalSansDimension
+              totalSansDimension += accumulatedMass;
+            }
+          } else {
+            // On continue à descendre dans la hiérarchie
+            if (hasContent) {
+              Object.values(dimData).forEach(childObj => {
+                const pctChild =
+                  typeof childObj === 'object' && childObj !== null
+                    ? typeof childObj.pourcentage === 'number'
+                      ? childObj.pourcentage
+                      : 100
+                    : 100;
+                const childMass = (accumulatedMass * pctChild) / 100;
+                traverse(childObj, pathIndex + 1, childMass);
+              });
+            } else {
+              // Dimension intermédiaire vide, on compte comme "sans dimension"
+              totalSansDimension += accumulatedMass;
+            }
+          }
+        } else {
+          // La dimension n'existe pas à ce niveau
+          totalSansDimension += accumulatedMass;
+        }
+      }
+
+      // Démarrer la traversée depuis le lot
+      // Pour les dimensions enfants, le chemin commence toujours par 'formats'
+      if (path[0] === 'formats' && lot.formats) {
+        // Itérer sur chaque format avec son pourcentage
+        Object.values(lot.formats).forEach(formatObj => {
+          const pctFormat =
+            typeof formatObj.pourcentage === 'number'
+              ? formatObj.pourcentage
+              : 100;
+          traverse(formatObj, 1, pctFormat);
+        });
+      } else {
+        // Cas par défaut (ne devrait pas arriver pour les dimensions enfants)
+        traverse(lot, 0, 100);
+      }
+
+      // Normaliser les pourcentages après agrégation et recalculer les totaux
+      const total = totalLot + totalSansDimension;
+      if (total > 0) {
+        itemsByBubbleId.forEach(item => {
+          item.percent = (item.percent / total) * 100;
+          // Recalculer le total avec le pourcentage normalisé
+          item.total = (lotTotal * item.percent) / 100;
+        });
+      }
+    }
+
+    // Ajouter l'item N/A si nécessaire (après normalisation)
+    const total = totalLot + totalSansDimension;
+    if (totalSansDimension > 0 && total > 0) {
+      const naPercent = (totalSansDimension / total) * 100;
+      const naTotal = (lotTotal * naPercent) / 100;
+      itemsByBubbleId.set(null, {
+        name: 'N/A',
+        bubble_id: null,
+        color: undefined,
+        percent: naPercent,
+        total: naTotal,
+      });
+    } else if (totalSansDimension > 0 && totalLot === 0) {
+      // Tout le lot est sans cette dimension
+      const naTotal = lotTotal;
+      itemsByBubbleId.set(null, {
+        name: 'N/A',
+        bubble_id: null,
+        color: undefined,
+        percent: 100,
+        total: naTotal,
+      });
+    }
+
+    // Convertir la Map en tableau d'items avec dimension ajouté
+    itemsByBubbleId.forEach(item => {
+      allItems.push({
+        ...item,
+        dimension: dimension,
+      });
+    });
+  });
+
+  // Trier : d'abord par dimension (ordre de DIMENSION_PROCESSING_ORDER), puis par percent décroissant
+  const dimensionOrder = {};
+  dimensions.forEach((dim, index) => {
+    dimensionOrder[dim] = index;
+  });
+
+  allItems.sort((a, b) => {
+    const dimOrderA = dimensionOrder[a.dimension] ?? 999;
+    const dimOrderB = dimensionOrder[b.dimension] ?? 999;
+    if (dimOrderA !== dimOrderB) {
+      return dimOrderA - dimOrderB;
+    }
+    return b.percent - a.percent;
+  });
+
+  return {
+    title: nodeName,
+    items: allItems,
+  };
+}
+
 function updateSankey(dimension) {
   // Attendre que les données de la team soient chargées si on a un teamId
   const teamId = getUrlParams().teamId;
@@ -3145,6 +3488,12 @@ function updateSankey(dimension) {
                 },
                 '*'
               );
+              // Générer et afficher les données groupées
+              const groupedData = generateGroupedLotData(
+                link.target.lot,
+                link.target.name
+              );
+              console.log('📊 [Données groupées]', groupedData);
             };
           // Handler pour Effacer
           dropdownMenu.querySelector('[data-action="delete"]').onclick =
@@ -3391,6 +3740,9 @@ function updateSankey(dimension) {
                 },
                 '*'
               );
+              // Générer et afficher les données groupées
+              const groupedData = generateGroupedLotData(d.lot, d.name);
+              console.log('📊 [Données groupées]', groupedData);
             },
           },
           {
@@ -3419,6 +3771,9 @@ function updateSankey(dimension) {
             },
             '*'
           );
+          // Générer et afficher les données groupées
+          const groupedData = generateGroupedLotData(d.lot, d.name);
+          console.log('📊 [Données groupées]', groupedData);
         });
       }
     });
@@ -3495,6 +3850,9 @@ function updateSankey(dimension) {
                 },
                 '*'
               );
+              // Générer et afficher les données groupées
+              const groupedData = generateGroupedLotData(d.lot, d.name);
+              console.log('📊 [Données groupées]', groupedData);
             },
           },
           {
@@ -3523,6 +3881,9 @@ function updateSankey(dimension) {
             },
             '*'
           );
+          // Générer et afficher les données groupées
+          const groupedData = generateGroupedLotData(d.lot, d.name);
+          console.log('📊 [Données groupées]', groupedData);
         });
       }
     }
