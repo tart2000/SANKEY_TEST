@@ -198,7 +198,7 @@ export function useDimensions() {
         });
       }
     },
-    []
+    [loadingBaseData]
   );
 
   // Récupérer un élément complet depuis l'API

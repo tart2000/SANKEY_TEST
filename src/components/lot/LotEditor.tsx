@@ -88,7 +88,7 @@ export function LotEditor({
       timestamp: new Date().toISOString(),
     });
     loadDimensionsLabels(isLive);
-  }, [loadDimensionsLabels, isLive]);
+  }, [loadDimensionsLabels, isLive, lotId]);
 
   // Logger quand dimensionsLabels change
   useEffect(() => {
