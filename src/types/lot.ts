@@ -102,3 +102,12 @@ export type AddItemParams = {
   pourcentage: number;
   donneesBase: BaseDataItem;
 };
+
+// Type pour une ligne du tableau agrégé
+export type AggregatedRow = {
+  bubbleId: string | null;
+  name: string;
+  totalKg: number;
+  totalPercentage: number;
+  color?: string;
+};

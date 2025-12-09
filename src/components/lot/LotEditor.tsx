@@ -16,7 +16,11 @@ import {
   getNodeAtPath,
   getDimensionLabel,
 } from '@/services/lot/dimensionUtils';
-import { getPercent, calculerPoidsNiveau } from '@/services/lot/lotUtils';
+import {
+  getPercent,
+  calculerPoidsNiveau,
+  getAggregatedValues,
+} from '@/services/lot/lotUtils';
 import {
   ajouterElementEtRepartir,
   supprimerNoeudEtRepartir,
@@ -25,6 +29,7 @@ import { StackbarHeader } from './StackbarHeader';
 import { Stackbar } from './Stackbar';
 import { AddItemModal } from './AddItemModal';
 import { SaveButton } from './SaveButton';
+import { AggregatedView } from './AggregatedView';
 
 interface LotEditorProps {
   lot: Lot | null;
@@ -76,9 +81,36 @@ export function LotEditor({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalNiveau, setModalNiveau] = useState(0);
   const [modalDimension, setModalDimension] = useState('');
+  const [viewMode, setViewMode] = useState<'detailed' | 'aggregated'>(
+    'detailed'
+  );
+  const [aggregatedDimension, setAggregatedDimension] =
+    useState<string>('formats');
   const containerRef = useRef<HTMLDivElement>(null);
   const userActionRef = useRef(false);
   const prevLotJsonRef = useRef<string>('');
+
+  // Calculer toutes les dimensions depuis dimensionsLabels (toutes les dimensions disponibles)
+  const allDimensions = useMemo(() => {
+    if (!dimensionsLabels) return [];
+    return Object.keys(dimensionsLabels);
+  }, [dimensionsLabels]);
+
+  // S'assurer que aggregatedDimension est valide
+  useEffect(() => {
+    if (
+      allDimensions.length > 0 &&
+      (!aggregatedDimension || !allDimensions.includes(aggregatedDimension))
+    ) {
+      // Par défaut, utiliser 'formats' s'il existe, sinon la première dimension
+      const defaultDim = allDimensions.includes('formats')
+        ? 'formats'
+        : allDimensions[0];
+      if (defaultDim) {
+        setAggregatedDimension(defaultDim);
+      }
+    }
+  }, [allDimensions, aggregatedDimension]);
 
   // Charger les labels de dimensions au montage
   useEffect(() => {
@@ -475,33 +507,72 @@ export function LotEditor({
   useEffect(() => {
     if (!lot || !containerRef.current) return;
 
-    // Calculer la hauteur en fonction du nombre de niveaux
-    // Base: 20px (padding container)
-    // Chaque niveau: 120px (header + stackbar)
-    // Gap entre niveaux: 20px
-    // Bouton Save: 60px (avec padding pr-5 pb-5)
-    const nombreNiveaux = headerInfos.length;
-    const baseHeight = 20; // Padding container
-    const hauteurParNiveau = 120; // Header + stackbar
-    const gapEntreNiveaux = 20;
-    const hauteurSaveButton = 60; // Bouton + padding
+    let height: number;
 
-    let height = baseHeight;
-    if (nombreNiveaux > 0) {
-      height += nombreNiveaux * hauteurParNiveau;
-      height += (nombreNiveaux - 1) * gapEntreNiveaux;
-      height += hauteurSaveButton;
+    if (viewMode === 'aggregated') {
+      // Vue agrégée : calculer en fonction du nombre de lignes du tableau
+      const baseHeight = 20; // Padding container
+      const hauteurHeader = 50; // Header
+      const hauteurDropdown = 60; // Dropdown de dimension + margin
+      const hauteurLigneTableau = 48; // Hauteur d'une ligne du tableau
+      const hauteurHeaderTableau = 40; // Header du tableau
+      const hauteurSaveButton = 60; // Bouton + padding
+      const marginBottom = 20; // Margin bottom du tableau
+
+      // Obtenir le nombre de lignes
+      const rows = getAggregatedValues(lot, aggregatedDimension, lang);
+      const nombreLignes = rows.length;
+
+      height =
+        baseHeight +
+        hauteurHeader +
+        hauteurDropdown +
+        hauteurHeaderTableau +
+        nombreLignes * hauteurLigneTableau +
+        marginBottom +
+        hauteurSaveButton;
+
+      // Hauteur minimale pour la vue agrégée
+      if (height < 300) {
+        height = 300;
+      }
     } else {
-      height = 400; // Hauteur minimale si pas de contenu
-    }
+      // Vue détaillée : calculer la hauteur en fonction du nombre de niveaux
+      // Base: 20px (padding container)
+      // Chaque niveau: 120px (header + stackbar)
+      // Gap entre niveaux: 20px
+      // Bouton Save: 60px (avec padding pr-5 pb-5)
+      const nombreNiveaux = headerInfos.length;
+      const baseHeight = 20; // Padding container
+      const hauteurParNiveau = 120; // Header + stackbar
+      const gapEntreNiveaux = 20;
+      const hauteurSaveButton = 60; // Bouton + padding
 
-    // Appliquer un minimum de 400px quand isEditable = true (pour éviter les problèmes avec la popup d'ajout)
-    if (isEditable && height < 400) {
-      height = 400;
+      height = baseHeight;
+      if (nombreNiveaux > 0) {
+        height += nombreNiveaux * hauteurParNiveau;
+        height += (nombreNiveaux - 1) * gapEntreNiveaux;
+        height += hauteurSaveButton;
+      } else {
+        height = 400; // Hauteur minimale si pas de contenu
+      }
+
+      // Appliquer un minimum de 400px quand isEditable = true (pour éviter les problèmes avec la popup d'ajout)
+      if (isEditable && height < 400) {
+        height = 400;
+      }
     }
 
     sendHeight(height);
-  }, [lot, headerInfos.length, sendHeight, isEditable]);
+  }, [
+    lot,
+    headerInfos.length,
+    sendHeight,
+    isEditable,
+    viewMode,
+    aggregatedDimension,
+    lang,
+  ]);
 
   // Gérer l'ajout d'un élément
   const handleAdd = async (
@@ -786,103 +857,166 @@ export function LotEditor({
       className="lot-container"
       style={{ position: 'relative' }}
     >
-      {headerInfos.map((info, idx) => {
-        // Calculer les dimensions disponibles pour ce niveau
-        // Toujours utiliser le nodeParent calculé dans headerInfos (comme dans le code original)
-        const dimsForLevel = info.nodeParent
-          ? getDimensionsFromNode(info.nodeParent)
-          : getDimensionsFromNode(lot);
+      {viewMode === 'aggregated'
+        ? // Vue agrégée : afficher seulement le header niveau 0 et le tableau
+          headerInfos.length > 0 && (
+            <div>
+              <StackbarHeader
+                niveau={headerInfos[0].niveau}
+                nom={headerInfos[0].nom}
+                nomCle={headerInfos[0].nomCle}
+                itemObj={headerInfos[0].itemObj}
+                pct={headerInfos[0].pct}
+                kg={headerInfos[0].kg}
+                lot={lot}
+                cheminSelection={cheminSelection}
+                availableDimensions={[]}
+                dimensionsLabels={dimensionsLabels}
+                lang={lang}
+                isEditable={isEditable}
+                frequency={lot.frequency}
+                viewMode={viewMode}
+                showViewToggle={true}
+                aggregatedDimension={aggregatedDimension}
+                allDimensions={allDimensions}
+                onNavigateSibling={navigateSibling}
+                onDimensionChange={() => {}}
+                onAggregatedDimensionChange={setAggregatedDimension}
+                onAdd={() => {}}
+                onDelete={() => {}}
+                onClose={() => {}}
+                onFrequencyChange={frequency => {
+                  userActionRef.current = true;
+                  updateLot(lot => ({ ...lot, frequency }));
+                }}
+                onViewModeChange={setViewMode}
+                onUpdateLot={updater => {
+                  userActionRef.current = true;
+                  updateLot(updater);
+                }}
+                onLotChange={lot => {
+                  userActionRef.current = true;
+                  setLot(lot);
+                }}
+                t={t}
+              />
+              {/* Tableau agrégé */}
+              <AggregatedView
+                lot={lot}
+                dimension={aggregatedDimension}
+                lang={lang}
+                t={t}
+              />
+            </div>
+          )
+        : // Vue détaillée : comportement normal
+          headerInfos.map((info, idx) => {
+            // Calculer les dimensions disponibles pour ce niveau
+            // Toujours utiliser le nodeParent calculé dans headerInfos (comme dans le code original)
+            const dimsForLevel = info.nodeParent
+              ? getDimensionsFromNode(info.nodeParent)
+              : getDimensionsFromNode(lot);
 
-        return (
-          <div key={idx}>
-            <StackbarHeader
-              niveau={info.niveau}
-              nom={info.nom}
-              nomCle={info.nomCle}
-              itemObj={info.itemObj}
-              pct={info.pct}
-              kg={info.kg}
-              lot={lot}
-              cheminSelection={cheminSelection}
-              availableDimensions={dimsForLevel}
-              dimensionsLabels={dimensionsLabels}
-              lang={lang}
-              isEditable={isEditable}
-              frequency={lot.frequency}
-              onNavigateSibling={navigateSibling}
-              onDimensionChange={dim => handleDimensionChange(dim, info.niveau)}
-              onAdd={() => {
-                setModalNiveau(info.niveau);
-                setModalDimension(info.dimension || dimsForLevel[0] || '');
-                setModalOpen(true);
-              }}
-              onDelete={() => handleDelete(info.niveau)}
-              onClose={() => navigateUp(info.niveau)}
-              onFrequencyChange={frequency => {
-                userActionRef.current = true; // Marquer comme action utilisateur
-                updateLot(lot => ({ ...lot, frequency }));
-              }}
-              onUpdateLot={updater => {
-                userActionRef.current = true; // Marquer comme action utilisateur
-                updateLot(updater);
-              }}
-              onLotChange={lot => {
-                userActionRef.current = true; // Marquer comme action utilisateur
-                setLot(lot);
-                // Ne pas appeler onLotChange ici, le useEffect s'en chargera
-              }}
-            />
+            return (
+              <div key={idx}>
+                <StackbarHeader
+                  niveau={info.niveau}
+                  nom={info.nom}
+                  nomCle={info.nomCle}
+                  itemObj={info.itemObj}
+                  pct={info.pct}
+                  kg={info.kg}
+                  lot={lot}
+                  cheminSelection={cheminSelection}
+                  availableDimensions={dimsForLevel}
+                  dimensionsLabels={dimensionsLabels}
+                  lang={lang}
+                  isEditable={isEditable}
+                  frequency={lot.frequency}
+                  viewMode={viewMode}
+                  showViewToggle={info.niveau === 0}
+                  onNavigateSibling={navigateSibling}
+                  onDimensionChange={dim =>
+                    handleDimensionChange(dim, info.niveau)
+                  }
+                  onAdd={() => {
+                    setModalNiveau(info.niveau);
+                    setModalDimension(info.dimension || dimsForLevel[0] || '');
+                    setModalOpen(true);
+                  }}
+                  onDelete={() => handleDelete(info.niveau)}
+                  onClose={() => navigateUp(info.niveau)}
+                  onFrequencyChange={frequency => {
+                    userActionRef.current = true; // Marquer comme action utilisateur
+                    updateLot(lot => ({ ...lot, frequency }));
+                  }}
+                  onViewModeChange={setViewMode}
+                  onUpdateLot={updater => {
+                    userActionRef.current = true; // Marquer comme action utilisateur
+                    updateLot(updater);
+                  }}
+                  onLotChange={lot => {
+                    userActionRef.current = true; // Marquer comme action utilisateur
+                    setLot(lot);
+                    // Ne pas appeler onLotChange ici, le useEffect s'en chargera
+                  }}
+                  t={t}
+                />
 
-            {/* Afficher la stackbar pour ce niveau si on a une dimension */}
-            {info.dimension &&
-              info.niveau < cheminSelection.length &&
-              (() => {
-                const nodeForStackbar = getNodeAtPath(
-                  lot,
-                  cheminSelection.slice(0, info.niveau)
-                );
-                if (!nodeForStackbar || typeof nodeForStackbar !== 'object')
-                  return null;
+                {/* Afficher la stackbar pour ce niveau si on a une dimension */}
+                {info.dimension &&
+                  info.niveau < cheminSelection.length &&
+                  (() => {
+                    const nodeForStackbar = getNodeAtPath(
+                      lot,
+                      cheminSelection.slice(0, info.niveau)
+                    );
+                    if (!nodeForStackbar || typeof nodeForStackbar !== 'object')
+                      return null;
 
-                const nodeObj = nodeForStackbar as Record<string, unknown>;
-                if (!(info.dimension in nodeObj)) return null;
+                    const nodeObj = nodeForStackbar as Record<string, unknown>;
+                    if (!(info.dimension in nodeObj)) return null;
 
-                const dimValue = nodeObj[info.dimension];
-                if (
-                  typeof dimValue !== 'object' ||
-                  dimValue === null ||
-                  Array.isArray(dimValue)
-                ) {
-                  return null;
-                }
-
-                const dimension = dimValue as Dimension;
-                const keys = Object.keys(dimension).filter(k => k !== 'title');
-                if (keys.length === 0) return null;
-
-                return (
-                  <Stackbar
-                    dimension={dimension}
-                    dimensionKey={info.dimension}
-                    lot={lot}
-                    cheminSelection={cheminSelection.slice(0, info.niveau)}
-                    selectedKey={
-                      info.valeur && keys.includes(info.valeur)
-                        ? info.valeur
-                        : null
+                    const dimValue = nodeObj[info.dimension];
+                    if (
+                      typeof dimValue !== 'object' ||
+                      dimValue === null ||
+                      Array.isArray(dimValue)
+                    ) {
+                      return null;
                     }
-                    isEditable={isEditable}
-                    lang={lang}
-                    onSegmentClick={key =>
-                      handleSegmentClick(info.niveau, info.dimension, key)
-                    }
-                    onUpdate={dim => handleDimensionUpdate(info.dimension, dim)}
-                  />
-                );
-              })()}
-          </div>
-        );
-      })}
+
+                    const dimension = dimValue as Dimension;
+                    const keys = Object.keys(dimension).filter(
+                      k => k !== 'title'
+                    );
+                    if (keys.length === 0) return null;
+
+                    return (
+                      <Stackbar
+                        dimension={dimension}
+                        dimensionKey={info.dimension}
+                        lot={lot}
+                        cheminSelection={cheminSelection.slice(0, info.niveau)}
+                        selectedKey={
+                          info.valeur && keys.includes(info.valeur)
+                            ? info.valeur
+                            : null
+                        }
+                        isEditable={isEditable}
+                        lang={lang}
+                        onSegmentClick={key =>
+                          handleSegmentClick(info.niveau, info.dimension, key)
+                        }
+                        onUpdate={dim =>
+                          handleDimensionUpdate(info.dimension, dim)
+                        }
+                      />
+                    );
+                  })()}
+              </div>
+            );
+          })}
 
       {/* Modal d'ajout */}
       {modalOpen && (

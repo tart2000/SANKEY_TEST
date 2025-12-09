@@ -102,6 +102,13 @@ export const translations = {
       percentage: 'Pourcentage',
       errorRetrievingElement:
         "Impossible de récupérer l'élément complet depuis Bubble",
+      // Vue agrégée
+      viewDetailed: 'Vue détaillée',
+      viewAggregated: 'Vue agrégée',
+      selectDimension: 'Sélectionner une dimension',
+      notAvailable: 'N/A',
+      totalWeight: 'Poids total',
+      totalPercentage: 'Pourcentage total',
       // Tooltips Sankey
       keys: 'Clés :',
       target: 'Cible :',
@@ -238,6 +245,13 @@ export const translations = {
       selectElement: 'Select an element',
       percentage: 'Percentage',
       errorRetrievingElement: 'Could not retrieve the full element from Bubble',
+      // Aggregated view
+      viewDetailed: 'Detailed view',
+      viewAggregated: 'Aggregated view',
+      selectDimension: 'Select a dimension',
+      notAvailable: 'N/A',
+      totalWeight: 'Total weight',
+      totalPercentage: 'Total percentage',
       // Tooltips Sankey
       keys: 'Keys :',
       target: 'Target :',

@@ -24,8 +24,19 @@ function LotPageContent() {
   const { fetchLot } = useLotAPI();
   const { t } = useTranslation(lang);
 
-  // Charger D3 et Phosphor Icons
+  // Charger D3, Phosphor Icons et dimensions.js
   useEffect(() => {
+    // Charger dimensions.js en premier (nécessaire pour DIMENSION_HIERARCHY)
+    if (
+      typeof window !== 'undefined' &&
+      !(window as { DIMENSION_HIERARCHY?: unknown }).DIMENSION_HIERARCHY
+    ) {
+      const dimensionsScript = document.createElement('script');
+      dimensionsScript.src = '/config/dimensions.js';
+      dimensionsScript.async = false; // Charger de manière synchrone pour être sûr qu'il est disponible
+      document.head.appendChild(dimensionsScript);
+    }
+
     // Charger D3
     if (typeof window !== 'undefined' && !(window as { d3?: unknown }).d3) {
       const script = document.createElement('script');
