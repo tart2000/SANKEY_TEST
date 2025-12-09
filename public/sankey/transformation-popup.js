@@ -1124,7 +1124,7 @@ class TransformationPopup {
             };
 
             // Fonction pour afficher les options filtrées
-            const showFilteredOptions = (searchValue = '') => {
+            let showFilteredOptions = (searchValue = '') => {
               const allKeys = Object.entries(keyListData || {});
               const usedKeysForThisTransfo = getUsedKeysForThisTransformation();
 
