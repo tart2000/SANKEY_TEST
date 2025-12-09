@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { BaseData, BaseDataItem, DimensionValue } from '@/types/lot';
 import { getTitreAffiche } from '@/services/lot/dimensionUtils';
 import {
@@ -47,17 +47,19 @@ export function AddItemModal({
   const [isValid, setIsValid] = useState(false);
   const [baseData, setBaseData] = useState<BaseData | null>(null);
   const [loading, setLoading] = useState(false);
+  const loadedDimensionRef = useRef<string | null>(null);
 
   // Charger les données de base quand la modal s'ouvre
   useEffect(() => {
-    if (isOpen && !baseData) {
+    if (isOpen && loadedDimensionRef.current !== dimension) {
       setLoading(true);
+      loadedDimensionRef.current = dimension;
       loadBaseData(dimension).then(data => {
         setBaseData(data);
         setLoading(false);
       });
     }
-  }, [isOpen, dimension, baseData, loadBaseData]);
+  }, [isOpen, dimension, loadBaseData]);
 
   // Filtrer les éléments disponibles
   const availableElements = useMemo(() => {
@@ -116,6 +118,10 @@ export function AddItemModal({
       setValeur('');
       setUnite('percentage');
       setIsValid(false);
+    } else {
+      // Réinitialiser baseData quand la modal se ferme
+      setBaseData(null);
+      loadedDimensionRef.current = null;
     }
   }, [isOpen]);
 
