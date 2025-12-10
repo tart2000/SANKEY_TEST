@@ -46,21 +46,29 @@ export const StackbarSegment = memo(function StackbarSegment({
   if (isSpecial) {
     const specialStyles = getSpecialSegmentStyles();
     Object.assign(styles, specialStyles);
+    // Appliquer les border-radius pour suivre l'arrondi du conteneur (12px) + border (1px) = 14px
+    if (isFirst) {
+      styles.borderTopLeftRadius = '14px';
+      styles.borderBottomLeftRadius = '14px';
+    }
+    if (isLast) {
+      styles.borderTopRightRadius = '14px';
+      styles.borderBottomRightRadius = '14px';
+    }
   } else {
     styles.background = formatRGBA(color, 0.8);
     styles.border = `2px solid ${formatRGBA(color, 1)}`;
     if (isSelected) {
       styles.border = `4px solid ${formatRGBA(color, 1)}`;
     }
-  }
-
-  if (isFirst) {
-    styles.borderTopLeftRadius = '12px';
-    styles.borderBottomLeftRadius = '12px';
-  }
-  if (isLast) {
-    styles.borderTopRightRadius = '12px';
-    styles.borderBottomRightRadius = '12px';
+    if (isFirst) {
+      styles.borderTopLeftRadius = '12px';
+      styles.borderBottomLeftRadius = '12px';
+    }
+    if (isLast) {
+      styles.borderTopRightRadius = '12px';
+      styles.borderBottomRightRadius = '12px';
+    }
   }
 
   return (
