@@ -1,6 +1,6 @@
 export function SkeletonLoader() {
   return (
-    <div className="p-4">
+    <div>
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm h-10">
         <div className="flex-1 h-5 mx-4 rounded skeleton-shimmer"></div>
