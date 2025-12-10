@@ -109,6 +109,9 @@ export const translations = {
       notAvailable: 'N/A',
       totalWeight: 'Poids total',
       totalPercentage: 'Pourcentage total',
+      // Frequency
+      frequencyRecurrent: 'Récurrent',
+      frequencyPonctuel: 'Ponctuel',
       // Tooltips Sankey
       keys: 'Clés :',
       target: 'Cible :',
@@ -252,6 +255,9 @@ export const translations = {
       notAvailable: 'N/A',
       totalWeight: 'Total weight',
       totalPercentage: 'Total percentage',
+      // Frequency
+      frequencyRecurrent: 'Recurring',
+      frequencyPonctuel: 'One-time',
       // Tooltips Sankey
       keys: 'Keys :',
       target: 'Target :',
@@ -387,6 +393,16 @@ export const translations = {
       percentage: 'Porcentaje',
       errorRetrievingElement:
         'No se pudo recuperar el elemento completo de Bubble',
+      // Aggregated view
+      viewDetailed: 'Vista detallada',
+      viewAggregated: 'Vista agregada',
+      selectDimension: 'Seleccionar una dimensión',
+      notAvailable: 'N/A',
+      totalWeight: 'Peso total',
+      totalPercentage: 'Porcentaje total',
+      // Frequency
+      frequencyRecurrent: 'Recurrente',
+      frequencyPonctuel: 'Puntual',
       // Tooltips Sankey
       keys: 'Claves :',
       target: 'Objetivo :',
@@ -525,6 +541,16 @@ export const translations = {
       selectElement: 'Select an element',
       percentage: 'Percentage',
       errorRetrievingElement: 'Could not retrieve the full element from Bubble',
+      // Aggregated view
+      viewDetailed: 'Detaillierte Ansicht',
+      viewAggregated: 'Aggregierte Ansicht',
+      selectDimension: 'Dimension auswählen',
+      notAvailable: 'N/A',
+      totalWeight: 'Gesamtgewicht',
+      totalPercentage: 'Gesamtprozent',
+      // Frequency
+      frequencyRecurrent: 'Wiederkehrend',
+      frequencyPonctuel: 'Einmalig',
       // Tooltips Sankey
       keys: 'Schlüssel :',
       target: 'Ziel :',

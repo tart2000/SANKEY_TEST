@@ -50,12 +50,10 @@ interface StackbarHeaderProps {
 const FREQUENCY_OPTIONS = {
   récurrent: {
     value: 'récurrent' as const,
-    label: 'Récurrent',
     icon: 'arrow-clockwise',
   },
   ponctuel: {
     value: 'ponctuel' as const,
-    label: 'Ponctuel',
     icon: 'map-pin-simple-area',
   },
 };
@@ -288,6 +286,12 @@ export function StackbarHeader({
   const frequencyIcon =
     FREQUENCY_OPTIONS[currentFrequency]?.icon || 'arrow-clockwise';
 
+  // Obtenir les labels traduits pour les fréquences
+  const getFrequencyLabel = (freq: 'récurrent' | 'ponctuel'): string => {
+    if (!t) return freq === 'récurrent' ? 'Récurrent' : 'Ponctuel';
+    return t(freq === 'récurrent' ? 'frequencyRecurrent' : 'frequencyPonctuel');
+  };
+
   // Calculer le nombre de siblings pour masquer les flèches si un seul élément
   const hasSiblings = (() => {
     if (niveau === 0) return false; // Pas de flèches au niveau 0
@@ -347,7 +351,10 @@ export function StackbarHeader({
     <div className="font-bold mb-4 flex items-center justify-between">
       <div className="flex items-center justify-between w-full">
         {/* Groupe gauche : Navigation, titre, %, kg, frequency */}
-        <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
+        <div
+          className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-stretch h-10"
+          style={{ overflow: 'visible' }}
+        >
           {niveau > 0 && hasSiblings && (
             <>
               <button
@@ -403,9 +410,11 @@ export function StackbarHeader({
             </span>
           )}
 
-          <span className="border-l border-gray-300 px-3 h-full text-sm flex items-center">
-            {pct.toFixed(1)}%
-          </span>
+          {niveau > 0 && (
+            <span className="border-l border-gray-300 px-3 h-full text-sm flex items-center">
+              {pct.toFixed(1)}%
+            </span>
+          )}
 
           {niveau === 0 ? (
             isEditingWeight ? (
@@ -458,7 +467,11 @@ export function StackbarHeader({
           {niveau === 0 && (
             <div className="relative" ref={frequencyDropdownRef}>
               <button
-                className="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center cursor-pointer"
+                className={`border-l border-gray-300 px-3 h-full focus:outline-none flex items-center justify-center ${
+                  isEditable
+                    ? 'hover:bg-gray-100 focus:bg-gray-100 cursor-pointer'
+                    : 'cursor-default'
+                }`}
                 aria-label="Actualiser"
                 onClick={e => {
                   if (isEditable) {
@@ -472,11 +485,11 @@ export function StackbarHeader({
 
               {showFrequencyDropdown && (
                 <div
-                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] max-w-[160px]"
+                  className="absolute bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] max-w-[160px]"
                   style={{
-                    top: '100%',
+                    top: 'calc(100% + 5px)',
                     right: '0',
-                    marginTop: '5px',
+                    zIndex: 9999,
                   }}
                 >
                   <div role="menu" aria-orientation="vertical" className="py-1">
@@ -502,7 +515,7 @@ export function StackbarHeader({
                               isSelected ? 'text-blue-600' : ''
                             }`}
                           ></i>
-                          {option.label}
+                          {getFrequencyLabel(option.value)}
                           {isSelected && (
                             <i className="ph ph-check ml-auto w-4 h-4 text-blue-600"></i>
                           )}
