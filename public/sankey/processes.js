@@ -723,10 +723,10 @@ const transformationTypes = {
     step: 'sorting',
   },
   selectByQualite: {
-    label: 'Tri par qualité',
-    en_gb: 'Sort by quality',
-    description: 'Sélectionne les articles selon leur qualité',
-    description_en_gb: 'Select items according to their quality',
+    label: 'Tri par intégrité',
+    en_gb: 'Sort by textile integrity',
+    description: "Sélectionne les articles selon l'intégrité de la matière",
+    description_en_gb: 'Select items according to their textile integrity',
     keyList: 'qualite',
     requiredKey: true,
     step: 'sorting',
@@ -761,7 +761,7 @@ const transformationTypes = {
   },
   selectByPerturbateur: {
     label: 'Tri par nievau de perturbation',
-    en_gb: 'Sort by level of perturbation',
+    en_gb: 'Sort by level of disruption',
     description: 'Sélectionne les articles selon la présence de perturbateurs',
     description_en_gb: 'Select items according to the presence of disruptors',
     keyList: 'perturbateurs',
