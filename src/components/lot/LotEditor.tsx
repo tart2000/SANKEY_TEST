@@ -882,7 +882,6 @@ export function LotEditor({
                 onNavigateSibling={navigateSibling}
                 onDimensionChange={() => {}}
                 onAggregatedDimensionChange={setAggregatedDimension}
-                onAdd={() => {}}
                 onDelete={() => {}}
                 onClose={() => {}}
                 onFrequencyChange={frequency => {
@@ -939,11 +938,6 @@ export function LotEditor({
                   onDimensionChange={dim =>
                     handleDimensionChange(dim, info.niveau)
                   }
-                  onAdd={() => {
-                    setModalNiveau(info.niveau);
-                    setModalDimension(info.dimension || dimsForLevel[0] || '');
-                    setModalOpen(true);
-                  }}
                   onDelete={() => handleDelete(info.niveau)}
                   onClose={() => navigateUp(info.niveau)}
                   onFrequencyChange={frequency => {
@@ -1005,12 +999,20 @@ export function LotEditor({
                         }
                         isEditable={isEditable}
                         lang={lang}
+                        hasAvailableDimensions={dimsForLevel.length > 0}
                         onSegmentClick={key =>
                           handleSegmentClick(info.niveau, info.dimension, key)
                         }
                         onUpdate={dim =>
                           handleDimensionUpdate(info.dimension, dim)
                         }
+                        onAdd={() => {
+                          setModalNiveau(info.niveau);
+                          setModalDimension(
+                            info.dimension || dimsForLevel[0] || ''
+                          );
+                          setModalOpen(true);
+                        }}
                       />
                     );
                   })()}

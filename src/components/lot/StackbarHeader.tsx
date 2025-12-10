@@ -37,7 +37,6 @@ interface StackbarHeaderProps {
   onNavigateSibling: (niveau: number, direction: -1 | 1) => void;
   onDimensionChange: (dimension: string) => void;
   onAggregatedDimensionChange?: (dimension: string) => void;
-  onAdd: () => void;
   onDelete: () => void;
   onClose: () => void;
   onFrequencyChange: (frequency: 'récurrent' | 'ponctuel') => void;
@@ -80,7 +79,6 @@ export function StackbarHeader({
   onNavigateSibling,
   onDimensionChange,
   onAggregatedDimensionChange,
-  onAdd,
   onDelete,
   onClose,
   onFrequencyChange,
@@ -651,37 +649,22 @@ export function StackbarHeader({
           )}
 
           {/* Boutons actions */}
-          {isEditable && viewMode !== 'aggregated' && (
+          {isEditable && viewMode !== 'aggregated' && niveau > 0 && (
             <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
-              {availableDimensions.length > 0 && (
-                <button
-                  className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300 cursor-pointer"
-                  aria-label="Ajouter"
-                  onClick={onAdd}
-                >
-                  <i className="ph ph-plus w-4 h-4"></i>
-                </button>
-              )}
-              {niveau > 0 && (
-                <>
-                  <button
-                    className={`h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300 cursor-pointer ${
-                      availableDimensions.length === 0 ? 'rounded-l-lg' : ''
-                    }`}
-                    aria-label="Supprimer"
-                    onClick={onDelete}
-                  >
-                    <i className="ph ph-trash w-4 h-4"></i>
-                  </button>
-                  <button
-                    className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg cursor-pointer"
-                    aria-label="Fermer"
-                    onClick={onClose}
-                  >
-                    <i className="ph ph-x w-4 h-4"></i>
-                  </button>
-                </>
-              )}
+              <button
+                className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300 cursor-pointer rounded-l-lg"
+                aria-label="Supprimer"
+                onClick={onDelete}
+              >
+                <i className="ph ph-trash w-4 h-4"></i>
+              </button>
+              <button
+                className="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg cursor-pointer"
+                aria-label="Fermer"
+                onClick={onClose}
+              >
+                <i className="ph ph-x w-4 h-4"></i>
+              </button>
             </div>
           )}
         </div>
