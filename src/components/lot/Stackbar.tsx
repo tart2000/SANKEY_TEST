@@ -179,7 +179,7 @@ export function Stackbar({
       </div>
 
       {showAddButton && (
-        <div className="flex items-center justify-center h-16 w-12">
+        <div className="flex items-center justify-center h-16 w-10">
           <button
             type="button"
             className="w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition cursor-pointer"
