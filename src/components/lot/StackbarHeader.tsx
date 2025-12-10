@@ -349,10 +349,7 @@ export function StackbarHeader({
     <div className="font-bold mb-4 flex items-center justify-between">
       <div className="flex items-center justify-between w-full">
         {/* Groupe gauche : Navigation, titre, %, kg, frequency */}
-        <div
-          className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-stretch h-10"
-          style={{ overflow: 'visible' }}
-        >
+        <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-stretch h-10 overflow-hidden">
           {niveau > 0 && hasSiblings && (
             <>
               <button
@@ -465,7 +462,7 @@ export function StackbarHeader({
           {niveau === 0 && (
             <div className="relative" ref={frequencyDropdownRef}>
               <button
-                className={`border-l border-gray-300 px-3 h-full focus:outline-none flex items-center justify-center ${
+                className={`px-3 h-full border-l border-gray-300 focus:outline-none flex items-center justify-center ${
                   isEditable
                     ? 'hover:bg-gray-100 focus:bg-gray-100 cursor-pointer'
                     : 'cursor-default'
