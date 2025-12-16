@@ -1937,51 +1937,63 @@ class SimpleDynamicTransformationEngine {
       };
     }
 
-    // 4. Charger les items complets pour target, loss, coproduct (avec cache)
-    // La structure est { "nom français": { bubble_id, en_gb } }
-    const getItemDataFromStructure = itemObj => {
-      if (!itemObj) return { bubbleId: null, itemData: null, formatName: null };
-      // La structure est { "nom français": { bubble_id, en_gb } }
-      const firstKey = Object.keys(itemObj)[0];
-      if (firstKey && itemObj[firstKey]?.bubble_id) {
+    // 4. Extraire format et type depuis la nouvelle structure
+    // La structure est { format: { fr_fr, en_gb, bubble_id }, type: { fr_fr, en_gb, bubble_id } }
+    const extractFormatAndTypeInfo = itemObj => {
+      if (!itemObj) {
         return {
-          bubbleId: itemObj[firstKey].bubble_id,
-          itemData: itemObj[firstKey],
-          formatName: firstKey, // Le nom français est la clé
+          formatBubbleId: null,
+          formatData: null,
+          typeBubbleId: null,
+          typeData: null,
         };
       }
-      return { bubbleId: null, itemData: null, formatName: null };
+      return {
+        formatBubbleId: itemObj.format?.bubble_id || null,
+        formatData: itemObj.format || null,
+        typeBubbleId: itemObj.type?.bubble_id || null,
+        typeData: itemObj.type || null,
+      };
     };
 
-    const targetItemInfo = getItemDataFromStructure(transfoDetails.target);
-    const lossItemInfo = getItemDataFromStructure(transfoDetails.loss);
-    const coproductItemInfo = getItemDataFromStructure(
-      transfoDetails.coproduct
-    );
+    const targetInfo = extractFormatAndTypeInfo(transfoDetails.target);
+    const lossInfo = extractFormatAndTypeInfo(transfoDetails.loss);
+    const coproductInfo = extractFormatAndTypeInfo(transfoDetails.coproduct);
 
-    const targetItemBubbleId = targetItemInfo.bubbleId;
-    const lossItemBubbleId = lossItemInfo.bubbleId;
-    const coproductItemBubbleId = coproductItemInfo.bubbleId;
-
-    if (!targetItemBubbleId) {
+    if (!targetInfo.formatBubbleId || !targetInfo.typeBubbleId) {
       throw new Error(
-        `Item target introuvable: bubble_id manquant dans transfoDetails.target`
+        `Item target introuvable: format ou type manquant dans transfoDetails.target`
       );
     }
 
-    const targetItem = targetItemBubbleId
-      ? fetchItemCompleteSync(targetItemBubbleId)
+    // Récupérer le format (item_small) et le type (item complet)
+    const targetFormatItem = targetInfo.formatBubbleId
+      ? fetchItemMiniSync(targetInfo.formatBubbleId)
       : null;
-    const lossItem =
-      lossItemBubbleId && transfoDetails.loss_percent > 0
-        ? fetchItemCompleteSync(lossItemBubbleId)
-        : null;
-    const coproductItem = coproductItemBubbleId
-      ? fetchItemCompleteSync(coproductItemBubbleId)
+    const targetTypeItem = targetInfo.typeBubbleId
+      ? fetchItemCompleteSync(targetInfo.typeBubbleId)
       : null;
 
-    if (!targetItem) {
-      throw new Error(`Item target introuvable: ${targetItemBubbleId}`);
+    const lossFormatItem =
+      lossInfo.formatBubbleId && transfoDetails.loss_percent > 0
+        ? fetchItemMiniSync(lossInfo.formatBubbleId)
+        : null;
+    const lossTypeItem =
+      lossInfo.typeBubbleId && transfoDetails.loss_percent > 0
+        ? fetchItemCompleteSync(lossInfo.typeBubbleId)
+        : null;
+
+    const coproductFormatItem = coproductInfo.formatBubbleId
+      ? fetchItemMiniSync(coproductInfo.formatBubbleId)
+      : null;
+    const coproductTypeItem = coproductInfo.typeBubbleId
+      ? fetchItemCompleteSync(coproductInfo.typeBubbleId)
+      : null;
+
+    if (!targetFormatItem || !targetTypeItem) {
+      throw new Error(
+        `Item target introuvable: format ou type non récupéré depuis l'API`
+      );
     }
 
     // 5. Calculer les volumes
@@ -1997,35 +2009,42 @@ class SimpleDynamicTransformationEngine {
       transfoDetails.yield || 100
     );
 
-    // 6. Créer targetLot avec écrasement du format et application des distributions filles
+    // 6. Créer targetLot avec format + type et distributions conditionnelles
     const targetLot = this.createTargetLot(
       filteredLot,
-      targetItem,
+      targetFormatItem,
+      targetTypeItem,
+      targetInfo,
       targetMass,
-      transfoDetails,
-      targetItemInfo
+      transfoDetails
     );
 
     // 7. Créer lossLot si nécessaire
     let lossLot = null;
-    if (lossMass > 0 && lossItem) {
+    if (lossMass > 0 && lossFormatItem && lossTypeItem) {
       lossLot = this.createLossLot(
-        lossItem,
+        lossFormatItem,
+        lossTypeItem,
+        lossInfo,
         lossMass,
-        transfoDetails,
-        lossItemInfo
+        transfoDetails
       );
     }
 
     // 8. Créer coproductFromTransformableLot si nécessaire
     let coproductFromTransformableLot = null;
-    if (coproductFromTransformable > 0 && coproductItem) {
+    if (
+      coproductFromTransformable > 0 &&
+      coproductFormatItem &&
+      coproductTypeItem
+    ) {
       coproductFromTransformableLot = this.createCoproductLot(
         filteredLot,
-        coproductItem,
+        coproductFormatItem,
+        coproductTypeItem,
+        coproductInfo,
         coproductFromTransformable,
-        transfoDetails,
-        coproductItemInfo
+        transfoDetails
       );
     }
 
@@ -2056,6 +2075,168 @@ class SimpleDynamicTransformationEngine {
     return { targetLot, coProductLot };
   }
 
+  // Trouver un type par bubble_id dans la structure item complète
+  findTypeInItemStructure(itemComplete, typeBubbleId) {
+    if (!itemComplete || !typeBubbleId) return null;
+
+    // Cas 1: L'API retourne directement le type (structure plate avec bubble_id à la racine)
+    if (itemComplete.bubble_id === typeBubbleId) {
+      // Prendre le nom depuis fr_fr ou la première clé
+      const typeName =
+        itemComplete.fr_fr ||
+        Object.keys(itemComplete).find(
+          k => k !== 'bubble_id' && k !== 'color' && k !== 'en_gb'
+        ) ||
+        'Type';
+      return { typeKey: typeName, type: itemComplete };
+    }
+
+    // Cas 2: Parcourir tous les formats (clés racines de l'objet)
+    for (const formatKey in itemComplete) {
+      const format = itemComplete[formatKey];
+      if (!format || typeof format !== 'object') continue;
+
+      // Vérifier si le format lui-même est le type recherché
+      if (format.bubble_id === typeBubbleId) {
+        return { typeKey: formatKey, type: format };
+      }
+
+      // Si le format a des types, les parcourir
+      if (format.types && typeof format.types === 'object') {
+        for (const typeKey in format.types) {
+          const type = format.types[typeKey];
+          if (type && type.bubble_id === typeBubbleId) {
+            return { typeKey, type };
+          }
+        }
+      }
+    }
+
+    // Cas 3: Recherche récursive dans toutes les dimensions (au cas où la structure serait différente)
+    const searchRecursive = (obj, path = []) => {
+      if (!obj || typeof obj !== 'object') return null;
+
+      // Vérifier si cet objet a le bon bubble_id
+      if (obj.bubble_id === typeBubbleId) {
+        // Trouver un nom approprié
+        const name = obj.fr_fr || path[path.length - 1] || 'Type';
+        return { typeKey: name, type: obj };
+      }
+
+      // Parcourir toutes les propriétés
+      for (const key in obj) {
+        if (
+          key === 'bubble_id' ||
+          key === 'color' ||
+          key === 'en_gb' ||
+          key === 'fr_fr' ||
+          key === 'pourcentage'
+        )
+          continue;
+
+        const value = obj[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const result = searchRecursive(value, [...path, key]);
+          if (result) return result;
+        }
+      }
+
+      return null;
+    };
+
+    const recursiveResult = searchRecursive(itemComplete);
+    if (recursiveResult) return recursiveResult;
+
+    // Si rien n'est trouvé, logger pour debug
+    console.warn('Type non trouvé dans la structure item:', {
+      typeBubbleId,
+      itemStructure: Object.keys(itemComplete),
+      firstKey: Object.keys(itemComplete)[0],
+      firstValue: itemComplete[Object.keys(itemComplete)[0]],
+    });
+
+    return null;
+  }
+
+  // Agréger une dimension depuis tous les types de tous les formats d'un lot
+  aggregateDimensionFromTypes(lot, dimension) {
+    if (!lot.formats) return null;
+
+    const aggregated = {};
+    let totalMass = 0;
+    const massMap = new Map();
+
+    Object.values(lot.formats).forEach(format => {
+      const formatPct = format.pourcentage || 0;
+      if (!format.types) return;
+
+      Object.values(format.types).forEach(type => {
+        const typePct = type.pourcentage || 0;
+        const dimensionData = type[dimension];
+
+        if (!dimensionData) return;
+
+        Object.entries(dimensionData).forEach(([key, value]) => {
+          const elementPct = value.pourcentage || 0;
+          // Calculer la masse relative : format% * type% * element% / 10000
+          const mass = (formatPct * typePct * elementPct) / 10000;
+          totalMass += mass;
+
+          if (!massMap.has(key)) {
+            massMap.set(key, {
+              ...value,
+              mass: 0,
+            });
+          }
+          const entry = massMap.get(key);
+          entry.mass += mass;
+        });
+      });
+    });
+
+    if (totalMass === 0) return null;
+
+    massMap.forEach((entry, key) => {
+      aggregated[key] = {
+        ...entry,
+        pourcentage: (entry.mass / totalMass) * 100,
+      };
+      delete aggregated[key].mass;
+    });
+
+    return aggregated;
+  }
+
+  // Appliquer les distributions conditionnelles au niveau du type
+  applyTypeDistributionsConditionally(targetType, referenceType, sourceLot) {
+    if (!targetType || !referenceType) return;
+
+    // Parcourir les dimensions enfants de types selon la hiérarchie
+    this.processingOrder.forEach(dimension => {
+      const dimensionConfig = this.dimensionHierarchy[dimension];
+      if (!dimensionConfig || dimensionConfig.parent !== 'types') return;
+
+      // Si le type de référence a cette dimension ET qu'elle n'est pas vide → copier
+      if (
+        referenceType[dimension] &&
+        Object.keys(referenceType[dimension]).length > 0
+      ) {
+        targetType[dimension] = JSON.parse(
+          JSON.stringify(referenceType[dimension])
+        );
+      } else if (sourceLot) {
+        // Sinon, utiliser les distributions agrégées depuis les types du lot d'entrée
+        const aggregated = this.aggregateDimensionFromTypes(
+          sourceLot,
+          dimension
+        );
+        if (aggregated && Object.keys(aggregated).length > 0) {
+          targetType[dimension] = aggregated;
+        }
+      }
+    });
+  }
+
   // Calculer les volumes
   calculateVolumes(inputMass, lossPercent, yieldPercent) {
     const lossMass = (inputMass * lossPercent) / 100;
@@ -2074,69 +2255,94 @@ class SimpleDynamicTransformationEngine {
   // Créer le targetLot
   createTargetLot(
     sourceLot,
-    targetItem,
+    targetFormatItem,
+    targetTypeItem,
+    targetInfo,
     targetMass,
-    transfoDetails,
-    targetItemInfo
+    transfoDetails
   ) {
     const targetLot = {
       total: targetMass,
       title: transfoDetails.title || 'Transformation dynamique',
     };
 
-    // 1. Prendre le format récupéré par API en entier et le copier
+    // 1. Récupérer le nom du format depuis item_small
+    const formatName = targetFormatItem?.fr_fr || 'Format inconnu';
+    const formatBubbleId = targetInfo.formatBubbleId;
+
+    // 2. Créer le format
     targetLot.formats = {};
-    const targetFormatName =
-      targetItemInfo.formatName ||
-      (targetItem ? Object.keys(targetItem)[0] : 'Format inconnu');
+    targetLot.formats[formatName] = {
+      bubble_id: formatBubbleId,
+      pourcentage: 100,
+      color: targetFormatItem?.color || null,
+      en_gb: targetFormatItem?.en_gb || null,
+      types: {},
+    };
 
-    const targetBubbleId = targetItemInfo.bubbleId;
-
-    // Dans l'item complet, les formats sont directement les clés de l'objet
-    // Utiliser EXACTEMENT le même pattern que createLossLot
-    // Mais avec un fallback si le nom ne correspond pas (prendre la première clé)
-    let targetFormatData = {};
-    if (targetItem) {
-      if (targetItem[targetFormatName]) {
-        targetFormatData = targetItem[targetFormatName];
-      } else if (Object.keys(targetItem).length > 0) {
-        // Fallback : prendre le premier format si le nom ne correspond pas
-        const firstKey = Object.keys(targetItem)[0];
-        targetFormatData = targetItem[firstKey];
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !targetLot.formats[formatName].color &&
+      window.colorById &&
+      formatBubbleId
+    ) {
+      if (window.colorById.has(formatBubbleId)) {
+        targetLot.formats[formatName].color =
+          window.colorById.get(formatBubbleId);
       }
     }
 
-    // Copier complètement le format de l'item complet (avec toutes ses distributions et color)
-    // Utiliser le spread comme dans createLossLot pour préserver la color
-    targetLot.formats[targetFormatName] = {
-      ...targetFormatData,
-      bubble_id: targetBubbleId,
+    // 3. Trouver le type dans la structure item complète
+    const typeResult = this.findTypeInItemStructure(
+      targetTypeItem,
+      targetInfo.typeBubbleId
+    );
+
+    if (!typeResult) {
+      // Log pour debug
+      console.error('Type introuvable dans la structure item:', {
+        typeBubbleId: targetInfo.typeBubbleId,
+        itemStructure: targetTypeItem ? Object.keys(targetTypeItem) : 'null',
+        firstFormatKey: targetTypeItem ? Object.keys(targetTypeItem)[0] : null,
+        firstFormat: targetTypeItem
+          ? targetTypeItem[Object.keys(targetTypeItem)[0]]
+          : null,
+      });
+      throw new Error(
+        `Type introuvable dans la structure item: ${targetInfo.typeBubbleId}. Structure disponible: ${targetTypeItem ? JSON.stringify(Object.keys(targetTypeItem)) : 'null'}`
+      );
+    }
+
+    const { typeKey, type: referenceType } = typeResult;
+
+    // 4. Créer le type dans le format
+    targetLot.formats[formatName].types[typeKey] = {
+      bubble_id: targetInfo.typeBubbleId,
       pourcentage: 100,
+      color: referenceType.color || null,
+      en_gb: referenceType.en_gb || null,
     };
 
-    // Ajouter en_gb si disponible dans targetItemInfo.itemData
-    if (targetItemInfo.itemData?.en_gb) {
-      targetLot.formats[targetFormatName].en_gb = targetItemInfo.itemData.en_gb;
-    }
-
-    // Appliquer la color depuis le format de l'item complet (EXACTEMENT comme dans createLossLot)
-    if (targetFormatData.color) {
-      targetLot.formats[targetFormatName].color = targetFormatData.color;
-    } else if (
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !targetLot.formats[formatName].types[typeKey].color &&
       window.colorById &&
-      targetBubbleId &&
-      window.colorById.has(targetBubbleId)
+      targetInfo.typeBubbleId
     ) {
-      targetLot.formats[targetFormatName].color =
-        window.colorById.get(targetBubbleId);
+      if (window.colorById.has(targetInfo.typeBubbleId)) {
+        targetLot.formats[formatName].types[typeKey].color =
+          window.colorById.get(targetInfo.typeBubbleId);
+      }
     }
 
-    // Ajouter en_gb si disponible dans targetItemInfo.itemData
-    if (targetItemInfo.itemData?.en_gb) {
-      targetLot.formats[targetFormatName].en_gb = targetItemInfo.itemData.en_gb;
-    }
+    // 5. Appliquer les distributions conditionnelles au niveau du type
+    this.applyTypeDistributionsConditionally(
+      targetLot.formats[formatName].types[typeKey],
+      referenceType,
+      sourceLot
+    );
 
-    // 2. Ajouter les qualités et propretés du lot d'entrée
+    // 6. Ajouter les qualités et propretés du lot d'entrée
     if (sourceLot.proprete) {
       targetLot.proprete = JSON.parse(JSON.stringify(sourceLot.proprete));
     }
@@ -2144,99 +2350,155 @@ class SimpleDynamicTransformationEngine {
       targetLot.qualite = JSON.parse(JSON.stringify(sourceLot.qualite));
     }
 
-    // 3. Descendre dans le format pour voir s'il a des distributions
-    // Si il en a, les garder (déjà copiées)
-    // S'il en a pas OU qu'elle est vide, appliquer celles du lot d'entrée (agrégées)
-    const targetFormat = targetLot.formats[targetFormatName];
-
-    // Pour chaque dimension enfant de formats
-    this.processingOrder.forEach(dimension => {
-      const dimensionConfig = this.dimensionHierarchy[dimension];
-      if (!dimensionConfig || dimensionConfig.parent !== 'formats') return;
-
-      // Si le format de référence n'a pas cette dimension OU qu'elle est vide, prendre celle du lot d'entrée
-      if (
-        (!targetFormat[dimension] ||
-          Object.keys(targetFormat[dimension]).length === 0) &&
-        sourceLot &&
-        sourceLot.formats
-      ) {
-        const aggregated = this.aggregateDimensionFromFormats(
-          sourceLot,
-          dimension
-        );
-        if (aggregated && Object.keys(aggregated).length > 0) {
-          targetFormat[dimension] = aggregated;
-        }
-      }
-    });
-
-    // Normaliser toutes les distributions
+    // 7. Normaliser toutes les distributions
     this.normalizeAllDistributions(targetLot);
 
-    // Réappliquer la color APRÈS normalisation pour être sûr qu'elle ne soit pas écrasée
-    if (targetFormatData.color) {
-      targetLot.formats[targetFormatName].color = targetFormatData.color;
+    // 8. Réappliquer les couleurs APRÈS normalisation
+    if (targetFormatItem?.color) {
+      targetLot.formats[formatName].color = targetFormatItem.color;
     } else if (
       window.colorById &&
-      targetBubbleId &&
-      window.colorById.has(targetBubbleId)
+      formatBubbleId &&
+      window.colorById.has(formatBubbleId)
     ) {
-      targetLot.formats[targetFormatName].color =
-        window.colorById.get(targetBubbleId);
+      targetLot.formats[formatName].color =
+        window.colorById.get(formatBubbleId);
+    }
+
+    if (referenceType.color) {
+      targetLot.formats[formatName].types[typeKey].color = referenceType.color;
+    } else if (
+      window.colorById &&
+      targetInfo.typeBubbleId &&
+      window.colorById.has(targetInfo.typeBubbleId)
+    ) {
+      targetLot.formats[formatName].types[typeKey].color = window.colorById.get(
+        targetInfo.typeBubbleId
+      );
     }
 
     return targetLot;
   }
 
   // Créer le lossLot
-  createLossLot(lossItem, lossMass, transfoDetails, lossItemInfo) {
+  createLossLot(
+    lossFormatItem,
+    lossTypeItem,
+    lossInfo,
+    lossMass,
+    transfoDetails
+  ) {
     const lossLot = {
       total: lossMass,
       title: `Perte ${transfoDetails.title || 'dynamique'}`,
     };
 
-    // Créer le format de perte
-    // Le nom du format est la clé française de l'objet loss
+    // 1. Récupérer le nom du format depuis item_small
+    const formatName = lossFormatItem?.fr_fr || 'Format inconnu';
+    const formatBubbleId = lossInfo.formatBubbleId;
+
+    // 2. Créer le format
     lossLot.formats = {};
-    const lossFormatName =
-      lossItemInfo.formatName ||
-      (lossItem ? Object.keys(lossItem)[0] : 'Format inconnu');
-
-    const lossBubbleId = lossItemInfo.bubbleId;
-
-    // Dans l'item complet, les formats sont directement les clés de l'objet
-    const lossFormatData =
-      lossItem && lossItem[lossFormatName] ? lossItem[lossFormatName] : {};
-
-    lossLot.formats[lossFormatName] = {
-      ...lossFormatData,
-      bubble_id: lossBubbleId,
+    lossLot.formats[formatName] = {
+      bubble_id: formatBubbleId,
       pourcentage: 100,
+      color: lossFormatItem?.color || null,
+      en_gb: lossFormatItem?.en_gb || null,
+      types: {},
     };
 
-    // Ajouter en_gb si disponible dans lossItemInfo.itemData
-    if (lossItemInfo.itemData?.en_gb) {
-      lossLot.formats[lossFormatName].en_gb = lossItemInfo.itemData.en_gb;
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !lossLot.formats[formatName].color &&
+      window.colorById &&
+      formatBubbleId
+    ) {
+      if (window.colorById.has(formatBubbleId)) {
+        lossLot.formats[formatName].color =
+          window.colorById.get(formatBubbleId);
+      }
     }
 
-    // Appliquer la color depuis le format de l'item complet
-    if (lossFormatData.color) {
-      lossLot.formats[lossFormatName].color = lossFormatData.color;
+    // 3. Trouver le type dans la structure item complète
+    const typeResult = this.findTypeInItemStructure(
+      lossTypeItem,
+      lossInfo.typeBubbleId
+    );
+
+    if (!typeResult) {
+      throw new Error(
+        `Type introuvable dans la structure item: ${lossInfo.typeBubbleId}`
+      );
+    }
+
+    const { typeKey, type: referenceType } = typeResult;
+
+    // 4. Créer le type dans le format
+    lossLot.formats[formatName].types[typeKey] = {
+      bubble_id: lossInfo.typeBubbleId,
+      pourcentage: 100,
+      color: referenceType.color || null,
+      en_gb: referenceType.en_gb || null,
+    };
+
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !lossLot.formats[formatName].types[typeKey].color &&
+      window.colorById &&
+      lossInfo.typeBubbleId
+    ) {
+      if (window.colorById.has(lossInfo.typeBubbleId)) {
+        lossLot.formats[formatName].types[typeKey].color = window.colorById.get(
+          lossInfo.typeBubbleId
+        );
+      }
+    }
+
+    // 5. Copier TOUTES les distributions du type (pas de fusion avec le lot d'entrée)
+    // Parcourir toutes les dimensions enfants du type
+    this.processingOrder.forEach(dimension => {
+      const dimensionConfig = this.dimensionHierarchy[dimension];
+      if (!dimensionConfig || dimensionConfig.parent !== 'types') return;
+
+      if (referenceType[dimension]) {
+        lossLot.formats[formatName].types[typeKey][dimension] = JSON.parse(
+          JSON.stringify(referenceType[dimension])
+        );
+
+        // Appliquer récursivement pour les dimensions enfants (matières → fibres, etc.)
+        this.applyAllChildDistributionsRecursive(
+          lossLot.formats[formatName].types[typeKey][dimension],
+          referenceType[dimension],
+          dimension
+        );
+      }
+    });
+
+    // 6. Normaliser toutes les distributions
+    this.normalizeAllDistributions(lossLot);
+
+    // 7. Réappliquer les couleurs APRÈS normalisation
+    if (lossFormatItem?.color) {
+      lossLot.formats[formatName].color = lossFormatItem.color;
     } else if (
       window.colorById &&
-      lossBubbleId &&
-      window.colorById.has(lossBubbleId)
+      formatBubbleId &&
+      window.colorById.has(formatBubbleId)
     ) {
-      lossLot.formats[lossFormatName].color =
-        window.colorById.get(lossBubbleId);
+      lossLot.formats[formatName].color = window.colorById.get(formatBubbleId);
     }
 
-    // Appliquer TOUTES les distributions filles de lossItem (pas de fusion)
-    this.applyAllChildDistributions(lossLot, lossItem);
-
-    // Normaliser toutes les distributions
-    this.normalizeAllDistributions(lossLot);
+    if (referenceType.color) {
+      lossLot.formats[formatName].types[typeKey].color = referenceType.color;
+    } else if (
+      window.colorById &&
+      lossInfo.typeBubbleId &&
+      window.colorById.has(lossInfo.typeBubbleId)
+    ) {
+      lossLot.formats[formatName].types[typeKey].color = window.colorById.get(
+        lossInfo.typeBubbleId
+      );
+    }
 
     return lossLot;
   }
@@ -2244,61 +2506,110 @@ class SimpleDynamicTransformationEngine {
   // Créer le coproductLot issu du transformable
   createCoproductLot(
     sourceLot,
-    coproductItem,
+    coproductFormatItem,
+    coproductTypeItem,
+    coproductInfo,
     coproductMass,
-    transfoDetails,
-    coproductItemInfo
+    transfoDetails
   ) {
     const coproductLot = {
       total: coproductMass,
       title: `Co-produit ${transfoDetails.title || 'dynamique'}`,
     };
 
-    // Créer le format de coproduit
-    // Le nom du format est la clé française de l'objet coproduct
+    // 1. Récupérer le nom du format depuis item_small
+    const formatName = coproductFormatItem?.fr_fr || 'Format inconnu';
+    const formatBubbleId = coproductInfo.formatBubbleId;
+
+    // 2. Créer le format
     coproductLot.formats = {};
-    const coproductFormatName =
-      coproductItemInfo.formatName ||
-      (coproductItem ? Object.keys(coproductItem)[0] : 'Format inconnu');
-
-    const coproductBubbleId = coproductItemInfo.bubbleId;
-
-    // Dans l'item complet, les formats sont directement les clés de l'objet
-    const coproductFormatData =
-      coproductItem && coproductItem[coproductFormatName]
-        ? coproductItem[coproductFormatName]
-        : {};
-
-    coproductLot.formats[coproductFormatName] = {
-      ...coproductFormatData,
-      bubble_id: coproductBubbleId,
+    coproductLot.formats[formatName] = {
+      bubble_id: formatBubbleId,
       pourcentage: 100,
+      color: coproductFormatItem?.color || null,
+      en_gb: coproductFormatItem?.en_gb || null,
+      types: {},
     };
 
-    // Ajouter en_gb si disponible dans coproductItemInfo.itemData
-    if (coproductItemInfo.itemData?.en_gb) {
-      coproductLot.formats[coproductFormatName].en_gb =
-        coproductItemInfo.itemData.en_gb;
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !coproductLot.formats[formatName].color &&
+      window.colorById &&
+      formatBubbleId
+    ) {
+      if (window.colorById.has(formatBubbleId)) {
+        coproductLot.formats[formatName].color =
+          window.colorById.get(formatBubbleId);
+      }
     }
 
-    // Appliquer la color depuis le format de l'item complet
-    if (coproductFormatData.color) {
-      coproductLot.formats[coproductFormatName].color =
-        coproductFormatData.color;
+    // 3. Trouver le type dans la structure item complète
+    const typeResult = this.findTypeInItemStructure(
+      coproductTypeItem,
+      coproductInfo.typeBubbleId
+    );
+
+    if (!typeResult) {
+      throw new Error(
+        `Type introuvable dans la structure item: ${coproductInfo.typeBubbleId}`
+      );
+    }
+
+    const { typeKey, type: referenceType } = typeResult;
+
+    // 4. Créer le type dans le format
+    coproductLot.formats[formatName].types[typeKey] = {
+      bubble_id: coproductInfo.typeBubbleId,
+      pourcentage: 100,
+      color: referenceType.color || null,
+      en_gb: referenceType.en_gb || null,
+    };
+
+    // Appliquer la couleur depuis le cache si nécessaire
+    if (
+      !coproductLot.formats[formatName].types[typeKey].color &&
+      window.colorById &&
+      coproductInfo.typeBubbleId
+    ) {
+      if (window.colorById.has(coproductInfo.typeBubbleId)) {
+        coproductLot.formats[formatName].types[typeKey].color =
+          window.colorById.get(coproductInfo.typeBubbleId);
+      }
+    }
+
+    // 5. Appliquer les distributions conditionnelles au niveau du type
+    this.applyTypeDistributionsConditionally(
+      coproductLot.formats[formatName].types[typeKey],
+      referenceType,
+      sourceLot
+    );
+
+    // 6. Normaliser toutes les distributions
+    this.normalizeAllDistributions(coproductLot);
+
+    // 7. Réappliquer les couleurs APRÈS normalisation
+    if (coproductFormatItem?.color) {
+      coproductLot.formats[formatName].color = coproductFormatItem.color;
     } else if (
       window.colorById &&
-      coproductBubbleId &&
-      window.colorById.has(coproductBubbleId)
+      formatBubbleId &&
+      window.colorById.has(formatBubbleId)
     ) {
-      coproductLot.formats[coproductFormatName].color =
-        window.colorById.get(coproductBubbleId);
+      coproductLot.formats[formatName].color =
+        window.colorById.get(formatBubbleId);
     }
 
-    // Appliquer les distributions filles (remplacement conditionnel)
-    this.applyChildDistributions(coproductLot, coproductItem, sourceLot);
-
-    // Normaliser toutes les distributions
-    this.normalizeAllDistributions(coproductLot);
+    if (referenceType.color) {
+      coproductLot.formats[formatName].types[typeKey].color =
+        referenceType.color;
+    } else if (
+      window.colorById &&
+      coproductInfo.typeBubbleId &&
+      window.colorById.has(coproductInfo.typeBubbleId)
+    ) {
+      coproductLot.formats[formatName].types[typeKey].color =
+        window.colorById.get(coproductInfo.typeBubbleId);
+    }
 
     return coproductLot;
   }

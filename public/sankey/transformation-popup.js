@@ -1699,64 +1699,61 @@ class TransformationPopup {
       }
     }
 
-    // Extraire le format cible
-    // La structure est { "nom français": { bubble_id, en_gb } }
-    let targetFormat = '-';
-    if (transfoDetails.target) {
-      const firstKey = Object.keys(transfoDetails.target)[0];
-      const targetItem = firstKey ? transfoDetails.target[firstKey] : null;
-      if (targetItem?.bubble_id) {
-        const elementMini = await this.recupererElementMini(
-          targetItem.bubble_id
+    // Extraire le type cible (pas le format)
+    // La structure est { format: { fr_fr, en_gb, bubble_id }, type: { fr_fr, en_gb, bubble_id } }
+    let targetType = '-';
+    if (transfoDetails.target?.type?.bubble_id) {
+      const elementMini = await this.recupererElementMini(
+        transfoDetails.target.type.bubble_id
+      );
+      if (elementMini) {
+        targetType = this.getTitreAffiche(
+          transfoDetails.target.type.fr_fr || '-',
+          elementMini
         );
-        if (elementMini) {
-          targetFormat = this.getTitreAffiche(firstKey, elementMini);
-        } else {
-          targetFormat = firstKey || '-';
-        }
+      } else {
+        targetType = transfoDetails.target.type.fr_fr || '-';
       }
     }
 
-    // Extraire le format coproduit
-    let coproductFormat = '-';
-    if (transfoDetails.coproduct) {
-      const firstKey = Object.keys(transfoDetails.coproduct)[0];
-      const coproductItem = firstKey
-        ? transfoDetails.coproduct[firstKey]
-        : null;
-      if (coproductItem?.bubble_id) {
-        const elementMini = await this.recupererElementMini(
-          coproductItem.bubble_id
+    // Extraire le type coproduit
+    let coproductType = '-';
+    if (transfoDetails.coproduct?.type?.bubble_id) {
+      const elementMini = await this.recupererElementMini(
+        transfoDetails.coproduct.type.bubble_id
+      );
+      if (elementMini) {
+        coproductType = this.getTitreAffiche(
+          transfoDetails.coproduct.type.fr_fr || '-',
+          elementMini
         );
-        if (elementMini) {
-          coproductFormat = this.getTitreAffiche(firstKey, elementMini);
-        } else {
-          coproductFormat = firstKey || '-';
-        }
+      } else {
+        coproductType = transfoDetails.coproduct.type.fr_fr || '-';
       }
     }
 
-    // Extraire le format perte
-    let lossFormat = '-';
-    if (transfoDetails.loss) {
-      const firstKey = Object.keys(transfoDetails.loss)[0];
-      const lossItem = firstKey ? transfoDetails.loss[firstKey] : null;
-      if (lossItem?.bubble_id) {
-        const elementMini = await this.recupererElementMini(lossItem.bubble_id);
-        if (elementMini) {
-          lossFormat = this.getTitreAffiche(firstKey, elementMini);
-        } else {
-          lossFormat = firstKey || '-';
-        }
+    // Extraire le type perte
+    let lossType = '-';
+    if (transfoDetails.loss?.type?.bubble_id) {
+      const elementMini = await this.recupererElementMini(
+        transfoDetails.loss.type.bubble_id
+      );
+      if (elementMini) {
+        lossType = this.getTitreAffiche(
+          transfoDetails.loss.type.fr_fr || '-',
+          elementMini
+        );
+      } else {
+        lossType = transfoDetails.loss.type.fr_fr || '-';
       }
     }
 
     return {
       generalInfo,
       filterTypes: filterTypes.join(', ') || '-',
-      targetFormat,
-      coproductFormat,
-      lossFormat,
+      targetType,
+      coproductType,
+      lossType,
     };
   }
 
@@ -1908,9 +1905,9 @@ class TransformationPopup {
     // Vérifier si on a des données
     const generalInfo = data.generalInfo || null;
     const filterTypes = data.filterTypes || '-';
-    const targetFormat = data.targetFormat || '-';
-    const coproductFormat = data.coproductFormat || '-';
-    const lossFormat = data.lossFormat || '-';
+    const targetType = data.targetType || '-';
+    const coproductType = data.coproductType || '-';
+    const lossType = data.lossType || '-';
 
     if (!generalInfo) {
       console.log('Aucune donnée à afficher dans le tableau');
@@ -1939,9 +1936,9 @@ class TransformationPopup {
               ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${generalInfo.lossPercent}%</span></div>` : ''}
               ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
               <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('filters')}</span><span class="text-gray-900">${filterTypes}</span></div>
-              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('target')}</span><span class="text-gray-900">${targetFormat}</span></div>
-              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('coproduct')}</span><span class="text-gray-900">${coproductFormat}</span></div>
-              ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${lossFormat}</span></div>` : ''}
+              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('target')}</span><span class="text-gray-900">${targetType}</span></div>
+              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('coproduct')}</span><span class="text-gray-900">${coproductType}</span></div>
+              ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${lossType}</span></div>` : ''}
             </div>
           </div>
         </div>
