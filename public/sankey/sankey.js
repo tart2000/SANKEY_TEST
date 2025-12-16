@@ -3142,12 +3142,68 @@ function updateSankey(dimension) {
               console.log('📋 Tooltip - transfo.scenario:', transfo.scenario);
             }
 
-            if (transfo._displayNames && transfo._displayNames.length > 0) {
-              // Utiliser les noms d'affichage français
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo._displayNames.join(', ')}</span></td></tr>`;
+            // Gérer les clés de sélection pour les transformations dynamiques
+            if (type === 'dynamic_transfo') {
+              // Pour les transformations dynamiques, les clés sont dans transfo.select
+              let selectKeys = [];
+
+              // Vérifier si transfo.select existe directement
+              if (transfo.select && typeof transfo.select === 'object') {
+                selectKeys = Object.keys(transfo.select);
+              } else if (transfo.dynamic_transfo_id) {
+                // Sinon, récupérer depuis les détails de la transformation
+                const transfoDetails =
+                  window.transformationUtils?.getDynamicTransfoDetailsSync(
+                    transfo.dynamic_transfo_id
+                  );
+                if (
+                  transfoDetails?.select &&
+                  typeof transfoDetails.select === 'object'
+                ) {
+                  selectKeys = Object.keys(transfoDetails.select);
+                }
+              }
+
+              if (selectKeys.length > 0) {
+                // Fonction pour tronquer une clé si elle est trop longue (limite élevée pour afficher le maximum)
+                const truncateKey = (key, maxLength = 250) => {
+                  if (key.length <= maxLength) return key;
+                  return key.substring(0, maxLength - 3) + '...';
+                };
+
+                // Afficher chaque clé sur une ligne séparée
+                selectKeys.forEach((key, index) => {
+                  const truncatedKey = truncateKey(key);
+                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+                });
+              }
+            } else if (
+              transfo._displayNames &&
+              transfo._displayNames.length > 0
+            ) {
+              // Utiliser les noms d'affichage français pour les transformations normales
+              // Afficher chaque clé sur une ligne séparée
+              const truncateKey = (key, maxLength = 250) => {
+                if (key.length <= maxLength) return key;
+                return key.substring(0, maxLength - 3) + '...';
+              };
+
+              transfo._displayNames.forEach((key, index) => {
+                const truncatedKey = truncateKey(key);
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+              });
             } else if (transfo.keys && transfo.keys.length > 0) {
               // Fallback sur les keys si pas de displayNames
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo.keys.join(', ')}</span></td></tr>`;
+              // Afficher chaque clé sur une ligne séparée
+              const truncateKey = (key, maxLength = 250) => {
+                if (key.length <= maxLength) return key;
+                return key.substring(0, maxLength - 3) + '...';
+              };
+
+              transfo.keys.forEach((key, index) => {
+                const truncatedKey = truncateKey(key);
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+              });
             }
             if (transfo.scenario && transfo.scenario.target) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
@@ -4638,6 +4694,11 @@ function applyScenario(
               transfoDetails
             );
             transfo.step = 'sorting';
+          }
+
+          // Stocker select dans la transformation pour l'affichage dans le tooltip
+          if (transfoDetails.select) {
+            transfo.select = transfoDetails.select;
           }
 
           // Précharger les couleurs pour cette transformation dynamique
