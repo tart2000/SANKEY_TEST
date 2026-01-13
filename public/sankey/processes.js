@@ -760,7 +760,7 @@ const transformationTypes = {
     step: 'sorting',
   },
   selectByPerturbateur: {
-    label: 'Tri par nievau de perturbation',
+    label: 'Tri par niveau de perturbation',
     en_gb: 'Sort by level of disruption',
     description: 'Sélectionne les articles selon la présence de perturbateurs',
     description_en_gb: 'Select items according to the presence of disruptors',
@@ -787,8 +787,6 @@ const translationTypes = {
     en_gb: 'Bleaching',
     description: 'Transforme le lot en blanc',
     description_en_gb: 'Transform the lot into white',
-    description_en_gb:
-      'Overwrites all color values into a single normalized value',
     dimension: 'couleurs',
     output_id_test: '1751446409161x466100660519829500',
     output_id_live: '1751446409161x466100660519829500',
