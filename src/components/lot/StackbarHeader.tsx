@@ -127,16 +127,24 @@ export function StackbarHeader({
     if (!showFrequencyDropdown) return;
 
     const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
         frequencyDropdownRef.current &&
-        !frequencyDropdownRef.current.contains(e.target as Node)
+        !frequencyDropdownRef.current.contains(target)
       ) {
         setShowFrequencyDropdown(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    // Délai pour laisser le dropdown se rendre
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside, true);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside, true);
+    };
   }, [showFrequencyDropdown]);
 
   // Fermer le dropdown view mode si on clique ailleurs
@@ -469,8 +477,8 @@ export function StackbarHeader({
                 }`}
                 aria-label="Actualiser"
                 onClick={e => {
+                  e.stopPropagation();
                   if (isEditable) {
-                    e.stopPropagation();
                     setShowFrequencyDropdown(!showFrequencyDropdown);
                   }
                 }}
@@ -480,12 +488,17 @@ export function StackbarHeader({
 
               {showFrequencyDropdown && (
                 <div
-                  className="absolute bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] max-w-[160px]"
+                  className="fixed bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] max-w-[160px]"
                   style={{
-                    top: 'calc(100% + 5px)',
-                    right: '0',
+                    top: frequencyDropdownRef.current
+                      ? `${frequencyDropdownRef.current.getBoundingClientRect().bottom + window.scrollY + 5}px`
+                      : '0px',
+                    left: frequencyDropdownRef.current
+                      ? `${frequencyDropdownRef.current.getBoundingClientRect().right - 140}px`
+                      : '0px',
                     zIndex: 9999,
                   }}
+                  onClick={e => e.stopPropagation()}
                 >
                   <div role="menu" aria-orientation="vertical" className="py-1">
                     {Object.values(FREQUENCY_OPTIONS).map(option => {
@@ -493,7 +506,7 @@ export function StackbarHeader({
                       return (
                         <button
                           key={option.value}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center ${
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center cursor-pointer ${
                             isSelected
                               ? 'text-blue-600 font-semibold'
                               : 'text-gray-700'
