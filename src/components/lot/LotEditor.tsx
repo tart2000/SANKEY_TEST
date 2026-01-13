@@ -64,13 +64,8 @@ export function LotEditor({
 }: LotEditorProps) {
   const { lot, isModified, updateLot, setLot, markAsSaved } =
     useLot(initialLot);
-  const {
-    cheminSelection,
-    navigateTo,
-    navigateUp,
-    navigateSibling,
-    setChemin,
-  } = useNavigation(lot);
+  const { cheminSelection, navigateUp, navigateSibling, setChemin } =
+    useNavigation(lot);
   const {
     dimensionsLabels,
     loadDimensionsLabels,
@@ -131,15 +126,23 @@ export function LotEditor({
     });
   }, [dimensionsLabels]);
 
-  // Initialiser le chemin si vide
+  // Initialiser le chemin avec formats et types par défaut
   useEffect(() => {
     if (lot && cheminSelection.length === 0) {
-      const dims = getDimensionsFromNode(lot);
-      if (dims.length > 0) {
-        navigateTo(dims[0], null);
+      const lotObj = lot as Record<string, unknown>;
+      const formats = lotObj.formats;
+      if (formats && typeof formats === 'object' && !Array.isArray(formats)) {
+        const formatsObj = formats as Record<string, unknown>;
+        const firstFormatKey = Object.keys(formatsObj).find(k => k !== 'title');
+        if (firstFormatKey) {
+          setChemin([
+            { dimension: 'formats', valeur: firstFormatKey },
+            { dimension: 'types', valeur: null },
+          ]);
+        }
       }
     }
-  }, [lot, cheminSelection.length, navigateTo]);
+  }, [lot, cheminSelection.length, setChemin]);
 
   // Notifier les changements de lot seulement si c'est une modification utilisateur
   useEffect(() => {
@@ -541,7 +544,7 @@ export function LotEditor({
       // Base: 20px (padding container)
       // Chaque niveau: 120px (header + stackbar)
       // Gap entre niveaux: 20px
-      // Bouton Save: 60px (avec padding pr-5 pb-5)
+      // Bouton Save: 60px (avec padding pr-4 pb-4)
       const nombreNiveaux = headerInfos.length;
       const baseHeight = 20; // Padding container
       const hauteurParNiveau = 120; // Header + stackbar
@@ -874,7 +877,6 @@ export function LotEditor({
                 dimensionsLabels={dimensionsLabels}
                 lang={lang}
                 isEditable={isEditable}
-                frequency={lot.frequency}
                 viewMode={viewMode}
                 showViewToggle={true}
                 aggregatedDimension={aggregatedDimension}
@@ -884,10 +886,7 @@ export function LotEditor({
                 onAggregatedDimensionChange={setAggregatedDimension}
                 onDelete={() => {}}
                 onClose={() => {}}
-                onFrequencyChange={frequency => {
-                  userActionRef.current = true;
-                  updateLot(lot => ({ ...lot, frequency }));
-                }}
+                onFrequencyChange={() => {}}
                 onViewModeChange={setViewMode}
                 onUpdateLot={updater => {
                   userActionRef.current = true;
@@ -931,7 +930,6 @@ export function LotEditor({
                   dimensionsLabels={dimensionsLabels}
                   lang={lang}
                   isEditable={isEditable}
-                  frequency={lot.frequency}
                   viewMode={viewMode}
                   showViewToggle={info.niveau === 0}
                   onNavigateSibling={navigateSibling}
@@ -940,10 +938,7 @@ export function LotEditor({
                   }
                   onDelete={() => handleDelete(info.niveau)}
                   onClose={() => navigateUp(info.niveau)}
-                  onFrequencyChange={frequency => {
-                    userActionRef.current = true; // Marquer comme action utilisateur
-                    updateLot(lot => ({ ...lot, frequency }));
-                  }}
+                  onFrequencyChange={() => {}}
                   onViewModeChange={setViewMode}
                   onUpdateLot={updater => {
                     userActionRef.current = true; // Marquer comme action utilisateur

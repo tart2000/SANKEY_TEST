@@ -73,7 +73,7 @@ export function SaveButton({
   const isDisabled = !isModified || loading || saveState === 'saving';
 
   return (
-    <div className="flex justify-end pr-5 pb-5" id="save-btn-container">
+    <div className="flex justify-end pb-4" id="save-btn-container">
       <button
         id="save-lot-btn"
         disabled={isDisabled}
