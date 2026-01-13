@@ -276,9 +276,13 @@ export function StackbarHeader({
   return (
     <div className="font-bold mb-4 flex items-center justify-between">
       <div className="flex items-center justify-between w-full">
-        {/* Groupe gauche : Container vide pour niveau 0, Navigation + titre + % + kg pour niveau > 0 */}
+        {/* Groupe gauche : Poids (non éditable) pour niveau 0, Navigation + titre + % + kg pour niveau > 0 */}
         {niveau === 0 ? (
-          <div className="w-[10px]"></div>
+          <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-stretch h-10 overflow-hidden">
+            <span className="px-3 h-full text-sm flex items-center">
+              {kg ? `${kg.toFixed(1)} kg` : ''}
+            </span>
+          </div>
         ) : (
           <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-stretch h-10 overflow-hidden">
             {hasSiblings && (
