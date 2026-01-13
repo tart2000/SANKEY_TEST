@@ -479,6 +479,82 @@ function separateByBubbleId(
 ) {
   const { threshold = null, condition = null } = options;
 
+  // CAS SPÉCIAL : Sélection par fibre (sélectionne la matière entière)
+  if (dimensionName === 'fibres') {
+    const dist = obj[dimensionName] || {};
+
+    // Si la dimension n'existe pas ou est vide, tout va au reste
+    if (Object.keys(dist).length === 0) {
+      return {
+        selected: null,
+        rest: obj,
+        selectedMass: 0,
+        restMass: parentMass,
+      };
+    }
+
+    // Vérifier si la matière contient au moins une des fibres sélectionnées
+    let shouldSelectMatiere = false;
+
+    // Parcourir toutes les fibres de la matière
+    for (const [key, value] of Object.entries(dist)) {
+      const pct =
+        typeof value === 'object' && value !== null
+          ? value.pourcentage !== undefined
+            ? value.pourcentage
+            : 0
+          : value || 0;
+
+      // Vérification bubble_id
+      const matchesBubbleId =
+        value && value.bubble_id && selectedBubbleIds.includes(value.bubble_id);
+
+      if (matchesBubbleId) {
+        // Vérification threshold (seulement si une seule fibre sélectionnée)
+        let matchesThreshold = true;
+        if (
+          threshold !== null &&
+          threshold !== undefined &&
+          condition &&
+          selectedBubbleIds.length === 1
+        ) {
+          if (condition === 'over') {
+            matchesThreshold = pct >= threshold;
+          } else if (condition === 'under') {
+            matchesThreshold = pct <= threshold;
+          }
+        }
+
+        // Si la fibre respecte les critères, sélectionner toute la matière
+        if (matchesThreshold) {
+          shouldSelectMatiere = true;
+          break; // Une seule fibre valide suffit pour sélectionner la matière
+        }
+      }
+    }
+
+    // Sélectionner toute la matière (avec toutes ses fibres) ou la mettre dans le reste
+    if (shouldSelectMatiere) {
+      // Sélectionner toute la matière avec toutes ses fibres intactes
+      const selectedObj = JSON.parse(JSON.stringify(obj));
+      return {
+        selected: selectedObj,
+        rest: null,
+        selectedMass: parentMass,
+        restMass: 0,
+      };
+    } else {
+      // Mettre toute la matière dans le reste
+      return {
+        selected: null,
+        rest: obj,
+        selectedMass: 0,
+        restMass: parentMass,
+      };
+    }
+  }
+
+  // COMPORTEMENT NORMAL : Séparation standard pour les autres dimensions
   const dist = obj[dimensionName] || {};
   let selected = {};
   let rest = {};

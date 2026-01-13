@@ -107,6 +107,7 @@ window.i18nConfig = {
         techsUpdated: 'Techs mises à jour',
         techsUpToDate: 'Toutes les techs sont à jour',
         errorUpdatingTechs: 'Erreur lors de la mise à jour des techs',
+        addThreshold: 'Ajouter un seuil',
       },
     },
     en_gb: {
@@ -213,6 +214,7 @@ window.i18nConfig = {
         techsUpdated: 'Techs updated',
         techsUpToDate: 'All techs are up to date',
         errorUpdatingTechs: 'Error updating techs',
+        addThreshold: 'Add threshold',
       },
     },
     es_es: {
@@ -321,6 +323,7 @@ window.i18nConfig = {
         techsUpdated: 'Tecnologías actualizadas',
         techsUpToDate: 'Todas las tecnologías están actualizadas',
         errorUpdatingTechs: 'Error al actualizar las tecnologías',
+        addThreshold: 'Añadir umbral',
       },
     },
     de_de: {
@@ -430,6 +433,7 @@ window.i18nConfig = {
         techsUpdated: 'Technologien aktualisiert',
         techsUpToDate: 'Alle Technologien sind auf dem neuesten Stand',
         errorUpdatingTechs: 'Fehler beim Aktualisieren der Technologien',
+        addThreshold: 'Schwelle hinzufügen',
       },
     },
   },
