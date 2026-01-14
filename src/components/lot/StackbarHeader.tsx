@@ -80,9 +80,7 @@ export function StackbarHeader({
 }: StackbarHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(nom);
-  const [showViewModeDropdown, setShowViewModeDropdown] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const viewModeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Mettre à jour les valeurs quand les props changent
   useEffect(() => {
@@ -96,23 +94,6 @@ export function StackbarHeader({
       nameInputRef.current.select();
     }
   }, [isEditingName]);
-
-  // Fermer le dropdown view mode si on clique ailleurs
-  useEffect(() => {
-    if (!showViewModeDropdown) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        viewModeDropdownRef.current &&
-        !viewModeDropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowViewModeDropdown(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showViewModeDropdown]);
 
   const handleSaveName = () => {
     if (!isEditable) return;
@@ -406,72 +387,35 @@ export function StackbarHeader({
         <div
           className={`flex items-center ${viewMode === 'aggregated' && (!isEditable || availableDimensions.length === 0) ? '' : 'gap-2'}`}
         >
-          {/* Bouton vue (œil) - visible si showViewToggle */}
+          {/* Button group vue - visible si showViewToggle */}
           {showViewToggle && onViewModeChange && t && (
-            <div className="relative" ref={viewModeDropdownRef}>
+            <div className="inline-flex rounded-lg border border-blue-200 bg-white shadow items-center h-10 overflow-hidden">
               <button
                 type="button"
-                className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10 px-3 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 cursor-pointer"
-                aria-label="Changer de vue"
-                onClick={e => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const newValue = !showViewModeDropdown;
-                  setShowViewModeDropdown(newValue);
-                }}
+                className={`h-10 px-4 text-base font-semibold focus:outline-none cursor-pointer flex items-center gap-2 ${
+                  viewMode === 'detailed'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
+                }`}
+                style={{ borderRadius: 0 }}
+                onClick={() => onViewModeChange('detailed')}
               >
-                <i className="ph ph-eye w-4 h-4"></i>
+                <i className="ph ph-list-magnifying-glass w-4 h-4"></i>
+                <span>{t('viewDetailed')}</span>
               </button>
-
-              {showViewModeDropdown && (
-                <div
-                  className="absolute bg-white border border-gray-200 rounded-lg shadow-lg min-w-[160px] max-w-[180px]"
-                  style={{
-                    top: 'calc(100% + 5px)',
-                    right: '0',
-                    zIndex: 9999,
-                  }}
-                >
-                  <div role="menu" aria-orientation="vertical" className="py-1">
-                    <button
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center cursor-pointer ${
-                        viewMode === 'detailed'
-                          ? 'text-blue-600 font-semibold'
-                          : 'text-gray-700'
-                      }`}
-                      role="menuitem"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onViewModeChange('detailed');
-                        setShowViewModeDropdown(false);
-                      }}
-                    >
-                      {t('viewDetailed')}
-                      {viewMode === 'detailed' && (
-                        <i className="ph ph-check ml-auto w-4 h-4 text-blue-600"></i>
-                      )}
-                    </button>
-                    <button
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center cursor-pointer ${
-                        viewMode === 'aggregated'
-                          ? 'text-blue-600 font-semibold'
-                          : 'text-gray-700'
-                      }`}
-                      role="menuitem"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onViewModeChange('aggregated');
-                        setShowViewModeDropdown(false);
-                      }}
-                    >
-                      {t('viewAggregated')}
-                      {viewMode === 'aggregated' && (
-                        <i className="ph ph-check ml-auto w-4 h-4 text-blue-600"></i>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                className={`h-10 px-4 text-base font-semibold focus:outline-none cursor-pointer flex items-center gap-2 border-l border-gray-200 ${
+                  viewMode === 'aggregated'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
+                }`}
+                style={{ borderRadius: 0 }}
+                onClick={() => onViewModeChange('aggregated')}
+              >
+                <i className="ph ph-chart-bar-horizontal w-4 h-4"></i>
+                <span>{t('viewAggregated')}</span>
+              </button>
             </div>
           )}
 
