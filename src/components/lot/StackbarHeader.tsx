@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react';
 import type {
   Lot,
   Dimension,
@@ -7,7 +6,6 @@ import type {
   DimensionLabels,
 } from '@/types/lot';
 import { getDimensionLabel } from '@/services/lot/dimensionUtils';
-import { deepCopy } from '@/services/lot/lotUtils';
 import {
   Select,
   SelectContent,
@@ -49,7 +47,8 @@ interface StackbarHeaderProps {
 export function StackbarHeader({
   niveau,
   nom,
-  nomCle,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  nomCle: _nomCle,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   itemObj: _itemObj,
   pct,
@@ -74,129 +73,12 @@ export function StackbarHeader({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onFrequencyChange: _onFrequencyChange,
   onViewModeChange,
-  onUpdateLot,
-  onLotChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onUpdateLot: _onUpdateLot,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onLotChange: _onLotChange,
   t,
 }: StackbarHeaderProps) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(nom);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // Mettre à jour les valeurs quand les props changent
-  useEffect(() => {
-    setEditedName(nom);
-  }, [nom]);
-
-  // Focus sur l'input quand on entre en mode édition
-  useEffect(() => {
-    if (isEditingName && nameInputRef.current) {
-      nameInputRef.current.focus();
-      nameInputRef.current.select();
-    }
-  }, [isEditingName]);
-
-  const handleSaveName = () => {
-    if (!isEditable) return;
-
-    const newName = editedName.trim();
-    if (newName && newName !== nom) {
-      // Renommage d'un segment à un niveau > 0
-      onUpdateLot(lot => {
-        const newLot = deepCopy(lot);
-        let nodeParent: Lot | Dimension = newLot;
-
-        // Naviguer jusqu'au parent
-        for (let i = 0; i < niveau - 1; i++) {
-          const { dimension, valeur } = cheminSelection[i];
-          if (!valeur || !nodeParent || typeof nodeParent !== 'object') {
-            return newLot;
-          }
-          const nodeObj = nodeParent as Record<string, unknown>;
-          if (!(dimension in nodeObj)) {
-            return newLot;
-          }
-          const dimValue = nodeObj[dimension];
-          if (
-            typeof dimValue !== 'object' ||
-            dimValue === null ||
-            Array.isArray(dimValue)
-          ) {
-            return newLot;
-          }
-          const dimObj = dimValue as Record<string, unknown>;
-          if (!(valeur in dimObj)) {
-            return newLot;
-          }
-          nodeParent = dimObj[valeur] as Lot | Dimension;
-        }
-
-        const dim = cheminSelection[niveau - 1]?.dimension;
-        const val = cheminSelection[niveau - 1]?.valeur;
-
-        // Si on est en en_gb et que l'objet a une traduction, on modifie seulement en_gb
-        if (
-          lang === 'en_gb' &&
-          nodeParent &&
-          dim &&
-          typeof nodeParent === 'object' &&
-          dim in nodeParent
-        ) {
-          const dimValue = (nodeParent as Record<string, unknown>)[dim];
-          if (
-            typeof dimValue === 'object' &&
-            dimValue !== null &&
-            !Array.isArray(dimValue) &&
-            nomCle in dimValue
-          ) {
-            const dimObj = dimValue as Record<string, unknown>;
-            const item = dimObj[nomCle];
-            if (typeof item === 'object' && item !== null && 'en_gb' in item) {
-              (item as { en_gb?: string }).en_gb = newName;
-            }
-          }
-        } else {
-          // Sinon, on renomme la clé
-          if (
-            nodeParent &&
-            dim &&
-            val &&
-            typeof nodeParent === 'object' &&
-            dim in nodeParent
-          ) {
-            const dimValue = (nodeParent as Record<string, unknown>)[dim];
-            if (
-              typeof dimValue === 'object' &&
-              dimValue !== null &&
-              !Array.isArray(dimValue)
-            ) {
-              const dimObj = dimValue as Record<string, unknown>;
-              if (nomCle in dimObj && !(newName in dimObj)) {
-                const entries = Object.entries(dimObj);
-                const idx = entries.findIndex(([k]) => k === nomCle);
-                if (idx !== -1) {
-                  const newEntries = [
-                    ...entries.slice(0, idx),
-                    [newName, dimObj[nomCle]],
-                    ...entries.slice(idx + 1),
-                  ];
-                  const newObj: Record<string, unknown> = {};
-                  newEntries.forEach(([k, v]) => {
-                    newObj[k as string] = v;
-                  });
-                  (nodeParent as Record<string, unknown>)[dim] = newObj;
-                }
-              }
-            }
-          }
-        }
-
-        onLotChange(newLot);
-        return newLot;
-      });
-    }
-    setIsEditingName(false);
-  };
-
   const currentDimension = cheminSelection[niveau]?.dimension;
 
   // Calculer le nombre de siblings pour masquer les flèches si un seul élément
@@ -285,45 +167,11 @@ export function StackbarHeader({
               </>
             )}
 
-            {isEditingName ? (
-              <input
-                ref={nameInputRef}
-                type="text"
-                value={editedName}
-                onChange={e => setEditedName(e.target.value)}
-                onBlur={handleSaveName}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleSaveName();
-                  } else if (e.key === 'Escape') {
-                    setEditedName(nom);
-                    setIsEditingName(false);
-                  }
-                }}
-                className={`${niveau > 0 && hasSiblings ? 'border-l border-gray-300' : ''} px-4 h-full font-bold text-base flex items-center outline-none`}
-                style={{
-                  width: '8rem',
-                  background: 'white',
-                  textAlign: 'left',
-                }}
-              />
-            ) : (
-              <span
-                className={`${niveau > 0 && hasSiblings ? 'border-l border-gray-300' : ''} px-4 h-full font-bold text-base flex items-center cursor-pointer`}
-                onClick={() => {
-                  if (isEditable) setIsEditingName(true);
-                }}
-                tabIndex={0}
-                onKeyDown={e => {
-                  if ((e.key === 'Enter' || e.key === ' ') && isEditable) {
-                    e.preventDefault();
-                    setIsEditingName(true);
-                  }
-                }}
-              >
-                {nom}
-              </span>
-            )}
+            <span
+              className={`${niveau > 0 && hasSiblings ? 'border-l border-gray-300' : ''} px-4 h-full font-bold text-base flex items-center`}
+            >
+              {nom}
+            </span>
 
             <span className="border-l border-gray-300 px-3 h-full text-sm flex items-center">
               {pct.toFixed(1)}%
