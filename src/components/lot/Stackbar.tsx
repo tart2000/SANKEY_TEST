@@ -105,6 +105,11 @@ export function Stackbar({
       return null;
     }
 
+    // Ne pas afficher la barre vide si on n'est pas en mode éditable
+    if (!isEditable) {
+      return null;
+    }
+
     // Afficher la stackbar vide grisée
     const showAddButton = isEditable && hasAvailableDimensions;
     const emptyText = t ? t('emptyDimension', {}) : 'Dimension vide';

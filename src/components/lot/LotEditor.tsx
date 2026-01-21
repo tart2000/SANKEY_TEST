@@ -16,6 +16,7 @@ import {
   getNodeAtPath,
   getDimensionLabel,
   getAvailableDimensionsFromHierarchy,
+  isDimensionEmpty,
 } from '@/services/lot/dimensionUtils';
 import {
   getPercent,
@@ -980,6 +981,32 @@ export function LotEditor({
                 : getDimensionsFromNode(lot);
             }
 
+            // Filtrer les dimensions vides si on n'est pas en mode éditable
+            let filteredDimsForLevel = dimsForLevel;
+            if (!isEditable) {
+              // Récupérer le node parent pour vérifier si les dimensions sont vides
+              const nodeParent = info.nodeParent || lot;
+              if (nodeParent && typeof nodeParent === 'object') {
+                filteredDimsForLevel = dimsForLevel.filter(dim => {
+                  const nodeObj = nodeParent as Record<string, unknown>;
+                  // Si la dimension n'existe pas dans le node, elle est considérée comme vide
+                  if (!(dim in nodeObj)) {
+                    return false; // Masquer les dimensions qui n'existent pas
+                  }
+                  const dimValue = nodeObj[dim];
+                  // Si la dimension existe, vérifier si elle est vide
+                  if (
+                    typeof dimValue === 'object' &&
+                    dimValue !== null &&
+                    !Array.isArray(dimValue)
+                  ) {
+                    return !isDimensionEmpty(dimValue as Dimension);
+                  }
+                  return false;
+                });
+              }
+            }
+
             return (
               <div key={idx}>
                 <StackbarHeader
@@ -991,7 +1018,7 @@ export function LotEditor({
                   kg={info.kg}
                   lot={lot}
                   cheminSelection={cheminSelection}
-                  availableDimensions={dimsForLevel}
+                  availableDimensions={filteredDimsForLevel}
                   dimensionsLabels={dimensionsLabels}
                   lang={lang}
                   isEditable={isEditable}
@@ -1033,7 +1060,8 @@ export function LotEditor({
                     // Si la dimension n'existe pas mais est dans dimsForLevel, créer un objet vide
                     if (!(info.dimension in nodeObj)) {
                       // Si la dimension est dans dimsForLevel, on peut l'afficher vide
-                      if (dimsForLevel.includes(info.dimension)) {
+                      // MAIS seulement si isEditable = true
+                      if (dimsForLevel.includes(info.dimension) && isEditable) {
                         // Créer la dimension comme objet vide (sera initialisée lors de l'ajout)
                         const emptyDimension: Dimension = {};
                         return (
@@ -1091,6 +1119,10 @@ export function LotEditor({
                     if (keys.length === 0) {
                       // Si aucune dimension disponible, on est à une feuille, ne pas afficher
                       if (dimsForLevel.length === 0) {
+                        return null;
+                      }
+                      // Si on n'est pas en mode éditable, ne pas afficher la barre vide
+                      if (!isEditable) {
                         return null;
                       }
                       // Sinon, afficher la stackbar vide (elle gérera l'affichage grisé)
