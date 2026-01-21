@@ -3,6 +3,7 @@ import type { Lot, CheminSelection, Dimension } from '@/types/lot';
 import {
   getNodeAtPath,
   getDimensionsFromNode,
+  getAvailableDimensionsFromHierarchy,
 } from '@/services/lot/dimensionUtils';
 
 export function useNavigation(lot: Lot | null) {
@@ -189,7 +190,17 @@ export function useNavigation(lot: Lot | null) {
 
         // Ajouter automatiquement le niveau suivant s'il y a des dimensions disponibles
         if (node && typeof node === 'object' && !Array.isArray(node)) {
-          const dimensions = getDimensionsFromNode(node);
+          // 1. Essayer de récupérer les dimensions réellement présentes dans le nœud
+          let dimensions = getDimensionsFromNode(node);
+
+          // 2. Si aucune dimension présente, utiliser la hiérarchie pour savoir
+          //    quelles dimensions PEUVENT exister sous la dimension courante
+          if (dimensions.length === 0) {
+            const parentDimension =
+              newChemin[newChemin.length - 1]?.dimension || null;
+            dimensions = getAvailableDimensionsFromHierarchy(parentDimension);
+          }
+
           if (dimensions.length > 0) {
             // Ajouter automatiquement la première dimension disponible
             newChemin.push({
