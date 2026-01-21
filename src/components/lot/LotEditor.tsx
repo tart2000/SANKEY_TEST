@@ -541,7 +541,7 @@ export function LotEditor({
         hauteurHeaderTableau +
         nombreLignes * hauteurLigneTableau +
         marginBottom +
-        hauteurSaveButton;
+        (isEditable ? hauteurSaveButton : 0);
 
       // Hauteur minimale pour la vue agrégée
       if (height < 300) {
@@ -563,7 +563,7 @@ export function LotEditor({
       if (nombreNiveaux > 0) {
         height += nombreNiveaux * hauteurParNiveau;
         height += (nombreNiveaux - 1) * gapEntreNiveaux;
-        height += hauteurSaveButton;
+        height += isEditable ? hauteurSaveButton : 0;
       } else {
         height = 400; // Hauteur minimale si pas de contenu
       }
