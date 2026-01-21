@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import type {
   Lot,
   CheminSelection,
@@ -15,6 +15,7 @@ import {
   getTitreAffiche,
   getNodeAtPath,
   getDimensionLabel,
+  getAvailableDimensionsFromHierarchy,
 } from '@/services/lot/dimensionUtils';
 import {
   getPercent,
@@ -84,6 +85,12 @@ export function LotEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const userActionRef = useRef(false);
   const prevLotJsonRef = useRef<string>('');
+
+  // Mémoriser la fonction loadBaseData pour éviter les re-renders de la modal
+  const loadBaseDataForModal = useCallback(
+    (dimension: string) => loadBaseData(dimension, isLive),
+    [loadBaseData, isLive]
+  );
 
   // Calculer toutes les dimensions depuis dimensionsLabels (toutes les dimensions disponibles)
   const allDimensions = useMemo(() => {
@@ -592,6 +599,22 @@ export function LotEditor({
         ? Object.keys(donneesBase)[0]
         : bubbleId;
 
+    // Créer une copie profonde du lot pour pouvoir modifier
+    const workingLot = JSON.parse(JSON.stringify(lot)) as Lot;
+
+    // Vérifier si la dimension existe, sinon la créer
+    const nodeForDimension = getNodeAtPath(
+      workingLot,
+      cheminSelection.slice(0, modalNiveau)
+    );
+    if (nodeForDimension && typeof nodeForDimension === 'object') {
+      const nodeObj = nodeForDimension as Record<string, unknown>;
+      if (!(modalDimension in nodeObj)) {
+        // Créer la dimension comme objet vide
+        nodeObj[modalDimension] = {};
+      }
+    }
+
     let newLot: Lot;
 
     // Si on ajoute en kg, il faut :
@@ -601,14 +624,14 @@ export function LotEditor({
     if (poidsKg !== undefined && poidsKg > 0) {
       // Calculer le poids du niveau avant ajout
       const poidsNiveauAvant = calculerPoidsNiveau(
-        lot,
+        workingLot,
         cheminSelection,
         modalNiveau
       );
 
       // Ajouter le poids au total du lot
-      const nouveauTotal = (lot.total || 0) + poidsKg;
-      const lotAvecNouveauTotal = { ...lot, total: nouveauTotal };
+      const nouveauTotal = (workingLot.total || 0) + poidsKg;
+      const lotAvecNouveauTotal = { ...workingLot, total: nouveauTotal };
 
       // Calculer le nouveau poids du niveau
       const nouveauPoidsNiveau = poidsNiveauAvant + poidsKg;
@@ -630,7 +653,7 @@ export function LotEditor({
     } else {
       // Comportement normal en pourcentage
       newLot = ajouterElementEtRepartir(
-        lot,
+        workingLot,
         cheminSelection,
         modalNiveau,
         modalDimension,
@@ -790,6 +813,20 @@ export function LotEditor({
           if (!hasChildDim) {
             newChemin.push({ dimension: dimsEnfant[0], valeur: null });
           }
+        } else {
+          // Si aucune dimension trouvée dans le node, utiliser la hiérarchie
+          // pour obtenir les dimensions possibles et charger la première
+          const availableDims =
+            getAvailableDimensionsFromHierarchy(dimensionKey);
+          if (availableDims.length > 0) {
+            // Vérifier si la dimension enfant n'est pas déjà dans le chemin
+            const hasChildDim = newChemin.some(
+              item => item.dimension === availableDims[0]
+            );
+            if (!hasChildDim) {
+              newChemin.push({ dimension: availableDims[0], valeur: null });
+            }
+          }
         }
       }
     }
@@ -910,10 +947,38 @@ export function LotEditor({
         : // Vue détaillée : comportement normal
           headerInfos.map((info, idx) => {
             // Calculer les dimensions disponibles pour ce niveau
-            // Toujours utiliser le nodeParent calculé dans headerInfos (comme dans le code original)
-            const dimsForLevel = info.nodeParent
-              ? getDimensionsFromNode(info.nodeParent)
-              : getDimensionsFromNode(lot);
+            // TOUJOURS utiliser la hiérarchie pour obtenir les dimensions possibles
+            // La hiérarchie est la source de vérité pour savoir quelles dimensions peuvent exister
+
+            // Pour obtenir les dimensions disponibles à un niveau, on doit utiliser le PARENT
+            // de la dimension courante, pas la dimension courante elle-même
+            // - Au niveau 0 : parent = null → dimensions de niveau 1 (formats, proprete, qualite, etc.)
+            // - Au niveau 1 : parent = dimension du niveau 0 → dimensions enfants
+            // - Au niveau 2 : parent = dimension du niveau 1 → dimensions enfants
+
+            let parentDimension: string | null = null;
+
+            if (info.niveau === 0) {
+              // Au niveau racine, le parent est null
+              parentDimension = null;
+            } else {
+              // Pour les autres niveaux, le parent est la dimension du niveau précédent
+              const parentNiveau = info.niveau - 1;
+              parentDimension =
+                cheminSelection[parentNiveau]?.dimension || null;
+            }
+
+            // Obtenir les dimensions depuis la hiérarchie (source de vérité)
+            let dimsForLevel =
+              getAvailableDimensionsFromHierarchy(parentDimension);
+
+            // Si aucune dimension trouvée dans la hiérarchie, fallback sur getDimensionsFromNode
+            // (pour les cas où une dimension existe dans le lot mais pas dans la hiérarchie)
+            if (dimsForLevel.length === 0) {
+              dimsForLevel = info.nodeParent
+                ? getDimensionsFromNode(info.nodeParent)
+                : getDimensionsFromNode(lot);
+            }
 
             return (
               <div key={idx}>
@@ -964,7 +1029,49 @@ export function LotEditor({
                       return null;
 
                     const nodeObj = nodeForStackbar as Record<string, unknown>;
-                    if (!(info.dimension in nodeObj)) return null;
+
+                    // Si la dimension n'existe pas mais est dans dimsForLevel, créer un objet vide
+                    if (!(info.dimension in nodeObj)) {
+                      // Si la dimension est dans dimsForLevel, on peut l'afficher vide
+                      if (dimsForLevel.includes(info.dimension)) {
+                        // Créer la dimension comme objet vide (sera initialisée lors de l'ajout)
+                        const emptyDimension: Dimension = {};
+                        return (
+                          <Stackbar
+                            dimension={emptyDimension}
+                            dimensionKey={info.dimension}
+                            lot={lot}
+                            cheminSelection={cheminSelection.slice(
+                              0,
+                              info.niveau
+                            )}
+                            selectedKey={null}
+                            isEditable={isEditable}
+                            lang={lang}
+                            hasAvailableDimensions={dimsForLevel.length > 0}
+                            onSegmentClick={key =>
+                              handleSegmentClick(
+                                info.niveau,
+                                info.dimension,
+                                key
+                              )
+                            }
+                            onUpdate={dim =>
+                              handleDimensionUpdate(info.dimension, dim)
+                            }
+                            onAdd={() => {
+                              setModalNiveau(info.niveau);
+                              setModalDimension(
+                                info.dimension || dimsForLevel[0] || ''
+                              );
+                              setModalOpen(true);
+                            }}
+                            t={t}
+                          />
+                        );
+                      }
+                      return null;
+                    }
 
                     const dimValue = nodeObj[info.dimension];
                     if (
@@ -979,7 +1086,15 @@ export function LotEditor({
                     const keys = Object.keys(dimension).filter(
                       k => k !== 'title'
                     );
-                    if (keys.length === 0) return null;
+
+                    // Si keys.length === 0, vérifier si on doit afficher la stackbar vide
+                    if (keys.length === 0) {
+                      // Si aucune dimension disponible, on est à une feuille, ne pas afficher
+                      if (dimsForLevel.length === 0) {
+                        return null;
+                      }
+                      // Sinon, afficher la stackbar vide (elle gérera l'affichage grisé)
+                    }
 
                     return (
                       <Stackbar
@@ -1008,6 +1123,7 @@ export function LotEditor({
                           );
                           setModalOpen(true);
                         }}
+                        t={t}
                       />
                     );
                   })()}
@@ -1027,7 +1143,7 @@ export function LotEditor({
             dimensionsLabels,
             lang
           )}
-          loadBaseData={dimension => loadBaseData(dimension, isLive)}
+          loadBaseData={loadBaseDataForModal}
           existingKeys={(() => {
             if (!lot) return [];
             const node = getNodeAtPath(

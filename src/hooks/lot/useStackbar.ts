@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import type { StackbarSegment, Dimension } from '@/types/lot';
+import type { StackbarSegment, Dimension, DimensionValue } from '@/types/lot';
 import {
   getPercent,
   setPercent,
@@ -18,6 +18,7 @@ export function useStackbar(
   const onUpdateRef = useRef(onUpdate);
   const isUpdatingRef = useRef(false);
   const segmentsRef = useRef<StackbarSegment[]>([]);
+  const normalizedDimensionsRef = useRef<Set<string>>(new Set());
 
   // Mettre à jour la ref de onUpdate
   useEffect(() => {
@@ -58,6 +59,53 @@ export function useStackbar(
   }, [calculatedSegments]);
 
   const segmentsKeyRef = useRef<string>('');
+
+  // Détecter si la dimension a besoin de normalisation automatique
+  const needsNormalization = useMemo(() => {
+    if (!dimension) return false;
+
+    const keys = Object.keys(dimension).filter(k => k !== 'title');
+    // Si la dimension est vide, on ne fait rien
+    if (keys.length === 0) return false;
+
+    // Calculer la somme des pourcentages
+    const total = keys.reduce((sum, key) => {
+      const val = dimension[key];
+      if (val === undefined || typeof val === 'string') return sum;
+      return sum + getPercent(val as DimensionValue);
+    }, 0);
+
+    // Vérifier si la somme est hors de [99.5 ; 100.5]
+    return Math.abs(total - 100) > 0.5;
+  }, [dimension]);
+
+  // Normalisation automatique des dimensions corrompues
+  useEffect(() => {
+    // Ne pas normaliser si :
+    // - pas besoin de normalisation
+    // - on est en train de drag
+    // - on est en train de mettre à jour
+    // - cette dimension avec ce contenu a déjà été normalisée (éviter les boucles infinies)
+    if (
+      !needsNormalization ||
+      !dimension ||
+      dragStateRef.current?.isDragging ||
+      isUpdatingRef.current ||
+      normalizedDimensionsRef.current.has(segmentsKey)
+    ) {
+      return;
+    }
+
+    // Marquer cette dimension avec ce contenu comme normalisée pour éviter les boucles
+    normalizedDimensionsRef.current.add(segmentsKey);
+
+    // Appliquer la normalisation via onUpdate (qui remonte jusqu'à updateLot et active isModified)
+    onUpdateRef.current((dim: Dimension) => {
+      const newDim = { ...dim };
+      normaliserDistribution(newDim);
+      return newDim;
+    });
+  }, [needsNormalization, dimension, segmentsKey]);
 
   // Mettre à jour les segments seulement si les valeurs calculées ont changé
   useEffect(() => {

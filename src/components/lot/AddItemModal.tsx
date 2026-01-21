@@ -171,7 +171,11 @@ export function AddItemModal({
 
   const dimensionTraduite = dimensionLabel.toLowerCase();
 
-  if (loading) {
+  const shouldShowLoading =
+    loading ||
+    (!baseData && isOpen && loadedDimensionRef.current !== dimension);
+
+  if (shouldShowLoading) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center z-50"

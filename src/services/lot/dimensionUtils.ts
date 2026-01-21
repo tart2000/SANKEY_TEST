@@ -228,3 +228,80 @@ export function getNodeAtPath(
 
   return node;
 }
+
+/**
+ * Obtient les dimensions disponibles à partir de la hiérarchie DIMENSION_HIERARCHY
+ * Utilise la structure hiérarchique pour déterminer quelles dimensions sont possibles
+ * même si elles sont vides dans le lot actuel
+ */
+export function getAvailableDimensionsFromHierarchy(
+  parentDimension: string | null
+): string[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const windowWithHierarchy = window as unknown as {
+    DIMENSION_HIERARCHY?: Record<
+      string,
+      { parent: string | null; children: string[] }
+    >;
+  };
+
+  const hierarchy = windowWithHierarchy.DIMENSION_HIERARCHY;
+  if (!hierarchy) {
+    return [];
+  }
+
+  if (parentDimension === null) {
+    // Retourner les dimensions de niveau 1 (parent = null)
+    return Object.keys(hierarchy).filter(
+      dim => hierarchy[dim]?.parent === null
+    );
+  }
+
+  // Retourner les dimensions enfants de la dimension parent
+  const parentConfig = hierarchy[parentDimension];
+  if (!parentConfig) {
+    return [];
+  }
+
+  return parentConfig.children || [];
+}
+
+/**
+ * Vérifie si une dimension existe mais est vide (pas de clés sauf métadonnées)
+ */
+export function isDimensionEmpty(
+  dimension: Dimension | null | undefined
+): boolean {
+  if (!dimension || typeof dimension !== 'object' || Array.isArray(dimension)) {
+    return true;
+  }
+
+  const METADATA_KEYS = [
+    'pourcentage',
+    'percent',
+    'name',
+    'titre',
+    'title',
+    'total',
+    'color',
+    'bubble_id',
+    'en_gb',
+    'fr_fr',
+    'es_es',
+    'de_de',
+    'description',
+    'notes',
+    'children',
+  ];
+
+  // Filtrer les clés qui ne sont pas des métadonnées
+  const validKeys = Object.keys(dimension).filter(
+    key => !METADATA_KEYS.includes(key)
+  );
+
+  // Si aucune clé valide, la dimension est vide
+  return validKeys.length === 0;
+}

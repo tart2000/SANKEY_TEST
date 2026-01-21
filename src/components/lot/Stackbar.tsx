@@ -16,6 +16,7 @@ interface StackbarProps {
   onUpdate: (updater: (dim: Dimension) => Dimension) => void;
   hasAvailableDimensions: boolean;
   onAdd: () => void;
+  t?: (key: string, params?: Record<string, string>) => string;
 }
 
 export function Stackbar({
@@ -30,6 +31,7 @@ export function Stackbar({
   onUpdate,
   hasAvailableDimensions,
   onAdd,
+  t,
 }: StackbarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { segments, handleDragStart } = useStackbar(
@@ -91,8 +93,54 @@ export function Stackbar({
     return names;
   }, [lot, dimension, cheminSelection, dimensionKey, segments, lang]);
 
-  if (!dimension || segments.length === 0) {
+  // Si pas de dimension ou pas de segments, vérifier si on doit afficher l'état vide
+  if (!dimension) {
     return null;
+  }
+
+  // Si pas de segments mais qu'il y a des dimensions disponibles, afficher l'état vide grisé
+  if (segments.length === 0) {
+    // Si aucune dimension disponible, on est à une feuille, ne pas afficher
+    if (!hasAvailableDimensions) {
+      return null;
+    }
+
+    // Afficher la stackbar vide grisée
+    const showAddButton = isEditable && hasAvailableDimensions;
+    const emptyText = t ? t('emptyDimension', {}) : 'Dimension vide';
+
+    return (
+      <div className="flex items-center mb-5">
+        <div
+          className="flex flex-1 h-16 overflow-hidden rounded-xl shadow-sm bg-gray-100 border border-gray-300 relative"
+          style={{ pointerEvents: 'none' }}
+        >
+          {/* Texte "Dimension vide" au centre, même style que les segments */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-full h-full text-center px-1 flex flex-col items-center justify-center overflow-hidden">
+              <span
+                className="text-black font-medium text-xs leading-tight truncate w-full"
+                title={emptyText}
+              >
+                {emptyText}
+              </span>
+            </div>
+          </div>
+        </div>
+        {showAddButton && (
+          <div className="flex items-center justify-center h-16 w-10">
+            <button
+              type="button"
+              className="w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition cursor-pointer"
+              aria-label="Ajouter"
+              onClick={onAdd}
+            >
+              <i className="ph ph-plus w-4 h-4"></i>
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   let cumulatedPercent = 0;
