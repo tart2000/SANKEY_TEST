@@ -2948,14 +2948,10 @@ function updateSankey(dimension) {
                 ? transfo.type[0]
                 : transfo.type;
 
-              if (transfo.title) {
-                tooltipTitle = transfo.title;
-              } else {
-                const frenchName = window.transformationUtils
-                  ? window.transformationUtils.getTransformationLabel(type)
-                  : type;
-                tooltipTitle = frenchName;
-              }
+              // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
+              tooltipTitle = window.transformationUtils
+                ? window.transformationUtils.getTransformationLabel(type)
+                : transfo.title || type;
 
               // Ajouter les paramètres en français si disponibles
               if (transfo._displayNames && transfo._displayNames.length > 0) {
@@ -3128,14 +3124,11 @@ function updateSankey(dimension) {
             const type = Array.isArray(transfo.type)
               ? transfo.type[0]
               : transfo.type;
-            const label =
-              transfo.title ||
-              (window.transformationUtils
-                ? window.transformationUtils.getTransformationLabel(type)
-                : type);
-            const typeLabel = window.transformationUtils
+            // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
+            const label = window.transformationUtils
               ? window.transformationUtils.getTransformationLabel(type)
-              : type;
+              : transfo.title || type;
+            const typeLabel = label;
             let tableRows = '';
 
             if (transfo.scenario) {
@@ -4045,16 +4038,10 @@ function updateSankey(dimension) {
           ? transfo.type[0]
           : transfo.type;
 
-        // Utiliser le titre de la transformation s'il existe
-        if (transfo.title) {
-          displayTitle = transfo.title;
-        } else {
-          // Sinon utiliser le nom français de la transformation
-          const frenchName = window.transformationUtils
-            ? window.transformationUtils.getTransformationLabel(type)
-            : type;
-          displayTitle = frenchName;
-        }
+        // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
+        displayTitle = window.transformationUtils
+          ? window.transformationUtils.getTransformationLabel(type)
+          : transfo.title || type;
       } else {
         // Fallback sur le nom du lot
         displayTitle = d.lot && d.lot.title ? d.lot.title : d.name;
