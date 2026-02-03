@@ -75,6 +75,91 @@ function getSiblingDimensions(
   return false;
 }
 
+type ConstraintWithIndex = CdcConstraint & { _index: number };
+
+function buildOptions(constraint: CdcConstraint): SelectByOptions {
+  if (
+    !hasThresholdContent(constraint.hasThreshold) ||
+    !constraint.hasThreshold ||
+    typeof constraint.hasThreshold !== 'object' ||
+    !('value' in constraint.hasThreshold) ||
+    !('threshold' in constraint.hasThreshold)
+  ) {
+    return {};
+  }
+  const ht = constraint.hasThreshold as {
+    value?: number;
+    threshold?: string;
+  };
+  return {
+    threshold: ht.value ?? null,
+    condition:
+      (ht.threshold === 'over' || ht.threshold === 'under'
+        ? ht.threshold
+        : undefined) ?? null,
+  };
+}
+
+/** Group constraints by (dimKey, include); each group = one selectBy with all item bubble_ids (OR). */
+function groupConstraintsByDimension(
+  sorted: ConstraintWithIndex[],
+  hierarchy: DimensionHierarchy
+): Array<{
+  dimKey: string;
+  include: boolean;
+  itemIds: string[];
+  indices: number[];
+  options: SelectByOptions;
+  hasPriority: boolean;
+}> {
+  const groups: Array<{
+    dimKey: string;
+    include: boolean;
+    itemIds: string[];
+    indices: number[];
+    options: SelectByOptions;
+    hasPriority: boolean;
+  }> = [];
+  let current: {
+    dimKey: string;
+    include: boolean;
+    itemIds: string[];
+    indices: number[];
+    options: SelectByOptions;
+    hasPriority: boolean;
+  } | null = null;
+
+  for (const c of sorted) {
+    const dimKey = normalizeDimensionKey(c.dimension, hierarchy);
+    const include = c.include === true;
+    const def = hierarchy[dimKey];
+    const isPriority = Boolean(def?.isPriority);
+
+    if (current && current.dimKey === dimKey && current.include === include) {
+      current.itemIds.push(c.item);
+      current.indices.push(c._index);
+      if (isPriority) current.hasPriority = true;
+      if (current.itemIds.length > 1) {
+        current.options = {};
+      } else if (hasThresholdContent(c.hasThreshold)) {
+        current.options = buildOptions(c);
+      }
+    } else {
+      if (current) groups.push(current);
+      current = {
+        dimKey,
+        include,
+        itemIds: [c.item],
+        indices: [c._index],
+        options: hasThresholdContent(c.hasThreshold) ? buildOptions(c) : {},
+        hasPriority: isPriority,
+      };
+    }
+  }
+  if (current) groups.push(current);
+  return groups;
+}
+
 export function applyCdc(
   lot: Lot,
   cdc: Cdc,
@@ -84,10 +169,9 @@ export function applyCdc(
   const constraints = cdc.constraints ?? [];
   const totalLot = (lot.total as number) || 0;
 
-  const constraintByIndex = constraints.map((c, index) => ({
-    ...c,
-    _index: index,
-  }));
+  const constraintByIndex: ConstraintWithIndex[] = constraints.map(
+    (c, index) => ({ ...c, _index: index })
+  );
   const orderRank = (dimKey: string) => {
     const i = processingOrder.indexOf(dimKey);
     return i >= 0 ? i : processingOrder.length;
@@ -98,51 +182,30 @@ export function applyCdc(
       orderRank(normalizeDimensionKey(b.dimension, hierarchy))
   );
 
+  const groups = groupConstraintsByDimension(sortedForCalculation, hierarchy);
+
   const analysisByIndex: Record<number, 'green' | 'orange' | 'red'> = {};
   let currentLot: Lot = JSON.parse(JSON.stringify(lot));
 
-  for (const constraint of sortedForCalculation) {
-    const dimKey = normalizeDimensionKey(constraint.dimension, hierarchy);
+  for (const group of groups) {
+    const { dimKey, include, itemIds, indices, options, hasPriority } = group;
     const def = hierarchy[dimKey];
     const dimensionPresent = Boolean(def);
-    const itemId = constraint.item;
-    const include = constraint.include === true;
-
-    let options: SelectByOptions = {};
-    if (
-      hasThresholdContent(constraint.hasThreshold) &&
-      constraint.hasThreshold &&
-      typeof constraint.hasThreshold === 'object' &&
-      'value' in constraint.hasThreshold &&
-      'threshold' in constraint.hasThreshold
-    ) {
-      const ht = constraint.hasThreshold as {
-        value?: number;
-        threshold?: string;
-      };
-      options = {
-        threshold: ht.value ?? null,
-        condition:
-          (ht.threshold === 'over' || ht.threshold === 'under'
-            ? ht.threshold
-            : undefined) ?? null,
-      };
-    }
-
-    const result = dimensionPresent
-      ? selectBy(currentLot, dimKey, [itemId], options, hierarchy)
-      : { targetLot: { total: 0 } as Lot, coProductLot: currentLot };
-
-    const nextLot = include ? result.targetLot : result.coProductLot;
-    const targetMass = (result.targetLot.total as number) ?? 0;
     const dimensionPresentInLot = Boolean(
       (currentLot as Record<string, unknown>)[dimKey]
     );
 
+    const result = dimensionPresent
+      ? selectBy(currentLot, dimKey, itemIds, options, hierarchy)
+      : { targetLot: { total: 0 } as Lot, coProductLot: currentLot };
+
+    const nextLot = include ? result.targetLot : result.coProductLot;
+    const targetMass = (result.targetLot.total as number) ?? 0;
+
     let constraintAnalysis: 'green' | 'orange' | 'red' = 'green';
     if (include) {
       if (!dimensionPresent || !dimensionPresentInLot || targetMass <= 0) {
-        constraintAnalysis = def?.isPriority ? 'red' : 'orange';
+        constraintAnalysis = hasPriority ? 'red' : 'orange';
       }
     } else {
       if (!dimensionPresent || !dimensionPresentInLot) {
@@ -150,7 +213,9 @@ export function applyCdc(
       }
     }
 
-    analysisByIndex[constraint._index] = constraintAnalysis;
+    for (const i of indices) {
+      analysisByIndex[i] = constraintAnalysis;
+    }
     currentLot = nextLot;
   }
 
