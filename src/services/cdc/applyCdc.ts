@@ -318,7 +318,11 @@ export function applyCdc(
               : 'orange';
       } else {
         constraintAnalysis =
-          dimensionPresent && dimensionPresentInLot ? 'green' : 'orange';
+          dimensionPresent && itemInLot
+            ? 'orange'
+            : dimensionPresent && dimensionPresentInLot
+              ? 'green'
+              : 'orange';
       }
       analysisByIndex[i] = constraintAnalysis;
     }
