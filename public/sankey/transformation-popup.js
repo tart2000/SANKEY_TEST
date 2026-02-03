@@ -375,9 +375,11 @@ class TransformationPopup {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          // Utiliser la langue appropriée
+          // Utiliser la langue appropriée (fr_fr pour les transfos dynamiques Bubble)
           const displayLabel =
-            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+            lang === 'en_gb' && transfo.en_gb
+              ? transfo.en_gb
+              : transfo.fr_fr || transfo.label;
           options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });
@@ -505,9 +507,11 @@ class TransformationPopup {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          // Utiliser la langue appropriée
+          // Utiliser la langue appropriée (fr_fr pour les transfos dynamiques Bubble)
           const displayLabel =
-            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+            lang === 'en_gb' && transfo.en_gb
+              ? transfo.en_gb
+              : transfo.fr_fr || transfo.label;
           options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });
@@ -585,9 +589,11 @@ class TransformationPopup {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          // Utiliser la langue appropriée
+          // Utiliser la langue appropriée (fr_fr pour les transfos dynamiques Bubble)
           const displayLabel =
-            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+            lang === 'en_gb' && transfo.en_gb
+              ? transfo.en_gb
+              : transfo.fr_fr || transfo.label;
           options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });

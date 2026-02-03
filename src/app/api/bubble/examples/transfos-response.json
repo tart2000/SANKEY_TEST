@@ -1,18 +1,21 @@
 {
   "Lavage": {
     "en_gb": "Cleanup",
+    "fr_fr": "Lavage",
     "bubble_id": "1754410648008x865508029816373200",
     "step": "washing",
     "version": 9
   },
   "Délissage de produits complexes": {
     "en_gb": "Complex stuff thing ",
+    "fr_fr": "Délissage de produits complexes",
     "bubble_id": "1756802894015x376315578893467650",
     "step": "preparation",
     "version": 24
   },
   "Effilochage fin": {
     "en_gb": "Light thing thing ",
+    "fr_fr": "Effilochage fin",
     "bubble_id": "1756818350195x963851048233205800",
     "step": "preparation",
     "version": 7

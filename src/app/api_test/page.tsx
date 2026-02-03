@@ -119,7 +119,7 @@ export default function ApiTestPage() {
                   <SelectContent>
                     {bubbleApiCalls.map((api, idx) => (
                       <SelectItem value={idx.toString()} key={api.name}>
-                        {api.name}
+                        {api.name} ({api.method})
                       </SelectItem>
                     ))}
                   </SelectContent>

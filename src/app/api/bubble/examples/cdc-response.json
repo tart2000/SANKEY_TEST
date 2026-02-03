@@ -1,0 +1,114 @@
+{
+  "Title": "Recherche 27/01/26",
+  "bubble_id": "1769529442173x933158719172902900",
+  "constraints": [
+    {
+      "bubble_id": "1769529444431x924502841110340900",
+      "dimension": "Matiere",
+      "item": "1751454906060x766426265037307900",
+      "fr_fr": "100% Coton",
+      "en_gb": "100% Cotton",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529444941x299505671932187800",
+      "dimension": "Matiere",
+      "item": "1751456479482x734867785348284400",
+      "fr_fr": "100% Laine",
+      "en_gb": "100% Whool",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529445304x544474076212207360",
+      "dimension": "Proprete",
+      "item": "1751363454187x882723774064230400",
+      "fr_fr": "Contaminé",
+      "en_gb": "Contaminated",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529445738x593768424324845300",
+      "dimension": "Qualite",
+      "item": "1751445942674x468258564829872100",
+      "fr_fr": "Bon état",
+      "en_gb": "Good condition",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529446195x428626803637167200",
+      "dimension": "Type",
+      "item": "1751468508440x887755237040586800",
+      "fr_fr": "Baskets",
+      "en_gb": "Baskets",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529446396x888817621046364800",
+      "dimension": "Type",
+      "item": "1751468757372x574424870583271400",
+      "fr_fr": "Bibelots et ustentiles",
+      "en_gb": "Ornaments and utensils",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529446834x667652613291625000",
+      "dimension": "Type",
+      "item": "1751468476969x831588532505280500",
+      "fr_fr": "Bottes et bottines",
+      "en_gb": "Boots",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769529447260x250165420962550560",
+      "dimension": "Type",
+      "item": "1751468736869x173809772432195600",
+      "fr_fr": "DEEE",
+      "en_gb": "WEEE",
+      "include": true,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    },
+    {
+      "bubble_id": "1769589497488x263443215588786180",
+      "dimension": "Fibre",
+      "item": "1751446528509x125699490513682430",
+      "fr_fr": "Élasthanne",
+      "en_gb": "Spandex",
+      "include": false,
+      "hasThreshold": {
+        "value": 42,
+        "threshold": "over"
+      }
+    }
+  ]
+}

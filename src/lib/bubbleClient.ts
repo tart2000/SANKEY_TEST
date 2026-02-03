@@ -55,12 +55,15 @@ export async function callBubble({
   const paramsSansIsLive: Record<string, unknown> = { ...normalizedParams };
   delete paramsSansIsLive.isLive;
 
-  let url = baseUrl + (endpoint || '').replace(/^\//, '');
+  const endpointNorm = (endpoint || '').replace(/^\//, '');
+  let url = baseUrl + endpointNorm;
 
+  const endpointHasQuery = endpointNorm.includes('?');
   if (
     method === 'GET' &&
     paramsSansIsLive &&
-    Object.keys(paramsSansIsLive).length > 0
+    Object.keys(paramsSansIsLive).length > 0 &&
+    !endpointHasQuery
   ) {
     const searchParams = new URLSearchParams();
     Object.entries(paramsSansIsLive).forEach(([key, value]) => {

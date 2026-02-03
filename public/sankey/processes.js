@@ -1305,7 +1305,9 @@ const transformationUtils = {
     if (type.startsWith('dynamic_transfo_')) {
       const bubbleId = type.replace('dynamic_transfo_', '');
       const transfo = getDynamicTransfo(bubbleId);
-      return transfo ? transfo.title : type;
+      if (!transfo) return type;
+      if (lang === 'en_gb' && transfo.en_gb) return transfo.en_gb;
+      return transfo.fr_fr || transfo.title;
     }
 
     return type;
@@ -1394,6 +1396,7 @@ const transformationUtils = {
       .map(transfo => ({
         value: `dynamic_transfo_${transfo.bubble_id}`,
         label: transfo.title,
+        fr_fr: transfo.fr_fr || transfo.title,
         en_gb: transfo.en_gb || transfo.title,
         description: `Transformation dynamique: ${transfo.step}`,
         isDynamic: true,

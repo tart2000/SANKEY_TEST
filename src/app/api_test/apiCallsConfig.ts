@@ -318,4 +318,24 @@ export const bubbleApiCalls = [
       },
     ],
   },
+  {
+    name: 'Get 1 cdc',
+    endpoint: 'cdc?id={id}',
+    method: 'GET',
+    examplePath: '../api/bubble/examples/cdc-response.json',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
+    ],
+  },
 ];
