@@ -7,6 +7,7 @@ export type DimensionDefinition = {
   parent: string | null;
   children: string[];
   description: string;
+  isPriority?: boolean;
 };
 
 export type DimensionHierarchy = Record<string, DimensionDefinition>;

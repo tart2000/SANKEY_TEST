@@ -183,3 +183,40 @@ export async function fetchBubbleLot({
 
   return data;
 }
+
+export async function fetchCdc({
+  id,
+  isLive,
+}: {
+  id: string;
+  isLive: boolean;
+}): Promise<Record<string, unknown>> {
+  const { status, data } = await callBubble({
+    endpoint: 'cdc',
+    params: { id, isLive },
+    method: 'GET',
+  });
+
+  if (!isSuccessStatus(status)) {
+    throw new BubbleClientError(
+      'Impossible de récupérer le CDC via Bubble',
+      status,
+      data
+    );
+  }
+
+  if (!isRecord(data)) {
+    throw new BubbleClientError(
+      'Format de CDC renvoyé par Bubble inattendu',
+      502,
+      {
+        error: 'CDC invalide',
+        details:
+          'Bubble doit renvoyer un objet JSON représentant le CDC complet.',
+        bubbleResponse: data,
+      }
+    );
+  }
+
+  return data;
+}

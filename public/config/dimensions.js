@@ -33,12 +33,14 @@ window.DIMENSION_HIERARCHY = {
     parent: 'types',
     children: ['fibres'],
     description: 'Matériaux des produits',
+    isPriority: true,
   },
   fibres: {
     level: 4,
     parent: 'matieres',
     children: [],
     description: 'Fibres des matériaux',
+    isPriority: true,
   },
   couleurs: {
     level: 3,
