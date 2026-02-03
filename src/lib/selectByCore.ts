@@ -12,7 +12,7 @@ export type SelectByResult = {
   coProductLot: Lot;
 };
 
-function buildPathToDimension(
+export function buildPathToDimension(
   dimensionName: string,
   hierarchy: DimensionHierarchy
 ): string[] {

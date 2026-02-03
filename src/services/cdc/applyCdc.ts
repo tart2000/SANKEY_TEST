@@ -1,5 +1,10 @@
 import type { DimensionHierarchy } from '@/lib/dimensions';
-import { selectBy, type Lot, type SelectByOptions } from '@/lib/selectByCore';
+import {
+  buildPathToDimension,
+  selectBy,
+  type Lot,
+  type SelectByOptions,
+} from '@/lib/selectByCore';
 
 const BUBBLE_DIMENSION_TO_KEY: Record<string, string> = {
   Format: 'formats',
@@ -71,6 +76,45 @@ function getSiblingDimensions(
   for (const p of parents) {
     if (p != null && seen.has(p)) return true;
     if (p != null) seen.add(p);
+  }
+  return false;
+}
+
+/** Vérifie si la dimension existe dans le lot au bon endroit (selon la hiérarchie). */
+function dimensionExistsInLot(
+  lot: Lot,
+  dimKey: string,
+  hierarchy: DimensionHierarchy
+): boolean {
+  const path = buildPathToDimension(dimKey, hierarchy);
+  if (path.length === 0) {
+    return Boolean((lot as Record<string, unknown>)[dimKey]);
+  }
+  let nodes: unknown[] = [lot];
+  for (const p of path) {
+    const next: unknown[] = [];
+    for (const node of nodes) {
+      if (!node || typeof node !== 'object' || Array.isArray(node)) continue;
+      const obj = node as Record<string, unknown>;
+      const val = obj[p];
+      if (val == null || typeof val !== 'object' || Array.isArray(val))
+        continue;
+      const coll = val as Record<string, unknown>;
+      for (const k of Object.keys(coll)) {
+        next.push(coll[k]);
+      }
+    }
+    nodes = next;
+  }
+  for (const node of nodes) {
+    if (
+      node &&
+      typeof node === 'object' &&
+      !Array.isArray(node) &&
+      dimKey in (node as Record<string, unknown>)
+    ) {
+      return true;
+    }
   }
   return false;
 }
@@ -191,8 +235,10 @@ export function applyCdc(
     const { dimKey, include, itemIds, indices, options, hasPriority } = group;
     const def = hierarchy[dimKey];
     const dimensionPresent = Boolean(def);
-    const dimensionPresentInLot = Boolean(
-      (currentLot as Record<string, unknown>)[dimKey]
+    const dimensionPresentInLot = dimensionExistsInLot(
+      currentLot,
+      dimKey,
+      hierarchy
     );
 
     const result = dimensionPresent
