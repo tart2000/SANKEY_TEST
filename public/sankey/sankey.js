@@ -3020,7 +3020,7 @@ function updateSankey(dimension) {
               `
                         <strong>${tooltipTitle}</strong>
                         <table class="tooltip-table">
-                          <tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${Math.round((d.transformations_appliquees && d.transformations_appliquees.length > 0 ? d.transformations_appliquees[d.transformations_appliquees.length - 1].entryLot?.total : null) || d.lot.total)} kg</span></td></tr>
+                          <tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round(d.lot?.total ?? 0)} kg</span></td></tr>
                           ${distributionRows ? `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('distribution')}</span></td></tr>${distributionRows}<tr><td class="tooltip-row"></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>` : `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>`}
                         </table>
                         ${missingInfo}
