@@ -253,6 +253,40 @@ export function useDimensions() {
     []
   );
 
+  // Récupérer un élément "small" (métadonnées seules, sans enfants) depuis l'API
+  const fetchItemSmall = useCallback(
+    async (bubbleId: string, isLive: boolean): Promise<BaseDataItem | null> => {
+      try {
+        const response = await fetch('/api/bubble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoint: 'item_small',
+            method: 'GET',
+            params: {
+              id: bubbleId,
+              isLive,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = await response.json();
+        return data as BaseDataItem;
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération de l'élément small:",
+          error
+        );
+        return null;
+      }
+    },
+    []
+  );
+
   return {
     dimensionsLabels,
     loadingLabels,
@@ -260,6 +294,7 @@ export function useDimensions() {
     loadDimensionsLabels,
     loadBaseData,
     fetchItemComplete,
+    fetchItemSmall,
     isLoadingBaseData: (dimension: string) => loadingBaseData.has(dimension),
     getBaseDataError: (dimension: string) =>
       errorBaseData.get(dimension) || null,

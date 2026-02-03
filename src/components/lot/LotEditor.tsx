@@ -73,6 +73,7 @@ export function LotEditor({
     loadDimensionsLabels,
     loadBaseData,
     fetchItemComplete,
+    fetchItemSmall,
   } = useDimensions();
   const { sendHeight, sendLotUpdated } = useIframeCommunication();
   const [modalOpen, setModalOpen] = useState(false);
@@ -1197,6 +1198,13 @@ export function LotEditor({
           })()}
           lang={lang}
           fetchItemComplete={bubbleId => fetchItemComplete(bubbleId, isLive)}
+          fetchItemSmall={bubbleId => fetchItemSmall(bubbleId, isLive)}
+          showStandardDistributionOption={
+            getAvailableDimensionsFromHierarchy(modalDimension).length > 0
+          }
+          dimensionChildKeys={getAvailableDimensionsFromHierarchy(
+            modalDimension
+          )}
           t={t}
           poidsNiveau={(() => {
             if (!lot) return 0;

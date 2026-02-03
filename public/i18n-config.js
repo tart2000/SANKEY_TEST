@@ -76,6 +76,7 @@ window.i18nConfig = {
         element: 'Élément',
         selectElement: 'Sélectionnez un élément',
         emptyDimension: 'Dimension vide',
+        standardDistribution: 'Distribution standard',
         percentage: 'Pourcentage :',
         errorRetrievingElement:
           "Impossible de récupérer l'élément complet depuis Bubble",
@@ -197,6 +198,7 @@ window.i18nConfig = {
         selectElement: 'Select an element',
         percentage: 'Percentage :',
         emptyDimension: 'Empty dimension',
+        standardDistribution: 'Standard distribution',
         errorRetrievingElement:
           'Could not retrieve the full element from Bubble',
         viewDetailed: 'Detailed view',
@@ -317,6 +319,7 @@ window.i18nConfig = {
         selectElement: 'Seleccionar un elemento',
         percentage: 'Porcentaje :',
         emptyDimension: 'Dimensión vacía',
+        standardDistribution: 'Distribución estándar',
         errorRetrievingElement:
           'No se pudo recuperar el elemento completo de Bubble',
         viewDetailed: 'Vista detallada',
@@ -439,6 +442,7 @@ window.i18nConfig = {
         selectElement: 'Select an element',
         percentage: 'Prozent :',
         emptyDimension: 'Empty dimension',
+        standardDistribution: 'Standardverteilung',
         errorRetrievingElement:
           'Could not retrieve the full element from Bubble',
         viewDetailed: 'Detaillierte Ansicht',

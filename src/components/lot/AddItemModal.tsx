@@ -24,6 +24,9 @@ interface AddItemModalProps {
   existingKeys: string[];
   lang: string;
   fetchItemComplete: (bubbleId: string) => Promise<BaseDataItem | null>;
+  fetchItemSmall: (bubbleId: string) => Promise<BaseDataItem | null>;
+  showStandardDistributionOption: boolean;
+  dimensionChildKeys: string[];
   t: (key: string, params?: Record<string, string>) => string;
   poidsNiveau?: number;
 }
@@ -38,6 +41,9 @@ export function AddItemModal({
   existingKeys,
   lang,
   fetchItemComplete,
+  fetchItemSmall,
+  showStandardDistributionOption,
+  dimensionChildKeys,
   t,
   poidsNiveau = 0,
 }: AddItemModalProps) {
@@ -47,6 +53,8 @@ export function AddItemModal({
   const [isValid, setIsValid] = useState(false);
   const [baseData, setBaseData] = useState<BaseData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [useStandardDistribution, setUseStandardDistribution] =
+    useState<boolean>(true);
   const loadedDimensionRef = useRef<string | null>(null);
 
   // Charger les données de base quand la modal s'ouvre
@@ -118,6 +126,7 @@ export function AddItemModal({
       setValeur('');
       setUnite('percentage');
       setIsValid(false);
+      setUseStandardDistribution(true);
     } else {
       // Réinitialiser baseData quand la modal se ferme
       setBaseData(null);
@@ -148,19 +157,33 @@ export function AddItemModal({
     }
 
     const bubbleId = baseData[selectedElement]?.bubble_id || selectedElement;
+    const nomLisible = selectedElement;
 
-    // Essayer de récupérer l'élément complet
-    const elementComplet = await fetchItemComplete(bubbleId);
-    if (elementComplet) {
-      // Extraire la clé et la valeur
-      const nomLisible = Object.keys(elementComplet)[0];
-      const data = elementComplet[nomLisible] as BaseDataItem;
-      onAdd(nomLisible, pct, data, poidsKg);
+    if (useStandardDistribution) {
+      // Comportement actuel : récupérer l'élément complet
+      const elementComplet = await fetchItemComplete(bubbleId);
+      if (elementComplet) {
+        const keyFromApi = Object.keys(elementComplet)[0];
+        const data = elementComplet[keyFromApi] as BaseDataItem;
+        onAdd(keyFromApi, pct, data, poidsKg);
+      } else {
+        const baseItem = baseData[selectedElement];
+        if (baseItem) {
+          onAdd(nomLisible, pct, baseItem, poidsKg);
+        }
+      }
     } else {
-      // Fallback : utiliser les données de base
-      const baseItem = baseData[selectedElement];
-      if (baseItem) {
-        onAdd(selectedElement, pct, baseItem, poidsKg);
+      // Sans distribution : item_small + dimensions vides
+      const itemSmall = await fetchItemSmall(bubbleId);
+      if (itemSmall) {
+        const emptyDims = Object.fromEntries(
+          dimensionChildKeys.map(d => [d, {}])
+        );
+        const donneesBase: BaseDataItem = {
+          ...itemSmall,
+          ...emptyDims,
+        };
+        onAdd(nomLisible, pct, donneesBase, poidsKg);
       }
     }
 
@@ -320,26 +343,41 @@ export function AddItemModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t">
-          <button
-            type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
-            onClick={onClose}
-          >
-            {t('cancel')}
-          </button>
-          <button
-            type="button"
-            disabled={!isValid}
-            className={`px-4 py-2 text-sm font-medium border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-              isValid
-                ? 'text-white bg-blue-600 hover:bg-blue-700 cursor-pointer'
-                : 'text-gray-400 bg-gray-200 cursor-not-allowed'
-            }`}
-            onClick={handleAdd}
-          >
-            {t('add')}
-          </button>
+        <div className="flex items-center justify-between gap-3 p-4 border-t">
+          {showStandardDistributionOption ? (
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={useStandardDistribution}
+                onChange={e => setUseStandardDistribution(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              {t('standardDistribution')}
+            </label>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+              onClick={onClose}
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="button"
+              disabled={!isValid}
+              className={`px-4 py-2 text-sm font-medium border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                isValid
+                  ? 'text-white bg-blue-600 hover:bg-blue-700 cursor-pointer'
+                  : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+              }`}
+              onClick={handleAdd}
+            >
+              {t('add')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -100,6 +100,7 @@ export const translations = {
       element: 'Élément',
       selectElement: 'Sélectionnez un élément',
       emptyDimension: 'Dimension vide',
+      standardDistribution: 'Distribution standard',
       percentage: 'Pourcentage',
       errorRetrievingElement:
         "Impossible de récupérer l'élément complet depuis Bubble",
@@ -253,6 +254,7 @@ export const translations = {
       selectElement: 'Select an element',
       percentage: 'Percentage',
       emptyDimension: 'Empty dimension',
+      standardDistribution: 'Standard distribution',
       errorRetrievingElement: 'Could not retrieve the full element from Bubble',
       // Aggregated view
       viewDetailed: 'Detailed view',
@@ -402,6 +404,7 @@ export const translations = {
       selectElement: 'Seleccionar un elemento',
       percentage: 'Porcentaje',
       emptyDimension: 'Dimensión vacía',
+      standardDistribution: 'Distribución estándar',
       errorRetrievingElement:
         'No se pudo recuperar el elemento completo de Bubble',
       // Aggregated view
@@ -556,6 +559,7 @@ export const translations = {
       selectElement: 'Select an element',
       percentage: 'Percentage',
       emptyDimension: 'Empty dimension',
+      standardDistribution: 'Standardverteilung',
       errorRetrievingElement: 'Could not retrieve the full element from Bubble',
       // Aggregated view
       viewDetailed: 'Detaillierte Ansicht',
