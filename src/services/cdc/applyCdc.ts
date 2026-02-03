@@ -282,7 +282,9 @@ export function applyCdc(
   const groups = groupConstraintsByDimension(sortedForCalculation, hierarchy);
 
   const analysisByIndex: Record<number, 'green' | 'orange' | 'red'> = {};
+  const initialLot: Lot = JSON.parse(JSON.stringify(lot));
   let currentLot: Lot = JSON.parse(JSON.stringify(lot));
+  let priorityPresentElsewhere = false;
 
   for (const group of groups) {
     const { dimKey, include, itemIds, indices, options, hasPriority } = group;
@@ -302,23 +304,35 @@ export function applyCdc(
 
     for (const i of indices) {
       const constraint = constraints[i];
-      const itemInLot = itemExistsInLot(
+      const itemInCurrentLot = itemExistsInLot(
         currentLot,
+        dimKey,
+        constraint.item,
+        hierarchy
+      );
+      const itemInInitialLot = itemExistsInLot(
+        initialLot,
         dimKey,
         constraint.item,
         hierarchy
       );
       let constraintAnalysis: 'green' | 'orange' | 'red';
       if (include) {
-        constraintAnalysis =
-          dimensionPresent && itemInLot
-            ? 'green'
-            : hasPriority
-              ? 'red'
-              : 'orange';
+        if (dimensionPresent && itemInCurrentLot) {
+          constraintAnalysis = 'green';
+        } else if (hasPriority) {
+          if (itemInInitialLot) {
+            constraintAnalysis = 'orange';
+            priorityPresentElsewhere = true;
+          } else {
+            constraintAnalysis = 'red';
+          }
+        } else {
+          constraintAnalysis = 'orange';
+        }
       } else {
         constraintAnalysis =
-          dimensionPresent && itemInLot
+          dimensionPresent && itemInCurrentLot
             ? 'orange'
             : dimensionPresent && dimensionPresentInLot
               ? 'green'
@@ -337,7 +351,9 @@ export function applyCdc(
       constraints.map(c => normalizeDimensionKey(c.dimension, hierarchy))
     ),
   ];
-  const isFlagged = getSiblingDimensions(uniqueDimensionKeys, hierarchy);
+  const isFlagged =
+    getSiblingDimensions(uniqueDimensionKeys, hierarchy) ||
+    priorityPresentElsewhere;
 
   const hasRed = Object.values(analysisByIndex).some(a => a === 'red');
   const hasOrange = Object.values(analysisByIndex).some(a => a === 'orange');
