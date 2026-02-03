@@ -119,6 +119,59 @@ function dimensionExistsInLot(
   return false;
 }
 
+/** Vérifie si l'item (bubble_id) est présent dans le lot pour la dimension donnée. */
+function itemExistsInLot(
+  lot: Lot,
+  dimKey: string,
+  itemBubbleId: string,
+  hierarchy: DimensionHierarchy
+): boolean {
+  const path = buildPathToDimension(dimKey, hierarchy);
+  if (path.length === 0) {
+    const coll = (lot as Record<string, unknown>)[dimKey] as
+      | Record<string, { bubble_id?: string }>
+      | undefined;
+    if (!coll || typeof coll !== 'object') return false;
+    for (const key of Object.keys(coll)) {
+      const el = coll[key];
+      if (el && typeof el === 'object' && el.bubble_id === itemBubbleId) {
+        return true;
+      }
+    }
+    return false;
+  }
+  let nodes: unknown[] = [lot];
+  for (const p of path) {
+    const next: unknown[] = [];
+    for (const node of nodes) {
+      if (!node || typeof node !== 'object' || Array.isArray(node)) continue;
+      const obj = node as Record<string, unknown>;
+      const val = obj[p];
+      if (val == null || typeof val !== 'object' || Array.isArray(val))
+        continue;
+      const coll = val as Record<string, unknown>;
+      for (const k of Object.keys(coll)) {
+        next.push(coll[k]);
+      }
+    }
+    nodes = next;
+  }
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) continue;
+    const coll = (node as Record<string, unknown>)[dimKey] as
+      | Record<string, { bubble_id?: string }>
+      | undefined;
+    if (!coll || typeof coll !== 'object') continue;
+    for (const key of Object.keys(coll)) {
+      const el = coll[key];
+      if (el && typeof el === 'object' && el.bubble_id === itemBubbleId) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 type ConstraintWithIndex = CdcConstraint & { _index: number };
 
 function buildOptions(constraint: CdcConstraint): SelectByOptions {
@@ -246,20 +299,27 @@ export function applyCdc(
       : { targetLot: { total: 0 } as Lot, coProductLot: currentLot };
 
     const nextLot = include ? result.targetLot : result.coProductLot;
-    const targetMass = (result.targetLot.total as number) ?? 0;
-
-    let constraintAnalysis: 'green' | 'orange' | 'red' = 'green';
-    if (include) {
-      if (!dimensionPresent || !dimensionPresentInLot || targetMass <= 0) {
-        constraintAnalysis = hasPriority ? 'red' : 'orange';
-      }
-    } else {
-      if (!dimensionPresent || !dimensionPresentInLot) {
-        constraintAnalysis = 'orange';
-      }
-    }
 
     for (const i of indices) {
+      const constraint = constraints[i];
+      const itemInLot = itemExistsInLot(
+        currentLot,
+        dimKey,
+        constraint.item,
+        hierarchy
+      );
+      let constraintAnalysis: 'green' | 'orange' | 'red';
+      if (include) {
+        constraintAnalysis =
+          dimensionPresent && itemInLot
+            ? 'green'
+            : hasPriority
+              ? 'red'
+              : 'orange';
+      } else {
+        constraintAnalysis =
+          dimensionPresent && dimensionPresentInLot ? 'green' : 'orange';
+      }
       analysisByIndex[i] = constraintAnalysis;
     }
     currentLot = nextLot;
