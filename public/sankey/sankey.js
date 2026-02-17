@@ -294,6 +294,21 @@ function addTransformationToPath(scenario, parentPath, transformation) {
   return false;
 }
 
+// Même logique de navigation que addTransformationToPath : atteint l'objet au path (ou le crée).
+// Utilisé pour valoriser/détacher CDC sur un nœud Reste (coproduct_scenario).
+function getOrCreateObjectAtPath(scenario, path) {
+  if (!path || !Array.isArray(path) || path.length === 0) return scenario;
+  let target = scenario;
+  for (let i = 0; i < path.length; i++) {
+    const key = path[i];
+    if (target[key] === undefined) {
+      target[key] = key === 'transformations' ? [] : {};
+    }
+    target = target[key];
+  }
+  return target;
+}
+
 // Fonction pour supprimer une transformation par son _nodeId
 function removeTransformationByNodeId(scenario, nodeId) {
   console.log('🗑️ removeTransformationByNodeId called:', { nodeId });
@@ -764,6 +779,266 @@ function handleAddCoproductTransformationClick(parentNode) {
     },
     'add'
   );
+}
+
+/**
+ * Retourne l'objet du scénario au chemin donné (liste de clés/indices).
+ * Utilise exactement le path tel que construit par applyScenario (pas de réécriture).
+ * Si la résolution échoue et que le path commence par 'transformations' avec main présent,
+ * on réessaie en prenant main comme base (convention applyScenario).
+ */
+
+/**
+ * Trouve le coproduct_scenario qui contient une transformation avec le _nodeId donné.
+ * Parcours récursif comme findTransformationByNodeId : aucun path, on cherche par _nodeId.
+ */
+function findCoproductScenarioByNodeId(scenario, nodeId) {
+  const normalized = nodeId != null ? String(nodeId) : null;
+  if (!normalized) return undefined;
+
+  function search(obj) {
+    if (!obj || typeof obj !== 'object') return undefined;
+    const copro = obj.coproduct_scenario;
+    if (copro && Array.isArray(copro.transformations)) {
+      const found = copro.transformations.some(
+        t => t && String(t._nodeId) === normalized
+      );
+      if (found) return copro;
+    }
+    const transformations = obj.main?.transformations || obj.transformations;
+    if (Array.isArray(transformations)) {
+      for (const t of transformations) {
+        if (t && t.scenario) {
+          const r = search(t.scenario);
+          if (r) return r;
+        }
+        if (t && t.scenario?.coproduct_scenario) {
+          const r = search(t.scenario.coproduct_scenario);
+          if (r) return r;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  if (
+    scenario.coproduct_scenario &&
+    Array.isArray(scenario.coproduct_scenario.transformations)
+  ) {
+    const found = scenario.coproduct_scenario.transformations.some(
+      t => t && String(t._nodeId) === normalized
+    );
+    if (found) return scenario.coproduct_scenario;
+  }
+  return search(scenario);
+}
+
+function getObjectAtPath(obj, path) {
+  if (!path || !Array.isArray(path) || path.length === 0) return obj;
+  function resolve(base) {
+    let current = base;
+    for (let i = 0; i < path.length; i++) {
+      if (current == null || current === undefined) return undefined;
+      current = current[path[i]];
+    }
+    return current;
+  }
+  // Les paths sont construits depuis (scenario.main?.transformations || scenario.transformations) dans applyScenario
+  if (
+    path[0] === 'transformations' &&
+    obj &&
+    obj.main &&
+    Array.isArray(obj.main.transformations)
+  ) {
+    const fromMain = resolve(obj.main);
+    if (fromMain !== undefined) return fromMain;
+  }
+  return resolve(obj);
+}
+
+// Gestionnaire pour le clic "Valoriser" (phase 1 : blocage sans choix CDC)
+function handleValoriseClick(node) {
+  // Log toujours visible : si le Sankey est dans une iframe, voir la console du parent (écoute 'sankey-log')
+  console.log('[Sankey Valoriser] appelé', {
+    id: node?.id,
+    name: node?.name,
+    isCoproduct: !!node?.isCoproduct,
+  });
+  try {
+    window.parent.postMessage(
+      {
+        type: 'sankey-log',
+        payload: {
+          handler: 'valorise',
+          id: node?.id,
+          name: node?.name,
+          isCoproduct: !!node?.isCoproduct,
+        },
+      },
+      '*'
+    );
+  } catch (e) {}
+
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  if (!scenario) {
+    console.error('Valoriser: scénario manquant');
+    return;
+  }
+
+  // Cas coproduit (Reste) : même logique de path que handleAddCoproductTransformationClick / addTransformationToPath
+  if (node.isCoproduct) {
+    if (!node._path || !Array.isArray(node._path) || node._path.length === 0) {
+      console.error('Valoriser: _path manquant sur le nœud Reste');
+      return;
+    }
+    const pathToCoproduct =
+      node._path[node._path.length - 1] === 'transformations'
+        ? node._path.slice(0, -1)
+        : node._path;
+    const coproductScenario = getOrCreateObjectAtPath(
+      scenario,
+      pathToCoproduct
+    );
+    coproductScenario.target = '__valorised__';
+    coproductScenario.valorised = true;
+    window.publishScenario(scenario, 'Valorisation');
+    const lot = window.lotType;
+    const dimension = window.currentDimension;
+    if (typeof runSankey === 'function' && lot && scenario) {
+      runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
+    if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+    return;
+  }
+
+  // Cas nœud "cible" classique (transformation)
+  const nodeId =
+    node._nodeId ||
+    (node.transformations_appliquees && node.transformations_appliquees.length
+      ? node.transformations_appliquees[
+          node.transformations_appliquees.length - 1
+        ]._nodeId
+      : null);
+  if (!nodeId) {
+    console.error('Valoriser: nodeId manquant', { nodeId, scenario });
+    return;
+  }
+  const nodeInfo = findTransformationByNodeId(scenario, nodeId);
+  if (!nodeInfo) {
+    console.error('Valoriser: transformation non trouvée pour nodeId', nodeId);
+    return;
+  }
+  const transfo = nodeInfo.transformation;
+  if (!transfo.scenario) transfo.scenario = {};
+  transfo.scenario.target = '__valorised__';
+  transfo.valorised = true;
+  const success = window.updateTransformationByNodeId(
+    scenario,
+    nodeId,
+    transfo
+  );
+  if (!success) return;
+  window.publishScenario(scenario, 'Valorisation');
+  const lot = window.lotType;
+  const dimension = window.currentDimension;
+  if (typeof runSankey === 'function' && lot && scenario) {
+    runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  }
+  if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+}
+
+// Gestionnaire pour le clic "Détacher le CDC"
+function handleDetachCdcClick(node) {
+  console.log('[Sankey Détacher CDC] appelé', {
+    id: node?.id,
+    name: node?.name,
+    isCoproduct: !!node?.isCoproduct,
+  });
+  try {
+    window.parent.postMessage(
+      {
+        type: 'sankey-log',
+        payload: {
+          handler: 'detachCdc',
+          id: node?.id,
+          name: node?.name,
+          isCoproduct: !!node?.isCoproduct,
+        },
+      },
+      '*'
+    );
+  } catch (e) {}
+
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  if (!scenario) {
+    console.error('Détacher CDC: scénario manquant');
+    return;
+  }
+
+  // Cas coproduit (Reste) : même logique de path que handleAddCoproductTransformationClick / addTransformationToPath
+  if (node.isCoproduct) {
+    if (!node._path || !Array.isArray(node._path) || node._path.length === 0) {
+      console.error('Détacher CDC: _path manquant sur le nœud Reste');
+      return;
+    }
+    const pathToCoproduct =
+      node._path[node._path.length - 1] === 'transformations'
+        ? node._path.slice(0, -1)
+        : node._path;
+    const coproductScenario = getOrCreateObjectAtPath(
+      scenario,
+      pathToCoproduct
+    );
+    delete coproductScenario.target;
+    delete coproductScenario.valorised;
+    window.publishScenario(scenario, 'Détachement CDC');
+    const lot = window.lotType;
+    const dimension = window.currentDimension;
+    if (typeof runSankey === 'function' && lot && scenario) {
+      runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
+    if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+    return;
+  }
+
+  // Cas nœud "cible" classique
+  const nodeId =
+    node._nodeId ||
+    (node.transformations_appliquees && node.transformations_appliquees.length
+      ? node.transformations_appliquees[
+          node.transformations_appliquees.length - 1
+        ]._nodeId
+      : null);
+  if (!nodeId) {
+    console.error('Détacher CDC: nodeId manquant', { nodeId, scenario });
+    return;
+  }
+  const nodeInfo = findTransformationByNodeId(scenario, nodeId);
+  if (!nodeInfo) {
+    console.error(
+      'Détacher CDC: transformation non trouvée pour nodeId',
+      nodeId
+    );
+    return;
+  }
+  const transfo = nodeInfo.transformation;
+  if (transfo.scenario) {
+    delete transfo.scenario.target;
+  }
+  delete transfo.valorised;
+  const success = window.updateTransformationByNodeId(
+    scenario,
+    nodeId,
+    transfo
+  );
+  if (!success) return;
+  window.publishScenario(scenario, 'Détachement CDC');
+  const lot = window.lotType;
+  const dimension = window.currentDimension;
+  if (typeof runSankey === 'function' && lot && scenario) {
+    runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  }
+  if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
 }
 
 // Gestionnaire pour le clic sur "edit" d'une transformation
@@ -2646,9 +2921,12 @@ function updateSankey(dimension) {
             },
           },
           {
-            icon: 'sign-out',
-            label: i18next.t('link'),
-            disabled: true,
+            icon: 'check-circle',
+            label: i18next.t('valoriser'),
+            onClick: () => {
+              const nodeForValorise = nodes && nodes.length ? nodes[0] : null;
+              if (nodeForValorise) handleValoriseClick(nodeForValorise);
+            },
           },
         ];
 
@@ -2790,6 +3068,11 @@ function updateSankey(dimension) {
     }
   });
 
+  const initialTotal =
+    nodes[0] && nodes[0].lot && typeof nodes[0].lot.total === 'number'
+      ? nodes[0].lot.total
+      : 0;
+
   // Création des liens
   svg
     .append('g')
@@ -2821,6 +3104,8 @@ function updateSankey(dimension) {
     const nodeOffset =
       originalHeight < 2 ? (originalHeight - nodeHeight) / 2 : 0;
 
+    const isValorised = (d.lot && d.lot.target) || d.isTarget;
+
     // Stackbar (à gauche du nœud)
     nodeGroup
       .append('rect')
@@ -2828,7 +3113,7 @@ function updateSankey(dimension) {
       .attr('y', nodeOffset)
       .attr('height', nodeHeight)
       .attr('width', STACKBAR_WIDTH)
-      .style('fill', '#e0e0e0')
+      .style('fill', isValorised ? '#dcfce7' : '#e0e0e0')
       .style('opacity', 0.6);
 
     // Stackbars pour la dimension sélectionnée
@@ -2886,8 +3171,8 @@ function updateSankey(dimension) {
       .attr('height', nodeHeight)
       .attr('rx', 4)
       .attr('ry', 4)
-      .style('fill', 'rgba(204,204,204,0.6)') // gris clair, opacité 60%
-      .style('stroke', 'rgba(204,204,204,1)') // bordure 100%
+      .style('fill', 'rgba(204,204,204,0.6)')
+      .style('stroke', 'rgba(204,204,204,1)')
       .style('stroke-width', '1px')
       .style('opacity', 1)
       .on('mouseover', function (event) {
@@ -3795,9 +4080,9 @@ function updateSankey(dimension) {
             },
           },
           {
-            icon: 'sign-out',
-            label: i18next.t('link'),
-            disabled: true,
+            icon: 'check-circle',
+            label: i18next.t('valoriser'),
+            onClick: () => handleValoriseClick(d),
           },
         ];
 
@@ -3905,9 +4190,9 @@ function updateSankey(dimension) {
             },
           },
           {
-            icon: 'sign-out',
-            label: i18next.t('link'),
-            disabled: true,
+            icon: 'check-circle',
+            label: i18next.t('valoriser'),
+            onClick: () => handleValoriseClick(d),
           },
         ];
 
@@ -3954,6 +4239,17 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center text-green-600'
       );
       fo.node().appendChild(div);
+      // Sur les feuilles valorisées (pas le nœud synthétique), dropdown "Détacher le CDC" en mode éditable
+      if (!d.isTarget && d.lot && d.lot.target && window.isEditable) {
+        const detachOptions = [
+          {
+            icon: 'sign-out',
+            label: i18next.t('detachCdc'),
+            onClick: () => handleDetachCdcClick(d),
+          },
+        ];
+        div.addEventListener('click', createDropdown(div, detachOptions, 1));
+      }
       div.addEventListener('mouseover', function (event) {
         // ===== TOOLTIP DES NŒUDS TARGET (NON-TRANSFO) =====
         tooltip.transition().duration(200).style('opacity', 0.95);
@@ -4023,8 +4319,14 @@ function updateSankey(dimension) {
     let incomingLink = null;
 
     if (d.isTarget) {
-      // Pour les nœuds target, afficher le nom du target
-      displayTitle = d.name;
+      // Pour les nœuds target (valorisation), afficher libellé + % du lot
+      const pct =
+        initialTotal > 0 && d.lot && typeof d.lot.total === 'number'
+          ? Math.round((d.lot.total / initialTotal) * 100)
+          : 0;
+      const targetLabel =
+        d.name === '__valorised__' ? i18next.t('valorised') : d.name;
+      displayTitle = targetLabel + ' (' + pct + '%)';
     } else if (d.isCoproduct) {
       // Pour les nœuds co-produits (reste), afficher "Reste" traduit
       displayTitle = i18next.t('reste');
