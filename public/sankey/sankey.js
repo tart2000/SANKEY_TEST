@@ -3232,10 +3232,16 @@ function updateSankey(dimension) {
               const type = Array.isArray(transfo.type)
                 ? transfo.type[0]
                 : transfo.type;
+              const typeForLabel =
+                type === 'dynamic_transfo' && transfo.dynamic_transfo_id
+                  ? `dynamic_transfo_${transfo.dynamic_transfo_id}`
+                  : type;
 
               // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
               tooltipTitle = window.transformationUtils
-                ? window.transformationUtils.getTransformationLabel(type)
+                ? window.transformationUtils.getTransformationLabel(
+                    typeForLabel
+                  )
                 : transfo.title || type;
 
               // Ajouter les paramètres en français si disponibles
@@ -3409,9 +3415,13 @@ function updateSankey(dimension) {
             const type = Array.isArray(transfo.type)
               ? transfo.type[0]
               : transfo.type;
+            const typeForLabel =
+              type === 'dynamic_transfo' && transfo.dynamic_transfo_id
+                ? `dynamic_transfo_${transfo.dynamic_transfo_id}`
+                : type;
             // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
             const label = window.transformationUtils
-              ? window.transformationUtils.getTransformationLabel(type)
+              ? window.transformationUtils.getTransformationLabel(typeForLabel)
               : transfo.title || type;
             const typeLabel = label;
             let tableRows = '';
@@ -4339,10 +4349,14 @@ function updateSankey(dimension) {
         const type = Array.isArray(transfo.type)
           ? transfo.type[0]
           : transfo.type;
+        const typeForLabel =
+          type === 'dynamic_transfo' && transfo.dynamic_transfo_id
+            ? `dynamic_transfo_${transfo.dynamic_transfo_id}`
+            : type;
 
         // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
         displayTitle = window.transformationUtils
-          ? window.transformationUtils.getTransformationLabel(type)
+          ? window.transformationUtils.getTransformationLabel(typeForLabel)
           : transfo.title || type;
       } else {
         // Fallback sur le nom du lot
