@@ -1,10 +1,19 @@
 #!/usr/bin/env sh
 set -e
 
+# Rendre node/npx disponibles quand Git est lancé depuis une GUI (ex. GitHub Desktop).
+# Charger nvm en premier pour utiliser le Node du projet ; ne pas le faire suivre par
+# /usr/local/bin sinon l’ancien Node système écrase celui de nvm (erreur "node:path").
+if [ -f "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh"
+  [ -f .nvmrc ] && nvm use
+fi
+export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
+
 echo "🔍 Running pre-commit checks..."
 
-# Lancer lint-staged (linting + formatage des fichiers modifiés)
-npx lint-staged
+# Utiliser le binaire local pour éviter le npx global (souvent lié à un vieux Node)
+node_modules/.bin/lint-staged
 
 # Vérifier les types TypeScript
 npm run type-check

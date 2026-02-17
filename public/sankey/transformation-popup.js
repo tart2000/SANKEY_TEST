@@ -340,7 +340,8 @@ class TransformationPopup {
     const keyInputHTML = keyList
       ? `
       <div class="relative mt-2" ${shouldHideKeyInput ? 'style="display: none;"' : ''}>
-        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" ${shouldHideKeyInput ? 'disabled' : ''} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" ${shouldHideKeyInput ? 'disabled' : ''} class="w-full rounded-lg border border-gray-300 px-3 pr-9 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <button type="button" id="key-dropdown-close" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 hidden" title="${i18next.t('close') || 'Fermer'}"><i class="ph ph-x w-4 h-4"></i></button>
         <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-[60] max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
@@ -783,6 +784,17 @@ class TransformationPopup {
     const keysContainer = this.modal.querySelector('#transfo-keys');
     const keyInput = this.modal.querySelector('#key-input');
     const keyDropdown = this.modal.querySelector('#key-dropdown');
+    const keyDropdownCloseBtn = this.modal.querySelector('#key-dropdown-close');
+
+    // Fermer le dropdown paramètres et masquer le bouton X (utilisé par Escape, X, et après sélection)
+    const closeKeyDropdown = () => {
+      if (keyDropdown) keyDropdown.classList.add('hidden');
+      if (keyInput) {
+        keyInput.value = '';
+        keyInput.blur();
+      }
+      if (keyDropdownCloseBtn) keyDropdownCloseBtn.classList.add('hidden');
+    };
 
     // Pour garder la liste des keys sélectionnées
     // Initialiser avec les keys existantes si on édite une transformation
@@ -1202,6 +1214,8 @@ class TransformationPopup {
             keyInput.addEventListener('focus', () => {
               if (this.threshold === null || !this.condition) {
                 showFilteredOptions();
+                if (keyDropdownCloseBtn)
+                  keyDropdownCloseBtn.classList.remove('hidden');
               } else {
                 // Empêcher l'ouverture du dropdown si threshold actif
                 keyInput.blur();
@@ -1212,12 +1226,23 @@ class TransformationPopup {
             keyInput.addEventListener('click', e => {
               if (this.threshold === null || !this.condition) {
                 showFilteredOptions();
+                if (keyDropdownCloseBtn)
+                  keyDropdownCloseBtn.classList.remove('hidden');
               } else {
                 // Empêcher l'ouverture du dropdown si threshold actif
                 e.preventDefault();
                 e.stopPropagation();
               }
             });
+
+            // Bouton X : fermer le dropdown sans sélectionner (mousedown pour éviter focus sur input)
+            if (keyDropdownCloseBtn) {
+              keyDropdownCloseBtn.addEventListener('mousedown', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeKeyDropdown();
+              });
+            }
 
             // Listener pour la saisie
             keyInput.addEventListener('input', e => {
@@ -1275,8 +1300,7 @@ class TransformationPopup {
                     this.updateThresholdDisplay(updateSaveButtonState);
                   }
 
-                  keyDropdown.classList.add('hidden');
-                  keyInput.value = '';
+                  closeKeyDropdown();
                 }
               },
               { capture: true }
@@ -1291,9 +1315,12 @@ class TransformationPopup {
               document.removeEventListener('keydown', this._escapeHandler);
             }
             this._escapeHandler = e => {
-              if (e.key === 'Escape' && keyDropdown) {
-                keyDropdown.classList.add('hidden');
-                keyInput.value = '';
+              if (
+                e.key === 'Escape' &&
+                keyDropdown &&
+                !keyDropdown.classList.contains('hidden')
+              ) {
+                closeKeyDropdown();
               }
             };
             document.addEventListener('keydown', this._escapeHandler);
