@@ -28,6 +28,10 @@ export const translations = {
       valoriser: 'Valoriser',
       detachCdc: 'Détacher le CDC',
       valorised: 'Valorisé',
+      associateToCdc: 'Associer à un cahier des charges',
+      associate: 'Associer',
+      noCdcToAssociate:
+        'Pas de cahier des charges à associer. Créez votre premier cahier des charges dans votre espace de valorisation.',
       edit: 'Modifier',
       tools: 'Outils',
       moveUp: 'Monter',
@@ -186,6 +190,10 @@ export const translations = {
       valoriser: 'Valorise',
       detachCdc: 'Detach CDC',
       valorised: 'Valorised',
+      associateToCdc: 'Associate to a specification',
+      associate: 'Associate',
+      noCdcToAssociate:
+        'No specification to associate. Create your first specification in your valorisation space.',
       edit: 'Edit',
       tools: 'Tools',
       moveUp: 'Move up',
@@ -339,6 +347,10 @@ export const translations = {
       valoriser: 'Valorizar',
       detachCdc: 'Desvincular el CDC',
       valorised: 'Valorizado',
+      associateToCdc: 'Asociar a un pliego de condiciones',
+      associate: 'Asociar',
+      noCdcToAssociate:
+        'No hay pliego de condiciones para asociar. Cree su primer pliego de condiciones en su espacio de valorización.',
       edit: 'Editar',
       tools: 'Herramientas',
       moveUp: 'Subir',
@@ -496,6 +508,10 @@ export const translations = {
       valoriser: 'Valorisieren',
       detachCdc: 'CDC lösen',
       valorised: 'Valorisiert',
+      associateToCdc: 'Mit Lastenheft verknüpfen',
+      associate: 'Verknüpfen',
+      noCdcToAssociate:
+        'Kein Lastenheft zum Verknüpfen. Erstellen Sie Ihr erstes Lastenheft in Ihrem Valorisationsbereich.',
       edit: 'Bearbeiten',
       tools: 'Werkzeuge',
       moveUp: 'Nach oben',

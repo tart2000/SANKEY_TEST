@@ -29,6 +29,10 @@ window.i18nConfig = {
         valoriser: 'Valoriser',
         detachCdc: 'Détacher le CDC',
         valorised: 'Valorisé',
+        associateToCdc: 'Associer à un cahier des charges',
+        associate: 'Associer',
+        noCdcToAssociate:
+          'Pas de cahier des charges à associer. Créez votre premier cahier des charges dans votre espace de valorisation.',
         tools: 'Outils',
         moveUp: 'Monter',
         moveDown: 'Descendre',
@@ -155,6 +159,10 @@ window.i18nConfig = {
         valoriser: 'Valorise',
         detachCdc: 'Detach CDC',
         valorised: 'Valorised',
+        associateToCdc: 'Associate to a specification',
+        associate: 'Associate',
+        noCdcToAssociate:
+          'No specification to associate. Create your first specification in your valorisation space.',
         tools: 'Tools',
         moveUp: 'Move up',
         moveDown: 'Move down',
@@ -278,6 +286,10 @@ window.i18nConfig = {
         valoriser: 'Valorizar',
         detachCdc: 'Desvincular el CDC',
         valorised: 'Valorizado',
+        associateToCdc: 'Asociar a un pliego de condiciones',
+        associate: 'Asociar',
+        noCdcToAssociate:
+          'No hay pliego de condiciones para asociar. Cree su primer pliego de condiciones en su espacio de valorización.',
         tools: 'Herramientas',
         moveUp: 'Subir',
         moveDown: 'Bajar',
@@ -404,6 +416,10 @@ window.i18nConfig = {
         valoriser: 'Valorisieren',
         detachCdc: 'CDC lösen',
         valorised: 'Valorisiert',
+        associateToCdc: 'Mit Lastenheft verknüpfen',
+        associate: 'Verknüpfen',
+        noCdcToAssociate:
+          'Kein Lastenheft zum Verknüpfen. Erstellen Sie Ihr erstes Lastenheft in Ihrem Valorisationsbereich.',
         tools: 'Werkzeuge',
         moveUp: 'Nach oben',
         moveDown: 'Nach unten',

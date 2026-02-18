@@ -885,33 +885,49 @@ function handleValoriseClick(node) {
     return;
   }
 
-  // Cas coproduit (Reste) : même logique de path que handleAddCoproductTransformationClick / addTransformationToPath
+  // Cas coproduit (Reste) : ouvrir la popup CDC puis enregistrer via path (même logique que addTransformationToPath)
   if (node.isCoproduct) {
     if (!node._path || !Array.isArray(node._path) || node._path.length === 0) {
       console.error('Valoriser: _path manquant sur le nœud Reste');
       return;
     }
-    const pathToCoproduct =
-      node._path[node._path.length - 1] === 'transformations'
-        ? node._path.slice(0, -1)
-        : node._path;
-    const coproductScenario = getOrCreateObjectAtPath(
-      scenario,
-      pathToCoproduct
-    );
-    coproductScenario.target = '__valorised__';
-    coproductScenario.valorised = true;
-    window.publishScenario(scenario, 'Valorisation');
-    const lot = window.lotType;
-    const dimension = window.currentDimension;
-    if (typeof runSankey === 'function' && lot && scenario) {
-      runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    const onAssociate = selectedCdc => {
+      const pathToCoproduct =
+        node._path[node._path.length - 1] === 'transformations'
+          ? node._path.slice(0, -1)
+          : node._path;
+      const coproductScenario = getOrCreateObjectAtPath(
+        scenario,
+        pathToCoproduct
+      );
+      coproductScenario.target = selectedCdc.bubble_id;
+      coproductScenario.title = selectedCdc.title;
+      if (coproductScenario.valorised !== undefined) {
+        delete coproductScenario.valorised;
+      }
+      window.publishScenario(scenario, 'Valorisation');
+      const lot = window.lotType;
+      const dimension = window.currentDimension;
+      if (typeof runSankey === 'function' && lot && scenario) {
+        runSankey({
+          lot,
+          scenario,
+          containerId: 'sankey-container',
+          dimension,
+        });
+      }
+      if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+    };
+    if (typeof window.CdcAssociatePopup === 'function') {
+      const popup = new window.CdcAssociatePopup();
+      popup.show(node, onAssociate);
+    } else {
+      console.error('Valoriser: CdcAssociatePopup non disponible');
     }
-    if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
     return;
   }
 
-  // Cas nœud "cible" classique (transformation)
+  // Cas nœud "cible" classique (transformation) : même popup CDC que pour les Reste
   const nodeId =
     node._nodeId ||
     (node.transformations_appliquees && node.transformations_appliquees.length
@@ -929,22 +945,31 @@ function handleValoriseClick(node) {
     return;
   }
   const transfo = nodeInfo.transformation;
-  if (!transfo.scenario) transfo.scenario = {};
-  transfo.scenario.target = '__valorised__';
-  transfo.valorised = true;
-  const success = window.updateTransformationByNodeId(
-    scenario,
-    nodeId,
-    transfo
-  );
-  if (!success) return;
-  window.publishScenario(scenario, 'Valorisation');
-  const lot = window.lotType;
-  const dimension = window.currentDimension;
-  if (typeof runSankey === 'function' && lot && scenario) {
-    runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  const onAssociate = selectedCdc => {
+    if (!transfo.scenario) transfo.scenario = {};
+    transfo.scenario.target = selectedCdc.bubble_id;
+    transfo.scenario.title = selectedCdc.title;
+    if (transfo.valorised !== undefined) delete transfo.valorised;
+    const success = window.updateTransformationByNodeId(
+      scenario,
+      nodeId,
+      transfo
+    );
+    if (!success) return;
+    window.publishScenario(scenario, 'Valorisation');
+    const lot = window.lotType;
+    const dimension = window.currentDimension;
+    if (typeof runSankey === 'function' && lot && scenario) {
+      runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
+    if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+  };
+  if (typeof window.CdcAssociatePopup === 'function') {
+    const popup = new window.CdcAssociatePopup();
+    popup.show(node, onAssociate);
+  } else {
+    console.error('Valoriser: CdcAssociatePopup non disponible');
   }
-  if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
 }
 
 // Gestionnaire pour le clic "Détacher le CDC"
@@ -990,7 +1015,10 @@ function handleDetachCdcClick(node) {
       pathToCoproduct
     );
     delete coproductScenario.target;
-    delete coproductScenario.valorised;
+    delete coproductScenario.title;
+    if (coproductScenario.valorised !== undefined) {
+      delete coproductScenario.valorised;
+    }
     window.publishScenario(scenario, 'Détachement CDC');
     const lot = window.lotType;
     const dimension = window.currentDimension;
@@ -1024,8 +1052,9 @@ function handleDetachCdcClick(node) {
   const transfo = nodeInfo.transformation;
   if (transfo.scenario) {
     delete transfo.scenario.target;
+    delete transfo.scenario.title;
   }
-  delete transfo.valorised;
+  if (transfo.valorised !== undefined) delete transfo.valorised;
   const success = window.updateTransformationByNodeId(
     scenario,
     nodeId,
@@ -2954,10 +2983,18 @@ function updateSankey(dimension) {
     const lotsToMerge = leafNodesWithTarget
       .filter(n => n.lot.target === target)
       .map(n => n.lot);
+    const firstLot = lotsToMerge[0];
+    const targetLabel =
+      firstLot && firstLot.targetLabel != null
+        ? firstLot.targetLabel
+        : target === '__valorised__'
+          ? null
+          : target;
 
     return {
       id: 'target_' + target,
       name: target,
+      targetLabel: targetLabel,
       isTarget: true,
       lot: mergeLots(lotsToMerge), // On merge les lots ici
       depth: maxNodeDepth + 1,
@@ -4089,12 +4126,14 @@ function updateSankey(dimension) {
               console.log('📊 [Données groupées]', groupedData);
             },
           },
-          {
+        ];
+        if (!d.lot || !d.lot.target) {
+          dropdownOptions.push({
             icon: 'check-circle',
             label: i18next.t('valoriser'),
             onClick: () => handleValoriseClick(d),
-          },
-        ];
+          });
+        }
 
         // Utiliser le même positionnement que les icônes de transformation
         div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
@@ -4199,12 +4238,14 @@ function updateSankey(dimension) {
               console.log('📊 [Données groupées]', groupedData);
             },
           },
-          {
+        ];
+        if (!d.lot || !d.lot.target) {
+          dropdownOptions.push({
             icon: 'check-circle',
             label: i18next.t('valoriser'),
             onClick: () => handleValoriseClick(d),
-          },
-        ];
+          });
+        }
 
         // Utiliser le même positionnement que les icônes de transformation
         div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
@@ -4335,7 +4376,11 @@ function updateSankey(dimension) {
           ? Math.round((d.lot.total / initialTotal) * 100)
           : 0;
       const targetLabel =
-        d.name === '__valorised__' ? i18next.t('valorised') : d.name;
+        d.targetLabel != null
+          ? d.targetLabel
+          : d.name === '__valorised__'
+            ? i18next.t('valorised')
+            : d.name;
       displayTitle = targetLabel + ' (' + pct + '%)';
     } else if (d.isCoproduct) {
       // Pour les nœuds co-produits (reste), afficher "Reste" traduit
@@ -5079,6 +5124,9 @@ function applyScenario(
       // Ajout de la target au lot si elle existe dans le scénario
       if (transfo.scenario && transfo.scenario.target) {
         targetLot.target = transfo.scenario.target;
+        if (transfo.scenario.title != null) {
+          targetLot.targetLabel = transfo.scenario.title;
+        }
       }
 
       // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
@@ -5172,6 +5220,9 @@ function applyScenario(
     if (!resteLot.title) resteLot.title = titre;
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.target) {
       resteLot.target = scenario.coproduct_scenario.target;
+      if (scenario.coproduct_scenario.title != null) {
+        resteLot.targetLabel = scenario.coproduct_scenario.title;
+      }
     }
     const coproductNodeId = `${idGenObj.id++}`;
     let coproductPath;
@@ -5198,7 +5249,10 @@ function applyScenario(
       ];
     }
     // Note: _path ne doit plus être stocké
-    const nodeName = resteLot.target ? `Reste → ${resteLot.target}` : 'Reste';
+    const nodeName = resteLot.target
+      ? 'Reste → ' +
+        (resteLot.targetLabel != null ? resteLot.targetLabel : resteLot.target)
+      : 'Reste';
     nodes.push({
       id: coproductNodeId,
       name: nodeName,
