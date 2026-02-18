@@ -338,4 +338,24 @@ export const bubbleApiCalls = [
       },
     ],
   },
+  {
+    name: 'Get team cdcs',
+    endpoint: 'cdcs?team_id={id}',
+    method: 'GET',
+    examplePath: '../api/bubble/examples/cdcs-response.json',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
+    ],
+  },
 ];
