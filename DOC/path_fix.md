@@ -45,9 +45,9 @@ function generateStableNodeId() {
 **Règles** :
 
 - ❌ Plus de `_path` dans les transformations
-- ✅ Fonction `getPathFromNodeId()` qui calcule le path à la volée
-- ✅ Le path est calculé dynamiquement à partir du `_nodeId`
-- ✅ Plus de problème de synchronisation des paths
+- ✅ Le `_path` est calculé à l'affichage dans `applyScenario` et attaché aux **nœuds du graphe** (notamment au nœud Reste)
+- ✅ Pour le coproduit, le path utilisé (ajout de transfo, valorisation/détachement) est **toujours `node._path`** (ou dérivé : path sans le dernier `'transformations'` pour atteindre l'objet `coproduct_scenario`)
+- ✅ Fonction **getOrCreateObjectAtPath(scenario, path)** : même logique de navigation que `addTransformationToPath` (parcours clé par clé, création des branches manquantes), utilisée pour valoriser/détacher le CDC sur un Reste (atteindre l'objet `coproduct_scenario` et y mettre à jour `target` / `title`)
 
 ### 4. Système de Recherche par NodeId
 
@@ -158,19 +158,15 @@ function handleAddTransformationClick(node) {
 }
 
 // Dans sankey.js - Gestion du clic sur le bouton "+" du coproduit
+// Le path est pris directement depuis le nœud Reste (_path calculé par applyScenario), pas via calculatePathForNewTransformation
 function handleAddCoproductTransformationClick(parentNode) {
   const parentNodeId = parentNode._nodeId || parentNode.id;
-  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
-  const path = calculatePathForNewTransformation(
-    parentNodeId,
-    'add_to_coproduct',
-    scenario
-  );
+  const path = [...parentNode._path]; // path vers coproduct_scenario.transformations
 
   const popup = new TransformationPopup();
   popup.show('add', {
     nodeId: parentNodeId,
-    path: path, // ✅ Path calculé à l'avance
+    path: path,
     node: parentNode,
   });
 }

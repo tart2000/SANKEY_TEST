@@ -86,9 +86,11 @@ const scenario = {
 };
 ```
 
+(Les `_path` dans l'exemple ci-dessus sont **illustratifs** ; en pratique, `_path` n'est pas stocké dans le scénario mais calculé sur les nœuds à l'affichage. Les paths réels utilisés pour la navigation sont des clés directes depuis la racine, sans `main` — voir section Paths et navigation.)
+
 **Notes importantes :**
 
-- `_path`, `_index` et `_nodeId` sont maintenus automatiquement pour faciliter les mises à jour, la navigation et l’affichage du bouton `+`.
+- `_nodeId` et `_index` sont persistés sur les transformations pour la recherche et l'édition. En revanche, **`_path` n'est pas stocké dans le scénario** : il est calculé à l'affichage dans `applyScenario` et attaché aux **nœuds du graphe** (notamment au nœud Reste). C'est ce `node._path` qui est utilisé pour l'ajout de transformation au coproduit et pour la valorisation/détachement CDC (voir section Paths et navigation).
 - Si `main` est absent, `scenario.transformations` et `scenario.coproduct_scenario` restent pris en charge (fichiers Bubble anciens).
 - Les `keys` doivent toujours contenir les `bubble_id` (pas les labels). Les textes affichés sont injectés via les données du lot.
 
@@ -113,14 +115,40 @@ const scenario = {
    }
    ```
 
-### Validation des Destinations
+### Validation des Destinations (valorisation CDC)
 
-- Chaque lot peut avoir une destination finale (`target`)
-- Les lots validés sont marqués d'une icône de validation
-- Le tooltip affiche :
-  - La destination du lot
-  - Le poids du lot
-  - Le total des lots ayant la même destination
+- Chaque lot (feuille de transformation ou Reste) peut être associé à un **cahier des charges (CDC)** : on enregistre **`target`** (bubble_id du CDC) et **`title`** (nom affiché). Un nœud est considéré valorisé si `target` (ou `title`) est présent ; le champ `valorised` n’est plus utilisé.
+- **Flux Valoriser** : au clic sur « Valoriser », une popup « Associer à un cahier des charges » s’ouvre ; l’appel API `cdcs?team_id=...` (avec `teamId` et `isLive` passés à l’iframe) charge la liste des CDCs de la team. L’utilisateur sélectionne un CDC et clique sur « Associer » : on enregistre `target` et `title` puis on relance le Sankey.
+- **Où sont stockés target et title** :
+  - **Reste (coproduit)** : sur l’objet `coproduct_scenario` atteint par le path du nœud (même navigation que pour l’ajout de transfo, via `getOrCreateObjectAtPath`).
+  - **Feuille de transformation (lot « direct »)** : sur `transfo.scenario.target` et `transfo.scenario.title`.
+- **Détacher le CDC** : supprime `target` et `title` (et `valorised` si présent) ; l’option « Valoriser » réapparaît dans le dropdown.
+- **Affichage** : les nœuds valorisés affichent **« [title] (x%) »**. Rétrocompatibilité : si `target === '__valorised__'` (ancien format), le libellé reste « Valorisé ».
+- Les lots valorisés sont marqués d’une icône de validation. Le tooltip affiche la destination (ou le titre), le poids du lot et le total des lots ayant la même destination.
+
+## Paths et navigation dans le scénario
+
+La navigation dans l’arbre du scénario (ajout de transformation, valorisation/détachement CDC) repose sur des **paths** : tableaux de clés depuis la **racine du scénario**, sans la clé `main`.
+
+### Convention des paths
+
+- Un path est un tableau de clés, ex. `['transformations', 0, 'scenario', 'coproduct_scenario', 'transformations']`.
+- La **lecture** des transformations utilise `scenario.main?.transformations || scenario.transformations`, mais les paths utilisés pour **écriture** (ajout, valorisation) sont des clés **directes** sur l’objet scénario : `scenario['transformations']`, `scenario[0]['scenario']['coproduct_scenario']`, etc. Il n’y a donc **pas de `'main'` dans les paths**.
+- **Où vit `_path`** : il n’est **pas** persisté dans le scénario. Il est calculé dans `applyScenario` et attaché aux **nœuds du graphe** (en particulier au nœud Reste). C’est ce `node._path` qui est utilisé pour l’ajout de transfo au coproduit et pour valoriser/détacher.
+
+### Fonctions de navigation (sankey.js)
+
+- **addTransformationToPath(scenario, path, transformation)** : parcourt le path clé par clé, crée les branches manquantes (`'transformations'` → `[]`, sinon `{}`), puis ajoute la transformation au tableau en fin de path.
+- **getOrCreateObjectAtPath(scenario, path)** : même parcours clé par clé, retourne l’objet au bout du path. Utilisé pour atteindre l’objet `coproduct_scenario` et y mettre à jour `target` / `title` (valorisation) ou les supprimer (détacher).
+
+### Exemples de paths
+
+- Racine des transformations principales : `['transformations']`.
+- Premier coproduit racine : `['coproduct_scenario', 'transformations']`.
+- Coproduit sous la première transformation : `['transformations', 0, 'scenario', 'coproduct_scenario', 'transformations']`.
+- Path vers l’**objet** `coproduct_scenario` (pour valoriser/détacher) : même path sans le dernier segment `'transformations'`, ex. `['transformations', 0, 'scenario', 'coproduct_scenario']`.
+
+Pour le **coproduit**, le path est toujours pris depuis le nœud : `path = [...parentNode._path]` pour l’ajout de transfo ; pour valoriser, on utilise ce path en retirant le dernier `'transformations'` pour cibler l’objet et non le tableau.
 
 ## Intégration Technique
 
@@ -133,6 +161,7 @@ const scenario = {
 - `processes.js` : librairie des transformations statiques (selectBy*, process*, filtres)
 - `transformation-popup.js` : popup d’édition d’une transformation (sélection, cibles, options)
 - `tech-popup.js` : popup d’édition des technos (fetch Bubble, versioning, calculs de coûts)
+- `cdc-associate-popup.js` : popup « Associer à un cahier des charges » (liste CDCs via API `cdcs?team_id=`, sélection, bouton Associer/Annuler), utilisée pour Valoriser (Reste et lots directs)
 - `utils/` : fonctions partagées (normalisation, couleurs, lots)
 - `../data/*.js` : jeux de données modulaires (lot type, couleurs, dynamic transfos) synchronisés avec Bubble
 - `../i18n-config.js` : configuration i18next générée par `npm run build:translations`
@@ -458,11 +487,12 @@ Un scénario standard comporte :
 - `main.transformations` : liste principale des transformations (sélections, processes, dynamic transfos…).
 - `main.coproduct_scenario.transformations` : transformations appliquées au reste généré par chacun des nœuds `main` (optionnel).
 - `coproduct_scenario.transformations` à la racine : transformations appliquées au reste global du lot initial.
-- Propriétés additionnelles susceptibles d’être présentes :
-  - `target` : destination finale (bubble_id) ;
+- Propriétés additionnelles susceptibles d'être présentes :
+  - `target` : destination finale (bubble_id du CDC) ;
+  - `title` : nom affiché du CDC (pour l'affichage dans le Sankey) ;
   - `tech` : techno associée (voir section techno) ;
   - `dynamic_transfo_id`, `transfo_type` ;
-  - attributs d’UI (`_path`, `_nodeId`, `_index`, `isProcess`, etc.).
+  - attributs d'UI (`_nodeId`, `_index`, `isProcess`, etc.) ; **`_path` n'est pas stocké** (voir section Paths et navigation).
 
 Chaque transformation possède les clés principales suivantes :
 
@@ -475,17 +505,20 @@ type Transformation = {
   condition?: 'over' | 'under';
   scenario?: ScenarioNode; // sous-scénario (même structure)
   coproduct_scenario?: ScenarioNode;
-  target?: string; // bubble_id destination
+  target?: string; // bubble_id du CDC (valorisation)
+  title?: string; // nom affiché du CDC (valorisation)
   yield?: number; // processes dynamiques
   tech?: TechAttachment; // techno attachée
-  _path?: (string | number)[]; // chemin vers la transformation
-  _nodeId?: string; // identifiant UI
-  _index?: number; // index dans le tableau parent
+  _nodeId?: string; // identifiant UI (persisté)
+  _index?: number; // index dans le tableau parent (persisté)
+  // _path n'est pas stocké dans le scénario ; il est calculé sur les nœuds à l'affichage
 };
 
 type ScenarioNode = {
   transformations?: Transformation[];
   coproduct_scenario?: ScenarioNode;
+  target?: string; // pour coproduct_scenario : bubble_id du CDC
+  title?: string; // pour coproduct_scenario : nom affiché du CDC
 };
 ```
 
@@ -570,7 +603,7 @@ const scenario = {
 
 - À chaque niveau, tu peux imbriquer autant de sous-scénarios que nécessaire.
 - Les transformations du "reste" (coproduit) se trouvent toujours dans un champ `coproduct_scenario.transformations`.
-- Les `_path` / `_nodeId` sont recalculés lors de la sauvegarde pour conserver la cohérence UI.
+- Le `_path` n'est pas stocké : il est calculé sur les nœuds à l'affichage. Les `_nodeId` et `_index` sont persistés pour la cohérence UI.
 
 ### Parsing
 
@@ -647,6 +680,7 @@ Pour toute question ou adaptation de la structure, contactez le développeur du 
 ### Règle actuelle
 
 - Le « + » s'affiche sur les nœuds feuilles sans lien sortant, sauf si le nœud a une destination finale (`target`) ou s'il est un nœud destination (`isTarget`).
+- L'option « Valoriser » du dropdown n'apparaît que si le nœud n'est pas déjà valorisé (`!d.lot || !d.lot.target`) ; une fois valorisé, seul « Détacher le CDC » reste disponible.
 - Le « + » s'affiche également sur le lien « Reste » (coproduit) pour indiquer qu'une transformation supplémentaire peut être ajoutée.
 
 ### Dernières modifications
