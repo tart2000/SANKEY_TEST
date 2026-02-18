@@ -3244,11 +3244,13 @@ function updateSankey(dimension) {
           // Ajout des informations sur la target
           let targetInfo = '';
           if (d.lot && d.lot.target) {
+            const targetDisplay =
+              d.lot.targetLabel != null ? d.lot.targetLabel : d.lot.target;
             targetInfo = `
                             <br/>
                             <div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'>
                                 <strong style='color:#4CAF50;'>✓ Destination validée</strong><br/>
-                                <span style='font-size:12px;'>Target: ${d.lot.target}</span>
+                                <span style='font-size:12px;'>${targetDisplay}</span>
                             </div>
                         `;
           }
@@ -3531,7 +3533,11 @@ function updateSankey(dimension) {
               });
             }
             if (transfo.scenario && transfo.scenario.target) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
+              const targetDisplay =
+                transfo.scenario.title != null
+                  ? transfo.scenario.title
+                  : transfo.scenario.target;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${targetDisplay}</span></td></tr>`;
             }
             // Ajouter la step de la transformation (label localisé)
             const stepId = getTransformationStep(transfo);
@@ -4326,11 +4332,17 @@ function updateSankey(dimension) {
             distributionHtml += '</div>';
           }
         }
+        const targetDisplay =
+          d.lot && d.lot.targetLabel != null
+            ? d.lot.targetLabel
+            : d.lot && d.lot.target
+              ? d.lot.target
+              : d.name;
         tooltip
           .html(
             `
                         <strong>Destination validée</strong><br/>
-                        Target: ${d.lot && d.lot.target ? d.lot.target : d.name}<br/>
+                        ${targetDisplay}<br/>
                         <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
                         ${distributionHtml}
                     `
