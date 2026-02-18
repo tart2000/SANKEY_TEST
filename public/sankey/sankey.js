@@ -3216,11 +3216,17 @@ function updateSankey(dimension) {
         const component = stackbarComponents[dimension];
         // Vérifier si c'est un nœud target
         if (d.isTarget) {
+          const targetTitle =
+            d.targetLabel != null && d.targetLabel !== ''
+              ? d.targetLabel
+              : window.i18next && window.i18next.t
+                ? window.i18next.t('cdcName')
+                : 'Cahier des charges';
           tooltip.transition().duration(200).style('opacity', 0.95);
           tooltip
             .html(
               `
-                        <strong>${d.name}</strong><br/>
+                        <strong>${targetTitle.replace(/</g, '&lt;')}</strong><br/>
                         <span style='font-size:12px;color:#666;'>Nœud destination</span>
                     `
             )
@@ -4333,16 +4339,18 @@ function updateSankey(dimension) {
           }
         }
         const targetDisplay =
-          d.lot && d.lot.targetLabel != null
-            ? d.lot.targetLabel
-            : d.lot && d.lot.target
-              ? d.lot.target
-              : d.name;
+          d.targetLabel != null && d.targetLabel !== ''
+            ? d.targetLabel
+            : d.lot && d.lot.targetLabel != null
+              ? d.lot.targetLabel
+              : window.i18next && window.i18next.t
+                ? window.i18next.t('cdcName')
+                : 'Cahier des charges';
         tooltip
           .html(
             `
                         <strong>Destination validée</strong><br/>
-                        ${targetDisplay}<br/>
+                        ${String(targetDisplay).replace(/</g, '&lt;')}<br/>
                         <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
                         ${distributionHtml}
                     `
@@ -4471,11 +4479,17 @@ function updateSankey(dimension) {
     });
   });
 
-  // Calculer et afficher les coûts totaux
+  const lotInitialTotal = nodes[0]?.lot?.total ?? 0;
+
+  // Calculer et afficher les coûts totaux (onglet Coûts)
   if (window.teamData) {
     const costsData = calculateCosts(nodes, links);
     displayCostsTable(costsData);
   }
+
+  // Toujours mettre à jour l'onglet Valorisation (nœuds cibles agrégés)
+  const valorisationData = getValorisationData(nodes, lotInitialTotal);
+  displayValorisationTable(valorisationData);
 
   // Demander un redimensionnement via la fonction commune exposée par index.html
   setTimeout(() => {
@@ -5785,20 +5799,75 @@ function formatTime(hours) {
   return formatted;
 }
 
-// Fonction pour afficher le tableau des coûts
-function displayCostsTable(costsData) {
-  // Supprimer l'ancien tableau s'il existe
-  const existingTable = document.getElementById('costs-table');
-  if (existingTable) {
-    existingTable.remove();
-  }
+// Crée une seule fois le conteneur à onglets (Coûts | Valorisation) après le bouton Enregistrer
+function ensureTabsContainer() {
+  if (document.getElementById('tabs-container')) return;
 
-  // Créer le nouveau tableau
+  const saveBtnContainer = document.getElementById('save-btn-container');
+  if (!saveBtnContainer) return;
+
+  const t =
+    window.i18next && typeof window.i18next.t === 'function'
+      ? window.i18next.t.bind(window.i18next)
+      : k => k;
+
+  const container = document.createElement('div');
+  container.id = 'tabs-container';
+  container.className = 'mt-4';
+  container.innerHTML = `
+    <div class="flex border-b border-gray-200 mb-0">
+      <button type="button" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-600 text-blue-600 bg-white" data-tab="costs">${t('totalCostsTitle')}</button>
+      <button type="button" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="valorisation">${t('valorisation')}</button>
+    </div>
+    <div class="border border-gray-200 border-t-0 rounded-b-lg p-4 bg-white">
+      <div id="tab-costs-panel"></div>
+      <div id="tab-valorisation-panel" style="display: none;"></div>
+    </div>
+  `;
+
+  saveBtnContainer.parentNode.insertBefore(
+    container,
+    saveBtnContainer.nextSibling
+  );
+
+  container.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const tab = this.getAttribute('data-tab');
+      container.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-blue-600', 'text-blue-600');
+        b.classList.add('border-transparent', 'text-gray-500');
+      });
+      this.classList.remove('border-transparent', 'text-gray-500');
+      this.classList.add('border-blue-600', 'text-blue-600');
+
+      const costsPanel = document.getElementById('tab-costs-panel');
+      const valorisationPanel = document.getElementById(
+        'tab-valorisation-panel'
+      );
+      if (tab === 'costs') {
+        if (costsPanel) costsPanel.style.display = '';
+        if (valorisationPanel) valorisationPanel.style.display = 'none';
+      } else {
+        if (costsPanel) costsPanel.style.display = 'none';
+        if (valorisationPanel) valorisationPanel.style.display = '';
+      }
+    });
+  });
+}
+
+// Fonction pour afficher le tableau des coûts (dans l'onglet Coûts)
+function displayCostsTable(costsData) {
+  ensureTabsContainer();
+  const panel = document.getElementById('tab-costs-panel');
+  if (!panel) return;
+
+  panel.innerHTML = '';
+
+  // Créer le contenu du tableau des coûts (conserver id costs-table pour la hauteur iframe)
   const tableContainer = document.createElement('div');
   tableContainer.id = 'costs-table';
-  tableContainer.className =
-    'mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm';
-  tableContainer.style.marginTop = '20px';
+  tableContainer.className = 'bg-white';
+  tableContainer.style.marginTop = '0';
 
   // Formater les temps
   const totalOperationTimeFormatted = formatTime(
@@ -5909,15 +5978,74 @@ function displayCostsTable(costsData) {
   `;
 
   tableContainer.innerHTML = tableHTML;
+  panel.appendChild(tableContainer);
+}
 
-  // Insérer le tableau après le bouton Enregistrer
-  const saveBtnContainer = document.getElementById('save-btn-container');
-  if (saveBtnContainer) {
-    saveBtnContainer.parentNode.insertBefore(
-      tableContainer,
-      saveBtnContainer.nextSibling
-    );
-  }
+// Données valorisation à partir des nœuds cibles (sans appel API)
+function getValorisationData(nodes, initialTotal) {
+  const total = initialTotal ?? nodes[0]?.lot?.total ?? 0;
+  const targets = (nodes || []).filter(n => n.isTarget);
+  const cdcRows = targets.map(n => {
+    const weightKg = n.lot?.total ?? 0;
+    const pct = total > 0 ? (weightKg / total) * 100 : 0;
+    return {
+      name: n.targetLabel ?? n.name ?? '',
+      pct,
+      weightKg,
+    };
+  });
+  const sumWeight = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const valorisedPercent = total > 0 ? (sumWeight / total) * 100 : 0;
+  return { valorisedPercent, cdcRows };
+}
+
+// Affiche le tableau de valorisation dans l'onglet Valorisation
+function displayValorisationTable(valorisationData) {
+  ensureTabsContainer();
+  const panel = document.getElementById('tab-valorisation-panel');
+  if (!panel) return;
+
+  panel.innerHTML = '';
+
+  const t =
+    window.i18next && typeof window.i18next.t === 'function'
+      ? window.i18next.t.bind(window.i18next)
+      : k => k;
+  const valorisedPercent = valorisationData?.valorisedPercent ?? 0;
+  const cdcRows = valorisationData?.cdcRows ?? [];
+  const pctRounded = Math.round(valorisedPercent);
+
+  const headerHtml = `
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-800">${t('valorisation')}</h3>
+      <div class="flex flex-col gap-1 md:items-end">
+        <span class="text-sm font-medium text-gray-600 md:text-right">${pctRounded}% ${t('valorisedPercentLabel')}</span>
+        <div class="w-full md:w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-500 transition-all" style="width: ${Math.min(100, pctRounded)}%;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let tableBody = '';
+  cdcRows.forEach(row => {
+    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td></tr>`;
+  });
+
+  const tableHtml = `
+    ${headerHtml}
+    <table class="w-full border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-50">
+          <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('cdcName')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('pctLot')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('weightKg')}</th>
+        </tr>
+      </thead>
+      <tbody>${tableBody}</tbody>
+    </table>
+  `;
+  panel.innerHTML = tableHtml;
 }
 
 // Fonction pour publier le scénario dans la console

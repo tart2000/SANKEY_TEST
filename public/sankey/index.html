@@ -672,6 +672,7 @@
           const sankeyContainer = document.getElementById('sankey-container');
           const saveBtnContainer =
             document.getElementById('save-btn-container');
+          const tabsContainer = document.getElementById('tabs-container');
           const costsTable = document.getElementById('costs-table');
 
           // Trouver le bas du dernier élément visible
@@ -705,9 +706,12 @@
             bottomMost = Math.max(bottomMost, rect.bottom);
           }
 
-          // 4. Tableau des coûts (s'il existe)
-          if (costsTable && getComputedStyle(costsTable).display !== 'none') {
-            const rect = costsTable.getBoundingClientRect();
+          // 4. Onglets Coûts / Valorisation (s'il existe)
+          if (
+            tabsContainer &&
+            getComputedStyle(tabsContainer).display !== 'none'
+          ) {
+            const rect = tabsContainer.getBoundingClientRect();
             bottomMost = Math.max(bottomMost, rect.bottom);
           }
 
