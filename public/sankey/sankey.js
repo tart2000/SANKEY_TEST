@@ -4502,6 +4502,16 @@ function updateSankey(dimension) {
 
   // Toujours mettre à jour l'onglet Valorisation (nœuds cibles agrégés)
   const valorisationData = getValorisationData(nodes, lotInitialTotal, links);
+  const downstreamFlow = getDownstreamFlowToTargets(nodes, links);
+  const costPerTarget = getCostPerTarget(costsData.nodeCosts, downstreamFlow);
+  (valorisationData.cdcRows || []).forEach(row => {
+    const targetId = (row.nodeId != null ? String(row.nodeId) : '').replace(
+      /^target_/,
+      ''
+    );
+    row.cost = targetId ? (costPerTarget[targetId] ?? 0) : 0;
+  });
+  valorisationData.totalCost = costsData.totalCost;
   displayValorisationTable(valorisationData);
 
   // Demander un redimensionnement via la fonction commune exposée par index.html
@@ -5771,7 +5781,13 @@ function calculateCosts(nodes, links) {
           totalTimeRH += tempsRHTransfo;
         }
 
+        const nodeIdForCost =
+          targetNode?.id ??
+          (typeof link.target === 'object' && link.target != null
+            ? link.target.id
+            : link.target);
         nodeCosts.push({
+          nodeId: nodeIdForCost != null ? String(nodeIdForCost) : undefined,
           nodeName: transformation._nodeId,
           transformation,
           costs,
@@ -6343,6 +6359,142 @@ function displayCostsTable(costsData) {
   panel.addEventListener('click', panel._costsTableTransfoClickHandler);
 }
 
+/**
+ * Calcule le flux (kg) qui part de chaque nœud vers chaque CDC (target_xxx).
+ * Retourne downstreamFlow[nodeId][targetId] = kg (targetId = partie après 'target_').
+ * @param {Array} nodes - Nœuds du graphe (après merge des cibles)
+ * @param {Array} links - Liens { source, target, value }
+ * @returns {Object} downstreamFlow[nodeId][targetId] = kg
+ */
+function getDownstreamFlowToTargets(nodes, links) {
+  const downstreamFlow = {};
+  const linkList = links || [];
+
+  function targetIdFromLink(link) {
+    const t =
+      link.target != null && typeof link.target === 'object'
+        ? link.target.id
+        : link.target;
+    const s = String(t);
+    return s.startsWith('target_') ? s.replace(/^target_/, '') : null;
+  }
+
+  function sourceId(link) {
+    return String(
+      link.source != null && typeof link.source === 'object'
+        ? link.source.id
+        : link.source
+    );
+  }
+
+  // Liens directs vers target_xxx
+  linkList.forEach(link => {
+    const tid = targetIdFromLink(link);
+    if (tid != null && link.value != null) {
+      const sid = sourceId(link);
+      if (!downstreamFlow[sid]) downstreamFlow[sid] = {};
+      downstreamFlow[sid][tid] = (downstreamFlow[sid][tid] || 0) + link.value;
+    }
+  });
+
+  const nodeIds = new Set(Object.keys(downstreamFlow));
+  linkList.forEach(link => {
+    const t =
+      link.target != null && typeof link.target === 'object'
+        ? link.target.id
+        : link.target;
+    const s = String(t);
+    if (!s.startsWith('target_') && s) {
+      nodeIds.add(sourceId(link));
+      nodeIds.add(s);
+    }
+  });
+
+  const depth = {};
+  nodeIds.forEach(id => (depth[id] = 0));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    linkList.forEach(link => {
+      const tid = targetIdFromLink(link);
+      if (tid != null) return;
+      const cid = String(
+        link.target != null && typeof link.target === 'object'
+          ? link.target.id
+          : link.target
+      );
+      const nid = sourceId(link);
+      const d = 1 + (depth[cid] ?? 0);
+      if (d > (depth[nid] ?? 0)) {
+        depth[nid] = d;
+        changed = true;
+      }
+    });
+  }
+
+  const sortedIds = Array.from(nodeIds).sort(
+    (a, b) => (depth[a] ?? 0) - (depth[b] ?? 0)
+  );
+
+  sortedIds.forEach(nid => {
+    linkList.forEach(link => {
+      if (sourceId(link) !== nid) return;
+      const tRaw =
+        link.target != null && typeof link.target === 'object'
+          ? link.target.id
+          : link.target;
+      const cid = String(tRaw);
+      if (cid.startsWith('target_')) return;
+      const V = link.value ?? 0;
+      const flowC = downstreamFlow[cid];
+      if (!flowC) return;
+      const totalC = Object.keys(flowC).reduce(
+        (s, k) => s + (flowC[k] || 0),
+        0
+      );
+      if (totalC <= 0) return;
+      if (!downstreamFlow[nid]) downstreamFlow[nid] = {};
+      Object.keys(flowC).forEach(t => {
+        downstreamFlow[nid][t] =
+          (downstreamFlow[nid][t] || 0) + V * (flowC[t] / totalC);
+      });
+    });
+  });
+
+  return downstreamFlow;
+}
+
+/**
+ * Répartit les coûts par nœud au prorata du flux vers chaque CDC.
+ * @param {Array} nodeCosts - Entrées { nodeId, transformation, costs } (costs.cout_total)
+ * @param {Object} downstreamFlow - downstreamFlow[nodeId][targetId] = kg
+ * @returns {Object} { [targetId]: number } coût en € par CDC
+ */
+function getCostPerTarget(nodeCosts, downstreamFlow) {
+  const costByNode = {};
+  (nodeCosts || []).forEach(entry => {
+    const nid = String(entry.nodeId ?? '');
+    if (!costByNode[nid]) costByNode[nid] = 0;
+    const ct = entry.costs?.cout_total;
+    costByNode[nid] += typeof ct === 'number' ? ct : 0;
+  });
+
+  const costPerTarget = {};
+  Object.keys(costByNode).forEach(nodeId => {
+    const totalCost = costByNode[nodeId];
+    const flow = downstreamFlow[nodeId];
+    if (!flow) return;
+    const totalFlow = Object.keys(flow).reduce((s, t) => s + (flow[t] || 0), 0);
+    if (totalFlow <= 0) return;
+    Object.keys(flow).forEach(t => {
+      if (!costPerTarget[t]) costPerTarget[t] = 0;
+      costPerTarget[t] += totalCost * (flow[t] / totalFlow);
+    });
+  });
+
+  return costPerTarget;
+}
+
 // Données valorisation à partir des nœuds cibles (sans appel API)
 // links : optionnel, utilisé pour identifier les nœuds de fin non valorisés (reste)
 function getValorisationData(nodes, initialTotal, links) {
@@ -6395,17 +6547,29 @@ function exportValorisationToExcel(valorisationData) {
   const initialTotal = valorisationData?.initialTotal ?? 0;
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
   const sumKg = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const sumCost = cdcRows.reduce((acc, r) => acc + (r.cost ?? 0), 0);
+  const totalCost = valorisationData?.totalCost;
+  const hasCost =
+    totalCost != null &&
+    typeof totalCost === 'number' &&
+    !Number.isNaN(totalCost);
+  const restCostVal = hasCost ? sumCost - totalCost : null;
   const restPct = Math.max(0, 100 - sumPct);
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
 
-  const headerRow = [t('cdcName'), t('pctLot'), t('weightKg')];
+  const headerRow = [t('cdcName'), t('pctLot'), t('weightKg'), t('cost')];
   const grid = [headerRow];
 
   cdcRows.forEach(row => {
+    const costCell =
+      row.cost != null && typeof row.cost === 'number'
+        ? Math.round(row.cost)
+        : '';
     grid.push([
       row.name != null ? String(row.name) : '',
       row.pct != null ? Math.round(row.pct * 100) / 100 : '',
       row.weightKg != null ? Math.round(row.weightKg * 100) / 100 : '',
+      costCell,
     ]);
   });
 
@@ -6413,11 +6577,13 @@ function exportValorisationToExcel(valorisationData) {
     t('total'),
     Math.round(sumPct * 100) / 100,
     Math.round(sumKg * 100) / 100,
+    sumCost > 0 ? Math.round(sumCost) : '',
   ]);
   grid.push([
     t('reste'),
     Math.round(restPct * 100) / 100,
     Math.round(restKg * 100) / 100,
+    restCostVal != null ? Math.round(restCostVal) : '',
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(grid);
@@ -6463,13 +6629,41 @@ function displayValorisationTable(valorisationData) {
   window._valorisationRestLot = valorisationData?.restLot ?? null;
   const initialTotal = valorisationData?.initialTotal ?? 0;
 
+  const formatCostCell = (cost, weightKg) => {
+    if (cost == null || typeof cost !== 'number' || Number.isNaN(cost))
+      return '–';
+    const costRounded = Math.round(cost);
+    const costPerKg = weightKg > 0 ? cost / weightKg : 0;
+    const costPerKgRounded = Math.round(costPerKg);
+    return `${costRounded} € (${costPerKgRounded} €/kg)`;
+  };
+
   let tableBody = '';
   cdcRows.forEach((row, idx) => {
-    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
+    const costCell =
+      row.cost != null && typeof row.cost === 'number'
+        ? formatCostCell(row.cost, row.weightKg ?? 0)
+        : '–';
+    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right">${costCell}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
   });
 
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
   const sumKg = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const sumCost = cdcRows.reduce((acc, r) => acc + (r.cost ?? 0), 0);
+  const totalCost = valorisationData?.totalCost;
+  const hasCost =
+    totalCost != null &&
+    typeof totalCost === 'number' &&
+    !Number.isNaN(totalCost);
+  const footerCostStr =
+    sumKg > 0 && sumCost > 0
+      ? `${Math.round(sumCost)} € (${Math.round(sumCost / sumKg)} €/kg)`
+      : sumCost > 0
+        ? `${Math.round(sumCost)} €`
+        : '–';
+  const restCostVal = hasCost ? sumCost - totalCost : null;
+  const restCostStr =
+    restCostVal != null ? `${Math.round(restCostVal)} €` : '–';
   const restPct = Math.max(0, 100 - sumPct);
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
   const tfootHtml = `
@@ -6478,12 +6672,14 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('total')}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerCostStr}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
-      <tr class="bg-gray-50 border-t-2 border-gray-500">
+      <tr class="bg-gray-50 border-t-2 border-gray-300">
         <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('reste')}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restKg)}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${restCostStr}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-rest" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
     </tfoot>
@@ -6513,6 +6709,7 @@ function displayValorisationTable(valorisationData) {
           <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('cdcName')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('pctLot')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('weightKg')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('cost')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('viewLot')}</th>
         </tr>
       </thead>
