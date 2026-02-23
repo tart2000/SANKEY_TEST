@@ -5886,6 +5886,160 @@ function ensureTabsContainer() {
   });
 }
 
+/**
+ * Exporte le tableau des coûts en Excel. Colonnes éclatées (temps/€ par profil, kWh/€).
+ * Cellules vides quand pas d'outil ou pas de valeur (jamais de "-").
+ */
+function exportCostsToExcel(costsData) {
+  if (typeof XLSX === 'undefined') {
+    console.error('[Coûts] SheetJS (XLSX) non chargé');
+    return;
+  }
+  const t =
+    window.i18next && typeof window.i18next.t === 'function'
+      ? window.i18next.t.bind(window.i18next)
+      : k => k;
+
+  const rows = costsData.rows || [];
+  const profileNames = Object.keys(window.teamData?.profils || {});
+
+  const sumTempsUtile = { value: 0 };
+  const sumProfilsTemps = {};
+  const sumProfilsCost = {};
+  const sumTotalProfilsTemps = { value: 0 };
+  const sumTotalProfilsCost = { value: 0 };
+  const sumEquipment = { value: 0 };
+  const sumEnergy = { value: 0 };
+  const sumEnergyCost = { value: 0 };
+  const sumConsumables = { value: 0 };
+  const sumTotalCost = { value: 0 };
+  profileNames.forEach(name => {
+    sumProfilsTemps[name] = 0;
+    sumProfilsCost[name] = 0;
+  });
+
+  // En-têtes
+  const headerRow = [t('transfoName'), t('toolName'), t('time') + ' (h)'];
+  profileNames.forEach(name => {
+    headerRow.push((name || '') + ' (h)', (name || '') + ' (€)');
+  });
+  headerRow.push(
+    t('totalProfils') + ' (h)',
+    t('totalProfils') + ' (€)',
+    t('equipmentCosts'),
+    t('energyConsumption') + ' (kWh)',
+    t('energyConsumption') + ' (€)',
+    t('consumables'),
+    t('totalCost')
+  );
+
+  const grid = [headerRow];
+
+  rows.forEach(row => {
+    const displayName = row.displayName != null ? String(row.displayName) : '';
+    const tech = row.transformation?.tech;
+    const toolLabel =
+      tech?.name != null && tech.name !== ''
+        ? tech.name +
+          (tech.quantity != null && tech.quantity !== 1
+            ? ' (x' + tech.quantity + ')'
+            : '')
+        : '';
+
+    if (row.costs) {
+      sumTempsUtile.value += row.costs.temps_utile || 0;
+      sumEquipment.value += row.costs.cout_amortissement || 0;
+      sumEnergy.value += row.costs.consommation_totale || 0;
+      sumEnergyCost.value += row.costs.cout_energie || 0;
+      sumConsumables.value += row.costs.cout_consommables || 0;
+      sumTotalCost.value += row.costs.cout_total || 0;
+    }
+
+    let totalProfilTemps = 0;
+    let totalProfilCost = 0;
+    const profilCells = [];
+    profileNames.forEach(profilName => {
+      const breakdown = row.profilsBreakdown?.[profilName];
+      if (breakdown != null && breakdown.temps != null) {
+        profilCells.push(breakdown.temps);
+        sumProfilsTemps[profilName] += breakdown.temps;
+        totalProfilTemps += breakdown.temps;
+      } else {
+        profilCells.push('');
+      }
+      if (breakdown != null && breakdown.cost != null) {
+        profilCells.push(breakdown.cost);
+        sumProfilsCost[profilName] += breakdown.cost;
+        totalProfilCost += breakdown.cost;
+      } else {
+        profilCells.push('');
+      }
+    });
+
+    sumTotalProfilsTemps.value += totalProfilTemps;
+    sumTotalProfilsCost.value += totalProfilCost;
+
+    const totalProfilsH =
+      row.profilsBreakdown && Object.keys(row.profilsBreakdown).length > 0
+        ? totalProfilTemps
+        : '';
+    const totalProfilsE =
+      row.profilsBreakdown && Object.keys(row.profilsBreakdown).length > 0
+        ? totalProfilCost
+        : '';
+
+    const tempsCell =
+      row.costs?.temps_utile != null ? row.costs.temps_utile : '';
+    const equipmentCell =
+      row.costs?.cout_amortissement != null ? row.costs.cout_amortissement : '';
+    const energyKwhCell =
+      row.costs?.consommation_totale != null
+        ? row.costs.consommation_totale
+        : '';
+    const energyCostCell =
+      row.costs?.cout_energie != null ? row.costs.cout_energie : '';
+    const consumablesCell =
+      row.costs?.cout_consommables != null ? row.costs.cout_consommables : '';
+    const totalCell = row.costs?.cout_total != null ? row.costs.cout_total : '';
+
+    const dataRow = [
+      displayName,
+      toolLabel,
+      tempsCell,
+      ...profilCells,
+      totalProfilsH,
+      totalProfilsE,
+      equipmentCell,
+      energyKwhCell,
+      energyCostCell,
+      consumablesCell,
+      totalCell,
+    ];
+    grid.push(dataRow);
+  });
+
+  // Ligne Total
+  const totalRow = [t('total'), '', sumTempsUtile.value];
+  profileNames.forEach(name => {
+    totalRow.push(sumProfilsTemps[name] ?? 0, sumProfilsCost[name] ?? 0);
+  });
+  totalRow.push(
+    sumTotalProfilsTemps.value,
+    sumTotalProfilsCost.value,
+    sumEquipment.value,
+    sumEnergy.value,
+    sumEnergyCost.value,
+    sumConsumables.value,
+    sumTotalCost.value
+  );
+  grid.push(totalRow);
+
+  const ws = XLSX.utils.aoa_to_sheet(grid);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Coûts');
+  XLSX.writeFile(wb, 'couts_scenario.xlsx');
+}
+
 // Fonction pour afficher le tableau des coûts (dans l'onglet Coûts)
 function displayCostsTable(costsData) {
   ensureTabsContainer();
@@ -6102,6 +6256,22 @@ function displayCostsTable(costsData) {
   tableContainer.innerHTML = tableHtml;
   panel.appendChild(tableContainer);
 
+  const downloadDiv = document.createElement('div');
+  downloadDiv.className = 'mt-3 flex justify-end';
+  const downloadBtn = document.createElement('button');
+  downloadBtn.type = 'button';
+  downloadBtn.className =
+    'px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 inline-flex items-center gap-2';
+  const downloadIcon = document.createElement('i');
+  downloadIcon.className = 'ph ph-download';
+  downloadBtn.appendChild(downloadIcon);
+  downloadBtn.appendChild(document.createTextNode(t('downloadCosts')));
+  downloadBtn.addEventListener('click', function () {
+    exportCostsToExcel(costsData);
+  });
+  downloadDiv.appendChild(downloadBtn);
+  panel.appendChild(downloadDiv);
+
   // Clic sur le nom d'une transfo : ouvrir le dropdown correspondant sur le Sankey
   if (panel._costsTableTransfoClickHandler) {
     panel.removeEventListener('click', panel._costsTableTransfoClickHandler);
@@ -6208,6 +6378,54 @@ function getValorisationData(nodes, initialTotal, links) {
   return { valorisedPercent, cdcRows, mergedLot, initialTotal: total, restLot };
 }
 
+/**
+ * Exporte le tableau de valorisation en Excel (nom CDC, %, volume kg).
+ */
+function exportValorisationToExcel(valorisationData) {
+  if (typeof XLSX === 'undefined') {
+    console.error('[Valorisation] SheetJS (XLSX) non chargé');
+    return;
+  }
+  const t =
+    window.i18next && typeof window.i18next.t === 'function'
+      ? window.i18next.t.bind(window.i18next)
+      : k => k;
+
+  const cdcRows = valorisationData?.cdcRows ?? [];
+  const initialTotal = valorisationData?.initialTotal ?? 0;
+  const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
+  const sumKg = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const restPct = Math.max(0, 100 - sumPct);
+  const restKg = Math.max(0, (initialTotal || 0) - sumKg);
+
+  const headerRow = [t('cdcName'), t('pctLot'), t('weightKg')];
+  const grid = [headerRow];
+
+  cdcRows.forEach(row => {
+    grid.push([
+      row.name != null ? String(row.name) : '',
+      row.pct != null ? Math.round(row.pct * 100) / 100 : '',
+      row.weightKg != null ? Math.round(row.weightKg * 100) / 100 : '',
+    ]);
+  });
+
+  grid.push([
+    t('total'),
+    Math.round(sumPct * 100) / 100,
+    Math.round(sumKg * 100) / 100,
+  ]);
+  grid.push([
+    t('reste'),
+    Math.round(restPct * 100) / 100,
+    Math.round(restKg * 100) / 100,
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(grid);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Valorisation');
+  XLSX.writeFile(wb, 'valorisation.xlsx');
+}
+
 // Affiche le tableau de valorisation dans l'onglet Valorisation
 function displayValorisationTable(valorisationData) {
   ensureTabsContainer();
@@ -6303,6 +6521,23 @@ function displayValorisationTable(valorisationData) {
     </table>
   `;
     panel.innerHTML = tableHtml;
+
+    const downloadDiv = document.createElement('div');
+    downloadDiv.className = 'mt-3 flex justify-end';
+    const downloadBtn = document.createElement('button');
+    downloadBtn.type = 'button';
+    downloadBtn.className =
+      'px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 inline-flex items-center gap-2';
+    const downloadIcon = document.createElement('i');
+    downloadIcon.className = 'ph ph-download';
+    downloadBtn.appendChild(downloadIcon);
+    downloadBtn.appendChild(document.createTextNode(t('downloadCosts')));
+    downloadBtn.addEventListener('click', function () {
+      exportValorisationToExcel(valorisationData);
+    });
+    downloadDiv.appendChild(downloadBtn);
+    panel.appendChild(downloadDiv);
+
     if (panel._valorisationClickHandler) {
       panel.removeEventListener('click', panel._valorisationClickHandler);
     }
