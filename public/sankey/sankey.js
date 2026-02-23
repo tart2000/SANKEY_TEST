@@ -4488,7 +4488,7 @@ function updateSankey(dimension) {
   }
 
   // Toujours mettre à jour l'onglet Valorisation (nœuds cibles agrégés)
-  const valorisationData = getValorisationData(nodes, lotInitialTotal);
+  const valorisationData = getValorisationData(nodes, lotInitialTotal, links);
   displayValorisationTable(valorisationData);
 
   // Demander un redimensionnement via la fonction commune exposée par index.html
@@ -5982,7 +5982,8 @@ function displayCostsTable(costsData) {
 }
 
 // Données valorisation à partir des nœuds cibles (sans appel API)
-function getValorisationData(nodes, initialTotal) {
+// links : optionnel, utilisé pour identifier les nœuds de fin non valorisés (reste)
+function getValorisationData(nodes, initialTotal, links) {
   const total = initialTotal ?? nodes[0]?.lot?.total ?? 0;
   const targets = (nodes || []).filter(n => n.isTarget);
   const cdcRows = targets.map(n => {
@@ -6003,7 +6004,16 @@ function getValorisationData(nodes, initialTotal) {
     targets.length > 0 && typeof window.mergeLots === 'function'
       ? window.mergeLots(targets.map(n => n.lot))
       : null;
-  return { valorisedPercent, cdcRows, mergedLot };
+  // Reste = tous les nœuds de fin non valorisés (sans lien sortant, et pas un nœud cible CDC)
+  const linkSources = new Set((links || []).map(l => String(l.source)));
+  const restNodes = (nodes || []).filter(
+    n => !n.isTarget && !linkSources.has(String(n.id)) && n.lot
+  );
+  const restLot =
+    restNodes.length > 0 && typeof window.mergeLots === 'function'
+      ? window.mergeLots(restNodes.map(n => n.lot))
+      : null;
+  return { valorisedPercent, cdcRows, mergedLot, initialTotal: total, restLot };
 }
 
 // Affiche le tableau de valorisation dans l'onglet Valorisation
@@ -6040,6 +6050,8 @@ function displayValorisationTable(valorisationData) {
     lot: r.lot,
   }));
   window._valorisationMergedLot = valorisationData?.mergedLot ?? null;
+  window._valorisationRestLot = valorisationData?.restLot ?? null;
+  const initialTotal = valorisationData?.initialTotal ?? 0;
 
   let tableBody = '';
   cdcRows.forEach((row, idx) => {
@@ -6048,6 +6060,8 @@ function displayValorisationTable(valorisationData) {
 
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
   const sumKg = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const restPct = Math.max(0, 100 - sumPct);
+  const restKg = Math.max(0, (initialTotal || 0) - sumKg);
   const tfootHtml = `
     <tfoot>
       <tr class="bg-gray-50">
@@ -6055,6 +6069,12 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
+      </tr>
+      <tr class="bg-gray-50">
+        <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('reste')}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restPct)}%</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restKg)}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-rest" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
     </tfoot>
   `;
@@ -6104,6 +6124,11 @@ function displayValorisationTable(valorisationData) {
       if (e.target.getAttribute('data-action') === 'view-merged') {
         const merged = window._valorisationMergedLot;
         if (merged) sendLotToParent('valorised-total', t('total'), merged);
+        return;
+      }
+      if (e.target.getAttribute('data-action') === 'view-rest') {
+        const rest = window._valorisationRestLot;
+        if (rest) sendLotToParent('reste', t('reste'), rest);
       }
     };
     panel.addEventListener('click', panel._valorisationClickHandler);
