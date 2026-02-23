@@ -5992,11 +5992,18 @@ function getValorisationData(nodes, initialTotal) {
       name: n.targetLabel ?? n.name ?? '',
       pct,
       weightKg,
+      nodeId: n.id,
+      nodeName: n.targetLabel ?? n.name ?? '',
+      lot: n.lot,
     };
   });
   const sumWeight = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
   const valorisedPercent = total > 0 ? (sumWeight / total) * 100 : 0;
-  return { valorisedPercent, cdcRows };
+  const mergedLot =
+    targets.length > 0 && typeof window.mergeLots === 'function'
+      ? window.mergeLots(targets.map(n => n.lot))
+      : null;
+  return { valorisedPercent, cdcRows, mergedLot };
 }
 
 // Affiche le tableau de valorisation dans l'onglet Valorisation
@@ -6027,9 +6034,16 @@ function displayValorisationTable(valorisationData) {
     </div>
   `;
 
+  window._valorisationTableRows = cdcRows.map(r => ({
+    nodeId: r.nodeId,
+    nodeName: r.nodeName,
+    lot: r.lot,
+  }));
+  window._valorisationMergedLot = valorisationData?.mergedLot ?? null;
+
   let tableBody = '';
-  cdcRows.forEach(row => {
-    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td></tr>`;
+  cdcRows.forEach((row, idx) => {
+    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
   });
 
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
@@ -6040,21 +6054,36 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('total')}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
     </tfoot>
   `;
+
+  function sendLotToParent(nodeId, nodeName, lot) {
+    if (!lot) return;
+    const lotJson = JSON.stringify(lot, null, 2);
+    window.parent.postMessage(
+      {
+        id: 'sankey-lot-visualization',
+        type: 'showLotDetails',
+        payload: { nodeId, nodeName, lotData: lotJson },
+      },
+      '*'
+    );
+  }
 
   if (cdcRows.length === 0) {
     panel.innerHTML = `${headerHtml}<p class="text-sm text-gray-600">${t('noCdcAssociated')}</p>`;
   } else {
     const tableHtml = `
     ${headerHtml}
-    <table class="w-full border-collapse border border-gray-200">
+    <table class="w-full border-collapse border border-gray-200" id="valorisation-table">
       <thead>
         <tr class="bg-gray-50">
           <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('cdcName')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('pctLot')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('weightKg')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('viewLot')}</th>
         </tr>
       </thead>
       <tbody>${tableBody}</tbody>
@@ -6062,6 +6091,22 @@ function displayValorisationTable(valorisationData) {
     </table>
   `;
     panel.innerHTML = tableHtml;
+    if (panel._valorisationClickHandler) {
+      panel.removeEventListener('click', panel._valorisationClickHandler);
+    }
+    panel._valorisationClickHandler = function (e) {
+      const rowIdx = e.target.getAttribute('data-row-index');
+      if (rowIdx != null && rowIdx !== '') {
+        const row = window._valorisationTableRows[parseInt(rowIdx, 10)];
+        if (row) sendLotToParent(row.nodeId, row.nodeName, row.lot);
+        return;
+      }
+      if (e.target.getAttribute('data-action') === 'view-merged') {
+        const merged = window._valorisationMergedLot;
+        if (merged) sendLotToParent('valorised-total', t('total'), merged);
+      }
+    };
+    panel.addEventListener('click', panel._valorisationClickHandler);
   }
 }
 

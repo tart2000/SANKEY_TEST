@@ -138,7 +138,7 @@ export const translations = {
       rate: 'Débit :',
       usefulTime: 'Temps utile :',
       consumption: 'Conso élec :',
-      total: 'Total :',
+      total: 'Total',
       detailsNotAvailable: 'Données non disponibles',
       colorSelection: 'Sélection par couleur',
       // Tooltips génériques
@@ -304,7 +304,7 @@ export const translations = {
       rate: 'Rate :',
       usefulTime: 'Useful Time :',
       consumption: 'Consumption :',
-      total: 'Total :',
+      total: 'Total',
       detailsNotAvailable: 'Details not available',
       colorSelection: 'Color selection',
       // Tooltips génériques
@@ -469,7 +469,7 @@ export const translations = {
       rate: 'Tasa :',
       usefulTime: 'Tiempo útil :',
       consumption: 'Consumo :',
-      total: 'Total :',
+      total: 'Total',
       detailsNotAvailable: 'Detalles no disponibles',
       colorSelection: 'Selección de color',
       // Tooltips génériques
@@ -637,7 +637,7 @@ export const translations = {
       rate: 'Rate :',
       usefulTime: 'Nützliche Zeit :',
       consumption: 'Verbrauch :',
-      total: 'Gesamt :',
+      total: 'Gesamt',
       detailsNotAvailable: 'Details nicht verfügbar',
       colorSelection: 'Farbauswahl',
       // Tooltips génériques
