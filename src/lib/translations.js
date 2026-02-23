@@ -60,6 +60,8 @@ export const translations = {
       pctLot: '% du lot',
       weightKg: 'Poids (kg)',
       valorisedPercentLabel: 'du lot valorisé',
+      noCdcAssociated:
+        'Aucun cahier des charges associé. Ajoutez-en un pour visualiser les résultats.',
       loadingDetails: 'Chargement des détails...',
       // Popup Tech
       addTool: 'Ajouter un outil',
@@ -227,6 +229,8 @@ export const translations = {
       pctLot: '% of lot',
       weightKg: 'Weight (kg)',
       valorisedPercentLabel: 'of lot valorised',
+      noCdcAssociated:
+        'No specifications associated. Add one to see the results.',
       loadingDetails: 'Loading details...',
       // Popup Tech
       addTool: 'Add tool',
@@ -389,6 +393,8 @@ export const translations = {
       pctLot: '% del lote',
       weightKg: 'Peso (kg)',
       valorisedPercentLabel: 'del lote valorizado',
+      noCdcAssociated:
+        'Ningún pliego de condiciones asociado. Añade uno para ver los resultados.',
       loadingDetails: 'Cargando detalles...',
       // Popup Tech
       addTool: 'Añadir herramienta',
@@ -555,6 +561,8 @@ export const translations = {
       pctLot: '% der Charge',
       weightKg: 'Gewicht (kg)',
       valorisedPercentLabel: 'der Charge valorisiert',
+      noCdcAssociated:
+        'Kein Lastenheft zugeordnet. Fügen Sie eines hinzu, um die Ergebnisse zu sehen.',
       loadingDetails: 'Details werden geladen...',
       // Popup Tech
       addTool: 'Werkzeug hinzufügen',

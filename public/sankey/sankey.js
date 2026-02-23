@@ -6032,7 +6032,22 @@ function displayValorisationTable(valorisationData) {
     tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td></tr>`;
   });
 
-  const tableHtml = `
+  const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
+  const sumKg = cdcRows.reduce((acc, r) => acc + r.weightKg, 0);
+  const tfootHtml = `
+    <tfoot>
+      <tr class="bg-gray-50">
+        <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('total')}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumPct)}%</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
+      </tr>
+    </tfoot>
+  `;
+
+  if (cdcRows.length === 0) {
+    panel.innerHTML = `${headerHtml}<p class="text-sm text-gray-600">${t('noCdcAssociated')}</p>`;
+  } else {
+    const tableHtml = `
     ${headerHtml}
     <table class="w-full border-collapse border border-gray-200">
       <thead>
@@ -6043,9 +6058,11 @@ function displayValorisationTable(valorisationData) {
         </tr>
       </thead>
       <tbody>${tableBody}</tbody>
+      ${tfootHtml}
     </table>
   `;
-  panel.innerHTML = tableHtml;
+    panel.innerHTML = tableHtml;
+  }
 }
 
 // Fonction pour publier le scénario dans la console

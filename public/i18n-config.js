@@ -58,6 +58,8 @@ window.i18nConfig = {
         pctLot: '% du lot',
         weightKg: 'Poids (kg)',
         valorisedPercentLabel: 'du lot valorisé',
+        noCdcAssociated:
+          'Aucun cahier des charges associé. Ajoutez-en un pour visualiser les résultats.',
         loadingDetails: 'Chargement des détails...',
         confirmDeleteTool:
           'Êtes-vous sûr de vouloir supprimer cet outil du scénario ?',
@@ -193,6 +195,8 @@ window.i18nConfig = {
         pctLot: '% of lot',
         weightKg: 'Weight (kg)',
         valorisedPercentLabel: 'of lot valorised',
+        noCdcAssociated:
+          'No specifications associated. Add one to see the results.',
         loadingDetails: 'Loading details...',
         confirmDeleteTool:
           'Are you sure you want to delete this tool from the scenario?',
@@ -325,6 +329,8 @@ window.i18nConfig = {
         pctLot: '% del lote',
         weightKg: 'Peso (kg)',
         valorisedPercentLabel: 'del lote valorizado',
+        noCdcAssociated:
+          'Ningún pliego de condiciones asociado. Añade uno para ver los resultados.',
         loadingDetails: 'Cargando detalles...',
         confirmDeleteTool:
           '¿Estás seguro de que quieres eliminar esta herramienta del escenario?',
@@ -460,6 +466,8 @@ window.i18nConfig = {
         pctLot: '% der Charge',
         weightKg: 'Gewicht (kg)',
         valorisedPercentLabel: 'der Charge valorisiert',
+        noCdcAssociated:
+          'Kein Lastenheft zugeordnet. Fügen Sie eines hinzu, um die Ergebnisse zu sehen.',
         loadingDetails: 'Details werden geladen...',
         confirmDeleteTool:
           'Sind Sie sicher, dass Sie dieses Werkzeug aus dem Szenario löschen möchten?',
