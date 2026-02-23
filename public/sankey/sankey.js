@@ -6480,7 +6480,7 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
-      <tr class="bg-gray-50">
+      <tr class="bg-gray-50 border-t-2 border-gray-500">
         <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('reste')}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restKg)}</td>
