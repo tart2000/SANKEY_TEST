@@ -3392,369 +3392,377 @@ function updateSankey(dimension) {
     const outgoingLinks = sankeyLinks.filter(
       l => l.source.id === d.id && !l.target.isCoproduct
     );
-    if (!(d.lot && d.lot.target) && !d.isTarget) {
-      outgoingLinks.forEach(link => {
-        const linkY = link.y0 - d.y0;
-        const fo = nodeGroup
-          .append('foreignObject')
-          .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
-          .attr('y', linkY - 14)
-          .attr('width', 28)
-          .attr('height', 28);
-        const div = document.createElement('div');
-        const isFork = !!link.transformation; // La transformation est sur le lien sortant
+    const nodeAllowsPlus = !(d.lot && d.lot.target) && !d.isTarget;
+    outgoingLinks.forEach(link => {
+      const hasTransfo = !!link.transformation;
+      // Toujours afficher l'icône + dropdown pour les liens avec transformation (pour clic depuis tableau coûts) ; pour le "+" d'ajout, seulement si le nœud n'est pas une cible CDC
+      if (!hasTransfo && !nodeAllowsPlus) return;
+      const linkY = link.y0 - d.y0;
+      const fo = nodeGroup
+        .append('foreignObject')
+        .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
+        .attr('y', linkY - 14)
+        .attr('width', 28)
+        .attr('height', 28);
+      const div = document.createElement('div');
+      const isFork = !!link.transformation; // La transformation est sur le lien sortant
 
-        // Déterminer l'icône selon la step de la transformation
-        let iconName = 'plus';
+      // Déterminer l'icône selon la step de la transformation
+      let iconName = 'plus';
+      if (isFork && link.transformation) {
+        const stepId = getTransformationStep(link.transformation);
+        iconName = getStepIcon(stepId);
+      }
+
+      // Déterminer la couleur de fond selon si la transformation a une tech
+      let bgColor = 'bg-gray-300 hover:bg-gray-400 border-gray-400';
+      if (isFork && link.transformation && link.transformation.tech) {
+        bgColor = 'bg-green-300 hover:bg-green-400 border-green-400';
+      }
+
+      div.className = `w-7 h-7 p-[3px] flex items-center justify-center rounded ${bgColor} border cursor-pointer`;
+      div.innerHTML = getIconSVG(
+        iconName,
+        'w-7 h-7 text-[1.3rem] flex items-center justify-center'
+      );
+      fo.node().appendChild(div);
+
+      // Mémoriser le bouton pour permettre un déclenchement via le libellé du nœud
+      link.dropdownTrigger = div;
+      if (link.transformation) {
+        console.log('[Sankey] dropdownTrigger assigné:', {
+          transfoNodeId: link.transformation._nodeId,
+          targetNodeId: link.target?.id ?? link.target,
+        });
+      }
+
+      // Dropdown menu state
+      let dropdownMenu = null;
+      let dropdownOpen = false;
+      let closeDropdown = () => {
+        if (dropdownMenu) {
+          dropdownMenu.remove();
+          dropdownMenu = null;
+          dropdownOpen = false;
+        }
+        document.removeEventListener('mousedown', onClickOutside);
+      };
+      let onClickOutside = e => {
+        if (
+          dropdownMenu &&
+          !dropdownMenu.contains(e.target) &&
+          e.target !== div
+        ) {
+          closeDropdown();
+        }
+      };
+
+      div.addEventListener('mouseover', function (event) {
+        // ===== TOOLTIP DES ICÔNES DE TRANSFORMATION (TRANSFO) =====
+        tooltip.transition().duration(200).style('opacity', 0.95);
+        // Retirer toutes les classes pour avoir la largeur par défaut (280px)
+        tooltip.classed('narrow', false);
+        let tooltipContent = '';
         if (isFork && link.transformation) {
-          const stepId = getTransformationStep(link.transformation);
-          iconName = getStepIcon(stepId);
-        }
+          // Utilise la transformation du lien sortant
+          const transfo = link.transformation;
+          const type = Array.isArray(transfo.type)
+            ? transfo.type[0]
+            : transfo.type;
+          const typeForLabel =
+            type === 'dynamic_transfo' && transfo.dynamic_transfo_id
+              ? `dynamic_transfo_${transfo.dynamic_transfo_id}`
+              : type;
+          // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
+          const label = window.transformationUtils
+            ? window.transformationUtils.getTransformationLabel(typeForLabel)
+            : transfo.title || type;
+          const typeLabel = label;
+          let tableRows = '';
 
-        // Déterminer la couleur de fond selon si la transformation a une tech
-        let bgColor = 'bg-gray-300 hover:bg-gray-400 border-gray-400';
-        if (isFork && link.transformation && link.transformation.tech) {
-          bgColor = 'bg-green-300 hover:bg-green-400 border-green-400';
-        }
-
-        div.className = `w-7 h-7 p-[3px] flex items-center justify-center rounded ${bgColor} border cursor-pointer`;
-        div.innerHTML = getIconSVG(
-          iconName,
-          'w-7 h-7 text-[1.3rem] flex items-center justify-center'
-        );
-        fo.node().appendChild(div);
-
-        // Mémoriser le bouton pour permettre un déclenchement via le libellé du nœud
-        link.dropdownTrigger = div;
-
-        // Dropdown menu state
-        let dropdownMenu = null;
-        let dropdownOpen = false;
-        let closeDropdown = () => {
-          if (dropdownMenu) {
-            dropdownMenu.remove();
-            dropdownMenu = null;
-            dropdownOpen = false;
+          if (transfo.scenario) {
+            console.log('📋 Tooltip - transfo.scenario:', transfo.scenario);
           }
-          document.removeEventListener('mousedown', onClickOutside);
-        };
-        let onClickOutside = e => {
-          if (
-            dropdownMenu &&
-            !dropdownMenu.contains(e.target) &&
-            e.target !== div
-          ) {
-            closeDropdown();
-          }
-        };
 
-        div.addEventListener('mouseover', function (event) {
-          // ===== TOOLTIP DES ICÔNES DE TRANSFORMATION (TRANSFO) =====
-          tooltip.transition().duration(200).style('opacity', 0.95);
-          // Retirer toutes les classes pour avoir la largeur par défaut (280px)
-          tooltip.classed('narrow', false);
-          let tooltipContent = '';
-          if (isFork && link.transformation) {
-            // Utilise la transformation du lien sortant
-            const transfo = link.transformation;
-            const type = Array.isArray(transfo.type)
-              ? transfo.type[0]
-              : transfo.type;
-            const typeForLabel =
-              type === 'dynamic_transfo' && transfo.dynamic_transfo_id
-                ? `dynamic_transfo_${transfo.dynamic_transfo_id}`
-                : type;
-            // Toujours utiliser le label localisé (fr_fr / en_gb selon la langue)
-            const label = window.transformationUtils
-              ? window.transformationUtils.getTransformationLabel(typeForLabel)
-              : transfo.title || type;
-            const typeLabel = label;
-            let tableRows = '';
+          // Gérer les clés de sélection pour les transformations dynamiques
+          if (type === 'dynamic_transfo') {
+            // Pour les transformations dynamiques, les clés sont dans transfo.select
+            let selectKeys = [];
 
-            if (transfo.scenario) {
-              console.log('📋 Tooltip - transfo.scenario:', transfo.scenario);
-            }
-
-            // Gérer les clés de sélection pour les transformations dynamiques
-            if (type === 'dynamic_transfo') {
-              // Pour les transformations dynamiques, les clés sont dans transfo.select
-              let selectKeys = [];
-
-              // Vérifier si transfo.select existe directement
-              if (transfo.select && typeof transfo.select === 'object') {
-                selectKeys = Object.keys(transfo.select);
-              } else if (transfo.dynamic_transfo_id) {
-                // Sinon, récupérer depuis les détails de la transformation
-                const transfoDetails =
-                  window.transformationUtils?.getDynamicTransfoDetailsSync(
-                    transfo.dynamic_transfo_id
-                  );
-                if (
-                  transfoDetails?.select &&
-                  typeof transfoDetails.select === 'object'
-                ) {
-                  selectKeys = Object.keys(transfoDetails.select);
-                }
-              }
-
-              if (selectKeys.length > 0) {
-                // Fonction pour tronquer une clé si elle est trop longue (limite élevée pour afficher le maximum)
-                const truncateKey = (key, maxLength = 250) => {
-                  if (key.length <= maxLength) return key;
-                  return key.substring(0, maxLength - 3) + '...';
-                };
-
-                // Afficher chaque clé sur une ligne séparée
-                selectKeys.forEach((key, index) => {
-                  const truncatedKey = truncateKey(key);
-                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
-                });
-              }
-            } else if (
-              transfo._displayNames &&
-              transfo._displayNames.length > 0
-            ) {
-              // Utiliser les noms d'affichage français pour les transformations normales
-              // Afficher chaque clé sur une ligne séparée
-              const truncateKey = (key, maxLength = 250) => {
-                if (key.length <= maxLength) return key;
-                return key.substring(0, maxLength - 3) + '...';
-              };
-
-              transfo._displayNames.forEach((key, index) => {
-                const truncatedKey = truncateKey(key);
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
-              });
-            } else if (transfo.keys && transfo.keys.length > 0) {
-              // Fallback sur les keys si pas de displayNames
-              // Afficher chaque clé sur une ligne séparée
-              const truncateKey = (key, maxLength = 250) => {
-                if (key.length <= maxLength) return key;
-                return key.substring(0, maxLength - 3) + '...';
-              };
-
-              transfo.keys.forEach((key, index) => {
-                const truncatedKey = truncateKey(key);
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
-              });
-            }
-            if (transfo.scenario && transfo.scenario.target) {
-              const targetDisplay =
-                transfo.scenario.title != null
-                  ? transfo.scenario.title
-                  : transfo.scenario.target;
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${targetDisplay}</span></td></tr>`;
-            }
-            // Ajouter la step de la transformation (label localisé)
-            const stepId = getTransformationStep(transfo);
-            const stepLabel = getStepLabel(stepId);
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepLabel}</span></td></tr>`;
-
-            // Ajouter la rate (débit) de la transformation
-            if (transfo.yield !== undefined) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
-            }
-
-            // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
-            // Utiliser directement la transformation depuis transformations_appliquees
-            const poids = link.inputLot.total; // Utiliser le lot d'entrée de la transformation
-            const poidsFormate = poids.toFixed(2);
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
-            // Ajouter les informations de la tech si elle existe
-            if (transfo.tech) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('tool')}</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
-
-              // Ajouter la rate de la tech si elle existe
-              if (transfo.tech.rate !== undefined) {
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('rate')}</span> <span class="tooltip-value">${transfo.tech.rate} kg/h</span></td></tr>`;
-              }
-
-              // Utiliser les données de la tech enregistrées dans le scénario
-              if (transfo.tech.details) {
-                // Utiliser la fonction de calcul des coûts avec les données stockées
-                const transformationWithVolume = {
-                  ...transfo,
-                  lot_input_volume: link.inputLot.total, // Utiliser le lot d'entrée du lien
-                };
-
-                const couts = calculateTransformationCosts(
-                  transformationWithVolume,
-                  transfo.tech.details,
-                  window.teamData
+            // Vérifier si transfo.select existe directement
+            if (transfo.select && typeof transfo.select === 'object') {
+              selectKeys = Object.keys(transfo.select);
+            } else if (transfo.dynamic_transfo_id) {
+              // Sinon, récupérer depuis les détails de la transformation
+              const transfoDetails =
+                window.transformationUtils?.getDynamicTransfoDetailsSync(
+                  transfo.dynamic_transfo_id
                 );
-
-                if (couts) {
-                  // Formater le temps utile
-                  const heures = Math.floor(couts.temps_utile);
-                  const minutes = Math.round((couts.temps_utile - heures) * 60);
-                  let tempsFormate = '';
-                  if (heures > 0) {
-                    tempsFormate += `${heures}h`;
-                  }
-                  if (minutes > 0) {
-                    tempsFormate += `${minutes}min`;
-                  }
-                  if (heures === 0 && minutes === 0) {
-                    tempsFormate = '< 1min';
-                  }
-
-                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('usefulTime')}</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
-
-                  // Ajouter les profils RH
-                  if (
-                    transfo.tech.details.profils &&
-                    window.teamData &&
-                    window.teamData.profils
-                  ) {
-                    Object.entries(transfo.tech.details.profils).forEach(
-                      ([profilName, profilData]) => {
-                        const profilTempsUtile =
-                          couts.temps_utile * profilData.timeh;
-
-                        // Formater le temps du profil
-                        const profilHeures = Math.floor(profilTempsUtile);
-                        const profilMinutes = Math.round(
-                          (profilTempsUtile - profilHeures) * 60
-                        );
-                        let profilTempsFormate = '';
-                        if (profilHeures > 0) {
-                          profilTempsFormate += `${profilHeures}h`;
-                        }
-                        if (profilMinutes > 0) {
-                          profilTempsFormate += `${profilMinutes}min`;
-                        }
-                        if (profilHeures === 0 && profilMinutes === 0) {
-                          profilTempsFormate = '< 1min';
-                        }
-
-                        // Calculer le prix avec le pricerate de la team
-                        const teamProfilData =
-                          window.teamData.profils[profilName];
-                        if (teamProfilData) {
-                          const prix =
-                            teamProfilData.pricerate * profilTempsUtile;
-                          const prixFormate = prix.toFixed(2);
-                          tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span><br/><span class="tooltip-value">${profilTempsFormate}</span><br/><span class="tooltip-value">${prixFormate}€</span></td></tr>`;
-                        }
-                      }
-                    );
-                  }
-
-                  // Ajouter la consommation électrique
-                  if (couts.consommation_totale > 0) {
-                    tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('consumption')}</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
-                  }
-
-                  // Ajouter le total
-                  tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
-                }
-              } else {
-                // Si pas de détails stockés, afficher un message
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">${i18next.t('detailsNotAvailable')}</span></td></tr>`;
+              if (
+                transfoDetails?.select &&
+                typeof transfoDetails.select === 'object'
+              ) {
+                selectKeys = Object.keys(transfoDetails.select);
               }
             }
 
-            // Générer le tooltip initial (sera mis à jour par la promesse si nécessaire)
-            tooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
-          } else {
-            tooltipContent = '<strong>Ajouter une transformation</strong>';
-          }
-          tooltip
-            .html(tooltipContent)
-            .style(
-              'left',
-              (() => {
-                const tooltipWidth = 180; // Largeur fixe du tooltip narrow
-                const windowWidth = window.innerWidth;
-                const mouseX = event.pageX;
+            if (selectKeys.length > 0) {
+              // Fonction pour tronquer une clé si elle est trop longue (limite élevée pour afficher le maximum)
+              const truncateKey = (key, maxLength = 250) => {
+                if (key.length <= maxLength) return key;
+                return key.substring(0, maxLength - 3) + '...';
+              };
 
-                // Si le tooltip va déborder à droite, le positionner à gauche
-                if (mouseX + 10 + tooltipWidth > windowWidth) {
-                  return mouseX - tooltipWidth + 10 + 'px';
-                } else {
-                  return mouseX + 10 + 'px';
-                }
-              })()
-            )
-            .style('top', event.pageY - 28 + 'px');
-        });
-        div.addEventListener('mouseout', function () {
-          tooltip.transition().duration(500).style('opacity', 0);
-        });
-        div.addEventListener('click', function (event) {
-          event.stopPropagation();
-
-          // Masquer le tooltip immédiatement quand on clique
-          hideTooltip();
-
-          if (!isFork) {
-            console.log(
-              '🔍 CLIC SIMPLE SUR LIEN - Appel direct de afficherPopupTransfo'
-            );
-            // Comportement + classique
-            const chemin = `${d.name} → ${link.target.name}`;
-            const ref = {
-              nodeId: d.id,
-              dimension: dimension,
-              lot: {
-                ...d.lot,
-                transformations_appliquees: d.transformations_appliquees,
-              },
-              chemin: chemin,
-              link: {
-                ...link,
-                target: {
-                  ...link.target,
-                  name: link.target.name.split('→')[0].trim(),
-                },
-              },
-              transformation: link.transformation || null,
-            };
-            console.log(
-              '🔍 window.afficherPopupTransfo exists:',
-              typeof window.afficherPopupTransfo
-            );
-            if (window.afficherPopupTransfo) {
-              console.log(
-                '🔍 Calling window.afficherPopupTransfo with ref:',
-                ref
-              );
-              window.afficherPopupTransfo(ref, 'add');
-            } else {
-              console.error('❌ window.afficherPopupTransfo not found!');
+              // Afficher chaque clé sur une ligne séparée
+              selectKeys.forEach((key, index) => {
+                const truncatedKey = truncateKey(key);
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+              });
             }
-            return;
+          } else if (
+            transfo._displayNames &&
+            transfo._displayNames.length > 0
+          ) {
+            // Utiliser les noms d'affichage français pour les transformations normales
+            // Afficher chaque clé sur une ligne séparée
+            const truncateKey = (key, maxLength = 250) => {
+              if (key.length <= maxLength) return key;
+              return key.substring(0, maxLength - 3) + '...';
+            };
+
+            transfo._displayNames.forEach((key, index) => {
+              const truncatedKey = truncateKey(key);
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+            });
+          } else if (transfo.keys && transfo.keys.length > 0) {
+            // Fallback sur les keys si pas de displayNames
+            // Afficher chaque clé sur une ligne séparée
+            const truncateKey = (key, maxLength = 250) => {
+              if (key.length <= maxLength) return key;
+              return key.substring(0, maxLength - 3) + '...';
+            };
+
+            transfo.keys.forEach((key, index) => {
+              const truncatedKey = truncateKey(key);
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${index === 0 ? i18next.t('keys') : ''}</span> <span class="tooltip-value" style="display: block; margin-left: ${index === 0 ? '0' : '60px'}; margin-top: ${index === 0 ? '0' : '2px'}; padding-right: 10px; word-wrap: break-word; overflow-wrap: break-word;">${truncatedKey}</span></td></tr>`;
+            });
           }
-          // Vérifier si on est en mode éditable
-          if (!window.isEditable) {
-            console.log(
-              '🔍 Mode lecture seule - dropdown transformation désactivé'
-            );
-            return;
+          if (transfo.scenario && transfo.scenario.target) {
+            const targetDisplay =
+              transfo.scenario.title != null
+                ? transfo.scenario.title
+                : transfo.scenario.target;
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${targetDisplay}</span></td></tr>`;
+          }
+          // Ajouter la step de la transformation (label localisé)
+          const stepId = getTransformationStep(transfo);
+          const stepLabel = getStepLabel(stepId);
+          tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepLabel}</span></td></tr>`;
+
+          // Ajouter la rate (débit) de la transformation
+          if (transfo.yield !== undefined) {
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
           }
 
-          // Toggle dropdown
-          console.log('🔍 CRÉATION DROPDOWN - isFork:', isFork);
-          if (dropdownOpen) {
-            closeDropdown();
-            return;
+          // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
+          // Utiliser directement la transformation depuis transformations_appliquees
+          const poids = link.inputLot.total; // Utiliser le lot d'entrée de la transformation
+          const poidsFormate = poids.toFixed(2);
+          tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
+          // Ajouter les informations de la tech si elle existe
+          if (transfo.tech) {
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('tool')}</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
+
+            // Ajouter la rate de la tech si elle existe
+            if (transfo.tech.rate !== undefined) {
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('rate')}</span> <span class="tooltip-value">${transfo.tech.rate} kg/h</span></td></tr>`;
+            }
+
+            // Utiliser les données de la tech enregistrées dans le scénario
+            if (transfo.tech.details) {
+              // Utiliser la fonction de calcul des coûts avec les données stockées
+              const transformationWithVolume = {
+                ...transfo,
+                lot_input_volume: link.inputLot.total, // Utiliser le lot d'entrée du lien
+              };
+
+              const couts = calculateTransformationCosts(
+                transformationWithVolume,
+                transfo.tech.details,
+                window.teamData
+              );
+
+              if (couts) {
+                // Formater le temps utile
+                const heures = Math.floor(couts.temps_utile);
+                const minutes = Math.round((couts.temps_utile - heures) * 60);
+                let tempsFormate = '';
+                if (heures > 0) {
+                  tempsFormate += `${heures}h`;
+                }
+                if (minutes > 0) {
+                  tempsFormate += `${minutes}min`;
+                }
+                if (heures === 0 && minutes === 0) {
+                  tempsFormate = '< 1min';
+                }
+
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('usefulTime')}</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
+
+                // Ajouter les profils RH
+                if (
+                  transfo.tech.details.profils &&
+                  window.teamData &&
+                  window.teamData.profils
+                ) {
+                  Object.entries(transfo.tech.details.profils).forEach(
+                    ([profilName, profilData]) => {
+                      const profilTempsUtile =
+                        couts.temps_utile * profilData.timeh;
+
+                      // Formater le temps du profil
+                      const profilHeures = Math.floor(profilTempsUtile);
+                      const profilMinutes = Math.round(
+                        (profilTempsUtile - profilHeures) * 60
+                      );
+                      let profilTempsFormate = '';
+                      if (profilHeures > 0) {
+                        profilTempsFormate += `${profilHeures}h`;
+                      }
+                      if (profilMinutes > 0) {
+                        profilTempsFormate += `${profilMinutes}min`;
+                      }
+                      if (profilHeures === 0 && profilMinutes === 0) {
+                        profilTempsFormate = '< 1min';
+                      }
+
+                      // Calculer le prix avec le pricerate de la team
+                      const teamProfilData =
+                        window.teamData.profils[profilName];
+                      if (teamProfilData) {
+                        const prix =
+                          teamProfilData.pricerate * profilTempsUtile;
+                        const prixFormate = prix.toFixed(2);
+                        tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span><br/><span class="tooltip-value">${profilTempsFormate}</span><br/><span class="tooltip-value">${prixFormate}€</span></td></tr>`;
+                      }
+                    }
+                  );
+                }
+
+                // Ajouter la consommation électrique
+                if (couts.consommation_totale > 0) {
+                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('consumption')}</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
+                }
+
+                // Ajouter le total
+                tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
+              }
+            } else {
+              // Si pas de détails stockés, afficher un message
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">${i18next.t('detailsNotAvailable')}</span></td></tr>`;
+            }
           }
-          // Créer le menu dropdown
-          dropdownMenu = document.createElement('div');
-          dropdownMenu.className =
-            'absolute z-50 mt-1 right-0 bg-white rounded-xl shadow-xl py-1 flex flex-col gap-0 border border-gray-200'; // min-w supprimé
-          dropdownMenu.style.width = '170px'; // Largeur fixe, lisible, style shadcn/ui
-          dropdownMenu.style.position = 'absolute';
-          dropdownMenu.style.padding = '0';
-          dropdownMenu.style.overflow = 'hidden'; // Empêche tout débordement
-          const rect = div.getBoundingClientRect();
-          dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
-          dropdownMenu.style.left = rect.right - STACKBAR_WIDTH - 28 + 'px';
-          // Génération dynamique du menu avec désactivation Monter/Descendre
-          const isFirst = outgoingLinks.indexOf(link) === 0;
-          const isLast =
-            outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
-          dropdownMenu.innerHTML = `
+
+          // Générer le tooltip initial (sera mis à jour par la promesse si nécessaire)
+          tooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
+        } else {
+          tooltipContent = '<strong>Ajouter une transformation</strong>';
+        }
+        tooltip
+          .html(tooltipContent)
+          .style(
+            'left',
+            (() => {
+              const tooltipWidth = 180; // Largeur fixe du tooltip narrow
+              const windowWidth = window.innerWidth;
+              const mouseX = event.pageX;
+
+              // Si le tooltip va déborder à droite, le positionner à gauche
+              if (mouseX + 10 + tooltipWidth > windowWidth) {
+                return mouseX - tooltipWidth + 10 + 'px';
+              } else {
+                return mouseX + 10 + 'px';
+              }
+            })()
+          )
+          .style('top', event.pageY - 28 + 'px');
+      });
+      div.addEventListener('mouseout', function () {
+        tooltip.transition().duration(500).style('opacity', 0);
+      });
+      div.addEventListener('click', function (event) {
+        event.stopPropagation();
+
+        // Masquer le tooltip immédiatement quand on clique
+        hideTooltip();
+
+        if (!isFork) {
+          console.log(
+            '🔍 CLIC SIMPLE SUR LIEN - Appel direct de afficherPopupTransfo'
+          );
+          // Comportement + classique
+          const chemin = `${d.name} → ${link.target.name}`;
+          const ref = {
+            nodeId: d.id,
+            dimension: dimension,
+            lot: {
+              ...d.lot,
+              transformations_appliquees: d.transformations_appliquees,
+            },
+            chemin: chemin,
+            link: {
+              ...link,
+              target: {
+                ...link.target,
+                name: link.target.name.split('→')[0].trim(),
+              },
+            },
+            transformation: link.transformation || null,
+          };
+          console.log(
+            '🔍 window.afficherPopupTransfo exists:',
+            typeof window.afficherPopupTransfo
+          );
+          if (window.afficherPopupTransfo) {
+            console.log(
+              '🔍 Calling window.afficherPopupTransfo with ref:',
+              ref
+            );
+            window.afficherPopupTransfo(ref, 'add');
+          } else {
+            console.error('❌ window.afficherPopupTransfo not found!');
+          }
+          return;
+        }
+        // Vérifier si on est en mode éditable
+        if (!window.isEditable) {
+          console.log(
+            '🔍 Mode lecture seule - dropdown transformation désactivé'
+          );
+          return;
+        }
+
+        // Toggle dropdown
+        console.log('🔍 CRÉATION DROPDOWN - isFork:', isFork);
+        if (dropdownOpen) {
+          closeDropdown();
+          return;
+        }
+        // Créer le menu dropdown
+        dropdownMenu = document.createElement('div');
+        dropdownMenu.className =
+          'absolute z-50 mt-1 right-0 bg-white rounded-xl shadow-xl py-1 flex flex-col gap-0 border border-gray-200'; // min-w supprimé
+        dropdownMenu.style.width = '170px'; // Largeur fixe, lisible, style shadcn/ui
+        dropdownMenu.style.position = 'absolute';
+        dropdownMenu.style.padding = '0';
+        dropdownMenu.style.overflow = 'hidden'; // Empêche tout débordement
+        const rect = div.getBoundingClientRect();
+        dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
+        dropdownMenu.style.left = rect.right - STACKBAR_WIDTH - 28 + 'px';
+        // Génération dynamique du menu avec désactivation Monter/Descendre
+        const isFirst = outgoingLinks.indexOf(link) === 0;
+        const isLast = outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
+        dropdownMenu.innerHTML = `
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>${i18next.t('edit')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>${i18next.t('tools')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="view"><i class="ph ph-eye text-base align-middle mr-2"></i>${i18next.t('viewLot')}</button>
@@ -3762,216 +3770,154 @@ function updateSankey(dimension) {
             <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>${i18next.t('moveDown')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>${i18next.t('delete')}</button>
           `;
-          // Appliquer le style inline sur chaque bouton
-          dropdownMenu.querySelectorAll('.dropdown-btn').forEach(btn => {
-            btn.style.display = 'flex';
-            btn.style.alignItems = 'center';
-            btn.style.justifyContent = 'flex-start';
-            btn.style.gap = '0.7em';
-            btn.style.width = '100%';
-            btn.style.boxSizing = 'border-box';
-            btn.style.background = 'none';
-            btn.style.border = 'none';
-            btn.style.outline = 'none';
-            btn.style.fontSize = '1rem';
-            btn.style.fontWeight = '500';
-            btn.style.padding = '0.4em 0.8em'; // padding vertical réduit
-            btn.style.borderRadius = '0.7em';
-            btn.style.transition =
-              'background 0.13s, color 0.13s, box-shadow 0.13s';
-            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
-            btn.style.color = '#23272f';
+        // Appliquer le style inline sur chaque bouton
+        dropdownMenu.querySelectorAll('.dropdown-btn').forEach(btn => {
+          btn.style.display = 'flex';
+          btn.style.alignItems = 'center';
+          btn.style.justifyContent = 'flex-start';
+          btn.style.gap = '0.7em';
+          btn.style.width = '100%';
+          btn.style.boxSizing = 'border-box';
+          btn.style.background = 'none';
+          btn.style.border = 'none';
+          btn.style.outline = 'none';
+          btn.style.fontSize = '1rem';
+          btn.style.fontWeight = '500';
+          btn.style.padding = '0.4em 0.8em'; // padding vertical réduit
+          btn.style.borderRadius = '0.7em';
+          btn.style.transition =
+            'background 0.13s, color 0.13s, box-shadow 0.13s';
+          btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+          btn.style.color = '#23272f';
+          if (btn.dataset.action === 'delete') {
+            btn.style.color = '#dc2626';
+          }
+          btn.onmouseover = function () {
+            if (btn.disabled) return;
             if (btn.dataset.action === 'delete') {
-              btn.style.color = '#dc2626';
+              btn.style.background = '#fff1f2';
+              btn.style.color = '#b91c1c';
+            } else {
+              btn.style.background = '#eaf3ff';
+              btn.style.color = '#1d4ed8';
             }
-            btn.onmouseover = function () {
-              if (btn.disabled) return;
-              if (btn.dataset.action === 'delete') {
-                btn.style.background = '#fff1f2';
-                btn.style.color = '#b91c1c';
-              } else {
-                btn.style.background = '#eaf3ff';
-                btn.style.color = '#1d4ed8';
-              }
-            };
-            btn.onmouseout = function () {
-              btn.style.background = 'none';
-              btn.style.color =
-                btn.dataset.action === 'delete' ? '#dc2626' : '#23272f';
-            };
-            btn.onfocus = btn.onmouseover;
-            btn.onblur = btn.onmouseout;
-          });
-          document.body.appendChild(dropdownMenu);
-          dropdownOpen = true;
-          // Handler pour Modifier
-          dropdownMenu.querySelector('[data-action="edit"]').onclick =
-            function (e) {
-              console.log('✏️ EDIT HANDLER CALLED');
-              e.stopPropagation();
-              closeDropdown();
+          };
+          btn.onmouseout = function () {
+            btn.style.background = 'none';
+            btn.style.color =
+              btn.dataset.action === 'delete' ? '#dc2626' : '#23272f';
+          };
+          btn.onfocus = btn.onmouseover;
+          btn.onblur = btn.onmouseout;
+        });
+        document.body.appendChild(dropdownMenu);
+        dropdownOpen = true;
+        // Handler pour Modifier
+        dropdownMenu.querySelector('[data-action="edit"]').onclick = function (
+          e
+        ) {
+          console.log('✏️ EDIT HANDLER CALLED');
+          e.stopPropagation();
+          closeDropdown();
 
-              // Trouver le _nodeId de la transformation à éditer
-              let transformationNodeId =
-                link.transformation && link.transformation._nodeId;
+          // Trouver le _nodeId de la transformation à éditer
+          let transformationNodeId =
+            link.transformation && link.transformation._nodeId;
 
-              if (!transformationNodeId) {
-                // Fallback : chercher dans les transformations appliquées
-                const lastTransfo =
-                  d.transformations_appliquees &&
-                  d.transformations_appliquees.length
-                    ? d.transformations_appliquees[
-                        d.transformations_appliquees.length - 1
-                      ]
-                    : null;
+          if (!transformationNodeId) {
+            // Fallback : chercher dans les transformations appliquées
+            const lastTransfo =
+              d.transformations_appliquees &&
+              d.transformations_appliquees.length
+                ? d.transformations_appliquees[
+                    d.transformations_appliquees.length - 1
+                  ]
+                : null;
 
-                if (lastTransfo && lastTransfo._nodeId) {
-                  transformationNodeId = lastTransfo._nodeId;
-                } else {
-                  console.error(
-                    'Impossible de trouver le _nodeId de la transformation à éditer'
-                  );
-                  return;
-                }
-              }
-
-              console.log(
-                '🔍 Édition de la transformation avec nodeId:',
-                transformationNodeId
+            if (lastTransfo && lastTransfo._nodeId) {
+              transformationNodeId = lastTransfo._nodeId;
+            } else {
+              console.error(
+                'Impossible de trouver le _nodeId de la transformation à éditer'
               );
+              return;
+            }
+          }
 
-              const chemin = `${d.name} → ${link.target.name}`;
-              const ref = {
-                nodeId: transformationNodeId, // Utiliser le _nodeId de la transformation, pas d.id
-                dimension: dimension,
-                lot: {
-                  ...d.lot,
-                  transformations_appliquees: d.transformations_appliquees,
-                },
-                chemin: chemin,
-                link: {
-                  ...link,
-                  target: {
-                    ...link.target,
-                    name: link.target.name.split('→')[0].trim(),
-                  },
-                },
-                transformation: link.transformation || null,
-              };
-              if (window.afficherPopupTransfo)
-                window.afficherPopupTransfo(ref, 'edit');
-            };
-          // Handler pour Visualiser le lot
-          dropdownMenu.querySelector('[data-action="view"]').onclick =
-            function (e) {
-              e.stopPropagation();
-              closeDropdown();
-              console.log('📦 [Visualiser le lot]', link.target.lot);
-              const lotJson = JSON.stringify(link.target.lot, null, 2);
-              window.parent.postMessage(
-                {
-                  id: 'sankey-lot-visualization',
-                  type: 'showLotDetails',
-                  payload: {
-                    nodeId: link.target.id,
-                    nodeName: link.target.name,
-                    lotData: lotJson,
-                    timestamp: new Date().toISOString(),
-                  },
-                },
-                '*'
-              );
-              // Générer et afficher les données groupées
-              const groupedData = generateGroupedLotData(
-                link.target.lot,
-                link.target.name
-              );
-              console.log('📊 [Données groupées]', groupedData);
-            };
-          // Handler pour Effacer
-          dropdownMenu.querySelector('[data-action="delete"]').onclick =
-            function (e) {
-              e.stopPropagation();
-              closeDropdown();
-              console.log('🗑️ BOUTON EFFACER CLICKED');
+          console.log(
+            '🔍 Édition de la transformation avec nodeId:',
+            transformationNodeId
+          );
 
-              // Trouver le scénario courant
-              const scenarioIdx = window.currentScenarioIdx;
-              const scenario = window.scenarios[scenarioIdx]?.scenario;
-
-              if (!scenario) {
-                alert('Scénario non trouvé.');
-                return;
-              }
-
-              // Trouver le _nodeId de la transformation à supprimer
-              let nodeId = link.transformation && link.transformation._nodeId;
-
-              if (!nodeId) {
-                // Fallback : chercher dans les transformations appliquées
-                const lastTransfo =
-                  d.transformations_appliquees &&
-                  d.transformations_appliquees.length
-                    ? d.transformations_appliquees[
-                        d.transformations_appliquees.length - 1
-                      ]
-                    : null;
-
-                if (lastTransfo && lastTransfo._nodeId) {
-                  nodeId = lastTransfo._nodeId;
-                } else {
-                  alert(
-                    'Impossible de retrouver la transformation à supprimer.'
-                  );
-                  return;
-                }
-              }
-
-              console.log(
-                '🔍 Suppression de la transformation avec nodeId:',
-                nodeId
-              );
-
-              // Utiliser la nouvelle fonction de suppression
-              const success = removeTransformationByNodeId(scenario, nodeId);
-
-              if (!success) {
-                alert('Erreur lors de la suppression de la transformation.');
-                return;
-              }
-
-              // Publier le scénario après suppression
-              publishScenario(scenario, 'SUPPRESSION TRANSFORMATION');
-
-              // Relancer le Sankey
-              const lot = window.lotType;
-              const dimension = window.currentDimension;
-              if (typeof runSankey === 'function' && lot && scenario) {
-                runSankey({
-                  lot,
-                  scenario,
-                  containerId: 'sankey-container',
-                  dimension,
-                });
-              }
-
-              // Activer le bouton Enregistrer
-              if (typeof setScenarioModifie === 'function') {
-                setScenarioModifie(true);
-              }
-            };
-          // Handler pour Monter
-          dropdownMenu.querySelector('[data-action="up"]').onclick = function (
-            e
-          ) {
+          const chemin = `${d.name} → ${link.target.name}`;
+          const ref = {
+            nodeId: transformationNodeId, // Utiliser le _nodeId de la transformation, pas d.id
+            dimension: dimension,
+            lot: {
+              ...d.lot,
+              transformations_appliquees: d.transformations_appliquees,
+            },
+            chemin: chemin,
+            link: {
+              ...link,
+              target: {
+                ...link.target,
+                name: link.target.name.split('→')[0].trim(),
+              },
+            },
+            transformation: link.transformation || null,
+          };
+          if (window.afficherPopupTransfo)
+            window.afficherPopupTransfo(ref, 'edit');
+        };
+        // Handler pour Visualiser le lot
+        dropdownMenu.querySelector('[data-action="view"]').onclick = function (
+          e
+        ) {
+          e.stopPropagation();
+          closeDropdown();
+          console.log('📦 [Visualiser le lot]', link.target.lot);
+          const lotJson = JSON.stringify(link.target.lot, null, 2);
+          window.parent.postMessage(
+            {
+              id: 'sankey-lot-visualization',
+              type: 'showLotDetails',
+              payload: {
+                nodeId: link.target.id,
+                nodeName: link.target.name,
+                lotData: lotJson,
+                timestamp: new Date().toISOString(),
+              },
+            },
+            '*'
+          );
+          // Générer et afficher les données groupées
+          const groupedData = generateGroupedLotData(
+            link.target.lot,
+            link.target.name
+          );
+          console.log('📊 [Données groupées]', groupedData);
+        };
+        // Handler pour Effacer
+        dropdownMenu.querySelector('[data-action="delete"]').onclick =
+          function (e) {
             e.stopPropagation();
             closeDropdown();
+            console.log('🗑️ BOUTON EFFACER CLICKED');
 
-            // Trouver le _nodeId de la transformation à déplacer
-            let transformationNodeId =
-              link.transformation && link.transformation._nodeId;
+            // Trouver le scénario courant
+            const scenarioIdx = window.currentScenarioIdx;
+            const scenario = window.scenarios[scenarioIdx]?.scenario;
 
-            if (!transformationNodeId) {
+            if (!scenario) {
+              alert('Scénario non trouvé.');
+              return;
+            }
+
+            // Trouver le _nodeId de la transformation à supprimer
+            let nodeId = link.transformation && link.transformation._nodeId;
+
+            if (!nodeId) {
               // Fallback : chercher dans les transformations appliquées
               const lastTransfo =
                 d.transformations_appliquees &&
@@ -3982,82 +3928,145 @@ function updateSankey(dimension) {
                   : null;
 
               if (lastTransfo && lastTransfo._nodeId) {
-                transformationNodeId = lastTransfo._nodeId;
+                nodeId = lastTransfo._nodeId;
               } else {
-                console.error(
-                  'Impossible de trouver le _nodeId pour le déplacement vers le haut'
-                );
+                alert('Impossible de retrouver la transformation à supprimer.');
                 return;
               }
             }
 
             console.log(
-              '🔍 Déplacement vers le haut avec nodeId:',
-              transformationNodeId
+              '🔍 Suppression de la transformation avec nodeId:',
+              nodeId
             );
 
-            if (typeof window.onTransformationMoveUp === 'function') {
-              window.onTransformationMoveUp(d.id, {
-                _nodeId: transformationNodeId,
+            // Utiliser la nouvelle fonction de suppression
+            const success = removeTransformationByNodeId(scenario, nodeId);
+
+            if (!success) {
+              alert('Erreur lors de la suppression de la transformation.');
+              return;
+            }
+
+            // Publier le scénario après suppression
+            publishScenario(scenario, 'SUPPRESSION TRANSFORMATION');
+
+            // Relancer le Sankey
+            const lot = window.lotType;
+            const dimension = window.currentDimension;
+            if (typeof runSankey === 'function' && lot && scenario) {
+              runSankey({
+                lot,
+                scenario,
+                containerId: 'sankey-container',
+                dimension,
               });
             }
+
+            // Activer le bouton Enregistrer
+            if (typeof setScenarioModifie === 'function') {
+              setScenarioModifie(true);
+            }
           };
-          // Handler pour Descendre
-          dropdownMenu.querySelector('[data-action="down"]').onclick =
-            function (e) {
-              e.stopPropagation();
-              closeDropdown();
+        // Handler pour Monter
+        dropdownMenu.querySelector('[data-action="up"]').onclick = function (
+          e
+        ) {
+          e.stopPropagation();
+          closeDropdown();
 
-              // Trouver le _nodeId de la transformation à déplacer
-              let transformationNodeId =
-                link.transformation && link.transformation._nodeId;
+          // Trouver le _nodeId de la transformation à déplacer
+          let transformationNodeId =
+            link.transformation && link.transformation._nodeId;
 
-              if (!transformationNodeId) {
-                // Fallback : chercher dans les transformations appliquées
-                const lastTransfo =
-                  d.transformations_appliquees &&
-                  d.transformations_appliquees.length
-                    ? d.transformations_appliquees[
-                        d.transformations_appliquees.length - 1
-                      ]
-                    : null;
+          if (!transformationNodeId) {
+            // Fallback : chercher dans les transformations appliquées
+            const lastTransfo =
+              d.transformations_appliquees &&
+              d.transformations_appliquees.length
+                ? d.transformations_appliquees[
+                    d.transformations_appliquees.length - 1
+                  ]
+                : null;
 
-                if (lastTransfo && lastTransfo._nodeId) {
-                  transformationNodeId = lastTransfo._nodeId;
-                } else {
-                  console.error(
-                    'Impossible de trouver le _nodeId pour le déplacement vers le bas'
-                  );
-                  return;
-                }
-              }
-
-              console.log(
-                '🔍 Déplacement vers le bas avec nodeId:',
-                transformationNodeId
+            if (lastTransfo && lastTransfo._nodeId) {
+              transformationNodeId = lastTransfo._nodeId;
+            } else {
+              console.error(
+                'Impossible de trouver le _nodeId pour le déplacement vers le haut'
               );
+              return;
+            }
+          }
 
-              if (typeof window.onTransformationMoveDown === 'function') {
-                window.onTransformationMoveDown(d.id, {
-                  _nodeId: transformationNodeId,
-                });
-              }
-            };
-          // Handler pour Outils
-          dropdownMenu.querySelector('[data-action="tools"]').onclick =
-            function (e) {
-              e.stopPropagation();
-              closeDropdown();
-              // Ouvrir la popup "transfo tech"
-              showTransfoTechPopup(d.id, link.transformation);
-            };
-          // Fermer si on clique ailleurs
-          setTimeout(() => {
-            document.addEventListener('mousedown', onClickOutside);
-          }, 0);
-        });
+          console.log(
+            '🔍 Déplacement vers le haut avec nodeId:',
+            transformationNodeId
+          );
+
+          if (typeof window.onTransformationMoveUp === 'function') {
+            window.onTransformationMoveUp(d.id, {
+              _nodeId: transformationNodeId,
+            });
+          }
+        };
+        // Handler pour Descendre
+        dropdownMenu.querySelector('[data-action="down"]').onclick = function (
+          e
+        ) {
+          e.stopPropagation();
+          closeDropdown();
+
+          // Trouver le _nodeId de la transformation à déplacer
+          let transformationNodeId =
+            link.transformation && link.transformation._nodeId;
+
+          if (!transformationNodeId) {
+            // Fallback : chercher dans les transformations appliquées
+            const lastTransfo =
+              d.transformations_appliquees &&
+              d.transformations_appliquees.length
+                ? d.transformations_appliquees[
+                    d.transformations_appliquees.length - 1
+                  ]
+                : null;
+
+            if (lastTransfo && lastTransfo._nodeId) {
+              transformationNodeId = lastTransfo._nodeId;
+            } else {
+              console.error(
+                'Impossible de trouver le _nodeId pour le déplacement vers le bas'
+              );
+              return;
+            }
+          }
+
+          console.log(
+            '🔍 Déplacement vers le bas avec nodeId:',
+            transformationNodeId
+          );
+
+          if (typeof window.onTransformationMoveDown === 'function') {
+            window.onTransformationMoveDown(d.id, {
+              _nodeId: transformationNodeId,
+            });
+          }
+        };
+        // Handler pour Outils
+        dropdownMenu.querySelector('[data-action="tools"]').onclick = function (
+          e
+        ) {
+          e.stopPropagation();
+          closeDropdown();
+          // Ouvrir la popup "transfo tech"
+          showTransfoTechPopup(d.id, link.transformation);
+        };
+        // Fermer si on clique ailleurs
+        setTimeout(() => {
+          document.addEventListener('mousedown', onClickOutside);
+        }, 0);
       });
-    }
+    });
 
     // 2. Icône + sur le lien "Reste" (coproduit)
     const resteLinks = sankeyLinks.filter(
@@ -4079,6 +4088,9 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
       fo.node().appendChild(div);
+
+      // Permettre l'ouverture depuis le tableau coûts (clic sur le nom de la transfo)
+      link.dropdownTrigger = div;
 
       // Conditionner la position et les comportements
       if (window.isEditable) {
@@ -4481,11 +4493,12 @@ function updateSankey(dimension) {
 
   const lotInitialTotal = nodes[0]?.lot?.total ?? 0;
 
-  // Calculer et afficher les coûts totaux (onglet Coûts)
-  if (window.teamData) {
-    const costsData = calculateCosts(nodes, links);
-    displayCostsTable(costsData);
-  }
+  // Exposer les liens Sankey (avec dropdownTrigger) pour que le tableau coûts puisse ouvrir le dropdown au clic sur un nom de transfo
+  window._sankeyLinksWithDropdown = sankeyLinks;
+
+  // Calculer et afficher les coûts totaux (onglet Coûts) — toujours afficher le tableau (avec '-' si pas de teamData)
+  const costsData = calculateCosts(nodes, links);
+  displayCostsTable(costsData);
 
   // Toujours mettre à jour l'onglet Valorisation (nœuds cibles agrégés)
   const valorisationData = getValorisationData(nodes, lotInitialTotal, links);
@@ -5615,6 +5628,28 @@ function createDropdown(button, options, positionOffset = 0) {
 }
 
 // Fonction globale pour calculer les coûts totaux
+
+/**
+ * Libellé affichable pour une transformation dans le tableau coûts.
+ * Même logique que l'affichage sur les paths du Sankey (lot-title) : label localisé uniquement.
+ * @param {Object} transformation - Objet transformation du lien
+ * @param {Object} targetNode - Nœud cible du lien (non utilisé, gardé pour signature)
+ * @param {Object} link - Lien (non utilisé, gardé pour signature)
+ * @returns {string}
+ */
+function getCostTableTransfoDisplayName(transformation, targetNode, link) {
+  const type = Array.isArray(transformation.type)
+    ? transformation.type[0]
+    : transformation.type;
+  const typeForLabel =
+    type === 'dynamic_transfo' && transformation.dynamic_transfo_id
+      ? `dynamic_transfo_${transformation.dynamic_transfo_id}`
+      : type;
+  return window.transformationUtils
+    ? window.transformationUtils.getTransformationLabel(typeForLabel)
+    : transformation.title || type;
+}
+
 /**
  * Calcule les coûts totaux du scénario
  * @param {Array} nodes - Nœuds du Sankey
@@ -5628,7 +5663,8 @@ function createDropdown(button, options, positionOffset = 0) {
  *   totalEquipmentCost: number,  // Coût équipement (amortissement) en €
  *   totalConsumablesCost: number, // Coût consommables en €
  *   totalEquipmentTime: number,  // Temps total machine en heures
- *   nodeCosts: Array            // Détails par nœud
+ *   nodeCosts: Array            // Détails par nœud (legacy)
+ *   rows: Array                 // Une ligne par transformation : { displayName, transformation, costs?, profilsBreakdown? }
  * }
  */
 function calculateCosts(nodes, links) {
@@ -5640,143 +5676,138 @@ function calculateCosts(nodes, links) {
   let totalEquipmentCost = 0;
   let totalConsumablesCost = 0;
   let totalEquipmentTime = 0;
-  let nodeCosts = [];
-  const uniqueTransformations = new Map();
-  let totalTransformationsCount = 0;
+  const rows = [];
+  const nodeCosts = []; // conservé pour compatibilité
+
+  const teamData = window.teamData;
+  const hasTeamData = !!(teamData && teamData.profils);
+
+  // Construire les lignes à partir des links (un lien = une transformation, ordre du graphe)
+  // Exclure les liens vers le nœud Reste (coproduit) : ce n'est pas une transformation
+  const linksWithTransfo = (links || []).filter(link => {
+    if (!link.transformation) return false;
+    const target =
+      typeof link.target === 'object' &&
+      link.target != null &&
+      'name' in link.target
+        ? link.target
+        : (nodes || []).find(n => String(n.id) === String(link.target));
+    return !target?.isCoproduct;
+  });
+  let totalTransformationsCount = linksWithTransfo.length;
   let assignedToolsCount = 0;
 
-  // ← NOUVEAU : Validation des données de base
-  if (!window.teamData || !window.teamData.profils) {
-    console.warn('Aucune donnée de profils RH trouvée dans window.teamData');
-    return {
-      totalCost: 0,
-      totalEnergyCost: 0,
-      totalLaborCost: 0,
-      totalEnergyConsumption: 0,
-      totalTime: 0,
-      totalEquipmentCost: 0,
-      totalConsumablesCost: 0,
-      totalEquipmentTime: 0,
-      nodeCosts: [],
-    };
-  }
-
-  // Parcourir tous les nœuds pour trouver les transformations avec tech
-  const transformationsTraitees = new Set(); // Pour éviter de traiter 2x la même transformation
-
-  nodes.forEach(node => {
-    if (
-      node.transformations_appliquees &&
-      node.transformations_appliquees.length > 0
-    ) {
-      // Parcourir TOUTES les transformations du nœud, pas seulement la dernière
-      node.transformations_appliquees.forEach(transformation => {
-        if (!transformation) {
-          return;
-        }
-
-        const transformationId =
-          transformation._nodeId != null
-            ? String(transformation._nodeId)
-            : `missing-${uniqueTransformations.size + 1}`;
-        const hasAssignedTech = !!(
-          transformation.tech &&
-          (transformation.tech.details || transformation.tech.bubble_id)
-        );
-
-        if (!uniqueTransformations.has(transformationId)) {
-          uniqueTransformations.set(transformationId, {
-            hasAssignedTech,
-          });
-          totalTransformationsCount += 1;
-          if (hasAssignedTech) {
-            assignedToolsCount += 1;
-          }
-        } else if (
-          hasAssignedTech &&
-          !uniqueTransformations.get(transformationId).hasAssignedTech
-        ) {
-          uniqueTransformations.get(transformationId).hasAssignedTech = true;
-          assignedToolsCount += 1;
-        }
-
-        if (
-          hasAssignedTech &&
-          transformation.tech.details &&
-          !transformationsTraitees.has(transformationId) // Éviter les doublons
-        ) {
-          // Créer une transformation avec le volume du lot d'entrée correct
-          const transformationWithVolume = {
-            ...transformation,
-            lot_input_volume: transformation.entryLot?.total || 0,
-          };
-
-          // Calculer les coûts pour cette transformation
-          const costs = calculateTransformationCosts(
-            transformationWithVolume,
-            transformation.tech.details,
-            window.teamData
-          );
-
-          if (costs) {
-            totalCost += costs.cout_total;
-            totalEnergyCost += costs.cout_energie;
-            totalLaborCost += costs.couts_rh;
-            totalEnergyConsumption += costs.consommation_totale;
-            totalEquipmentCost += costs.cout_amortissement || 0;
-            totalConsumablesCost += costs.cout_consommables || 0;
-            totalEquipmentTime += costs.temps_utile || 0;
-
-            // ← NOUVEAU : Calculer le temps total RH pour cette transformation
-            let tempsRHTransfo = 0;
-            if (
-              transformation.tech.details.profils &&
-              window.teamData.profils
-            ) {
-              // ← NOUVEAU : Vérifier que les profils de la tech existent dans la team
-              const profilsManquants = Object.keys(
-                transformation.tech.details.profils
-              ).filter(profilName => !window.teamData.profils[profilName]);
-              if (profilsManquants.length > 0) {
-                console.warn(
-                  `Profils RH manquants dans la team pour la transformation ${transformation._nodeId}: ${profilsManquants.join(', ')}`
-                );
-              }
-
-              Object.entries(transformation.tech.details.profils).forEach(
-                ([profilName, profilData]) => {
-                  const profilTempsUtile = costs.temps_utile * profilData.timeh;
-                  tempsRHTransfo += profilTempsUtile;
-                }
-              );
-            }
-            totalTimeRH += tempsRHTransfo;
-
-            // Stocker les détails pour l'affichage
-            nodeCosts.push({
-              nodeName: transformation._nodeId,
-              transformation: transformation,
-              costs: costs,
-            });
-
-            // Marquer cette transformation comme traitée
-            transformationsTraitees.add(transformationId);
-          }
-        }
-      });
+  linksWithTransfo.forEach(link => {
+    const transformation = link.transformation;
+    // link.target peut être l'id (string) ou l'objet nœud après passage par d3.sankey()
+    const targetNode =
+      typeof link.target === 'object' &&
+      link.target != null &&
+      'name' in link.target
+        ? link.target
+        : (nodes || []).find(n => String(n.id) === String(link.target));
+    const displayName = getCostTableTransfoDisplayName(
+      transformation,
+      targetNode,
+      link
+    );
+    const volume = link.inputLot?.total ?? 0;
+    const hasAssignedTech = !!(
+      transformation.tech &&
+      (transformation.tech.details || transformation.tech.bubble_id)
+    );
+    if (hasAssignedTech) {
+      assignedToolsCount += 1;
     }
+
+    let costs = null;
+    let profilsBreakdown = null;
+
+    if (hasAssignedTech && transformation.tech.details && hasTeamData) {
+      const transformationWithVolume = {
+        ...transformation,
+        lot_input_volume: volume,
+      };
+      costs = calculateTransformationCosts(
+        transformationWithVolume,
+        transformation.tech.details,
+        teamData
+      );
+
+      if (costs) {
+        totalCost += costs.cout_total;
+        totalEnergyCost += costs.cout_energie;
+        totalLaborCost += costs.couts_rh;
+        totalEnergyConsumption += costs.consommation_totale;
+        totalEquipmentCost += costs.cout_amortissement || 0;
+        totalConsumablesCost += costs.cout_consommables || 0;
+        totalEquipmentTime += costs.temps_utile || 0;
+
+        let tempsRHTransfo = 0;
+        if (transformation.tech.details.profils && teamData.profils) {
+          const profilsManquants = Object.keys(
+            transformation.tech.details.profils
+          ).filter(profilName => !teamData.profils[profilName]);
+          if (profilsManquants.length > 0) {
+            console.warn(
+              `Profils RH manquants dans la team pour la transformation ${transformation._nodeId}: ${profilsManquants.join(', ')}`
+            );
+          }
+          profilsBreakdown = {};
+          Object.entries(transformation.tech.details.profils).forEach(
+            ([profilName, profilData]) => {
+              const profilTempsUtile = costs.temps_utile * profilData.timeh;
+              tempsRHTransfo += profilTempsUtile;
+              const teamProfilData = teamData.profils[profilName];
+              const cost = teamProfilData
+                ? teamProfilData.pricerate * profilTempsUtile
+                : 0;
+              profilsBreakdown[profilName] = {
+                temps: profilTempsUtile,
+                cost,
+              };
+            }
+          );
+          totalTimeRH += tempsRHTransfo;
+        }
+
+        nodeCosts.push({
+          nodeName: transformation._nodeId,
+          transformation,
+          costs,
+        });
+      }
+    }
+
+    const targetNodeId =
+      targetNode?.id ??
+      (typeof link.target === 'object' && link.target != null
+        ? link.target.id
+        : link.target);
+    rows.push({
+      displayName,
+      transformation,
+      costs,
+      profilsBreakdown,
+      targetNodeId: targetNodeId != null ? String(targetNodeId) : '',
+    });
   });
+
+  if (!hasTeamData && linksWithTransfo.length > 0) {
+    console.warn('Aucune donnée de profils RH trouvée dans window.teamData');
+  }
 
   return {
     totalCost,
     totalEnergyCost,
     totalLaborCost,
     totalEnergyConsumption,
-    totalTime: totalTimeRH, // ← MODIFIÉ : retourner le temps RH total
+    totalTime: totalTimeRH,
     totalEquipmentCost,
     totalConsumablesCost,
     totalEquipmentTime,
     nodeCosts,
+    rows,
     totalTransformationsCount,
     assignedToolsCount,
   };
@@ -5863,55 +5894,13 @@ function displayCostsTable(costsData) {
 
   panel.innerHTML = '';
 
-  // Créer le contenu du tableau des coûts (conserver id costs-table pour la hauteur iframe)
-  const tableContainer = document.createElement('div');
-  tableContainer.id = 'costs-table';
-  tableContainer.className = 'bg-white';
-  tableContainer.style.marginTop = '0';
+  const t =
+    window.i18next && typeof window.i18next.t === 'function'
+      ? window.i18next.t.bind(window.i18next)
+      : k => k;
 
-  // Formater les temps
-  const totalOperationTimeFormatted = formatTime(
-    costsData.totalEquipmentTime || 0
-  );
-  const equipmentTimeFormatted = formatTime(costsData.totalEquipmentTime || 0);
-
-  // Calculer les détails des profils RH
-  let profilsDetails = '';
-  if (costsData.nodeCosts.length > 0) {
-    // Collecter tous les profils utilisés
-    const profilsMap = new Map();
-
-    costsData.nodeCosts.forEach(nodeCost => {
-      if (nodeCost.transformation.tech.details.profils) {
-        Object.entries(nodeCost.transformation.tech.details.profils).forEach(
-          ([profilName, profilData]) => {
-            if (!profilsMap.has(profilName)) {
-              profilsMap.set(profilName, { tempsTotal: 0, coutTotal: 0 });
-            }
-            const profilTempsUtile =
-              nodeCost.costs.temps_utile * profilData.timeh;
-            const teamProfilData = window.teamData.profils[profilName];
-            if (teamProfilData) {
-              const prix = teamProfilData.pricerate * profilTempsUtile;
-              profilsMap.get(profilName).tempsTotal += profilTempsUtile;
-              profilsMap.get(profilName).coutTotal += prix;
-            }
-          }
-        );
-      }
-    });
-
-    // Générer le HTML pour les profils
-    if (profilsMap.size > 0) {
-      profilsDetails = `<div class="mt-3"><div class="text-xs text-green-600 font-medium mb-2">${i18next.t('laborCostDetails')}</div>`;
-      profilsMap.forEach((details, profilName) => {
-        const profilTempsFormate = formatTime(details.tempsTotal);
-        profilsDetails += `<div class="py-1 flex justify-between"><span class="text-xs text-green-700 font-medium">${profilName}</span><div class="text-right"><div class="text-xs text-green-600">${profilTempsFormate}</div><div class="text-xs font-medium text-green-800">${details.coutTotal.toFixed(2)}€</div></div></div>`;
-      });
-      profilsDetails += '</div>';
-    }
-  }
-
+  const rows = costsData.rows || [];
+  const profileNames = Object.keys(window.teamData?.profils || {});
   const totalTransformations = costsData.totalTransformationsCount || 0;
   const assignedTools = costsData.assignedToolsCount || 0;
   const progressPercent =
@@ -5921,10 +5910,10 @@ function displayCostsTable(costsData) {
 
   const headerHtml = `
     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-      <h3 class="text-lg font-semibold text-gray-800">${i18next.t('totalCostsTitle')}</h3>
+      <h3 class="text-lg font-semibold text-gray-800">${t('totalCostsTitle')}</h3>
       <div class="flex flex-col gap-1 md:items-end">
         <span class="text-sm font-medium text-gray-600 md:text-right">
-          ${assignedTools}/${totalTransformations} ${i18next.t('toolsAssignedLabel')}
+          ${assignedTools}/${totalTransformations} ${t('toolsAssignedLabel')}
         </span>
         <div class="w-full md:w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div class="h-full bg-blue-500 transition-all" style="width: ${progressPercent}%;"></div>
@@ -5933,52 +5922,255 @@ function displayCostsTable(costsData) {
     </div>
   `;
 
-  const tableHTML = `
-    ${headerHtml}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-      <!-- Colonne 1: Total Cost + Total operation time -->
-      <div class="bg-blue-50 p-4 rounded-lg">
-        <div class="text-sm text-blue-600 font-medium mb-2">${i18next.t('totalCost')}</div>
-        <div class="text-xl font-bold text-blue-800 mb-3">${costsData.totalCost.toFixed(2)}€</div>
-        <div class="text-xs text-blue-600 font-medium">${i18next.t('totalOperationTime')}</div>
-        <div class="text-sm font-semibold text-blue-800">${totalOperationTimeFormatted}</div>
-      </div>
+  if (rows.length === 0) {
+    panel.innerHTML = `${headerHtml}<p class="text-sm text-gray-600">${t('noTransformations')}</p>`;
+    return;
+  }
 
-      <!-- Colonne 2: Equipment costs + Equipment time -->
-      <div class="bg-purple-50 p-4 rounded-lg">
-        <div class="text-sm text-purple-600 font-medium mb-2">${i18next.t('equipmentCosts')}</div>
-        <div class="text-xl font-bold text-purple-800 mb-3">${(costsData.totalEquipmentCost || 0).toFixed(2)}€</div>
-        <div class="text-xs text-purple-600 font-medium">${i18next.t('equipmentTime')}</div>
-        <div class="text-sm font-semibold text-purple-800">${equipmentTimeFormatted}</div>
-      </div>
-
-      <!-- Colonne 3: Energy costs + Energy consumption -->
-      <div class="bg-yellow-50 p-4 rounded-lg">
-        <div class="text-sm text-yellow-600 font-medium mb-2">${i18next.t('energyCosts')}</div>
-        <div class="text-xl font-bold text-yellow-800 mb-3">${costsData.totalEnergyCost.toFixed(2)}€</div>
-        <div class="text-xs text-yellow-600 font-medium">${i18next.t('energyConsumption')}</div>
-        <div class="text-sm font-semibold text-yellow-800">${costsData.totalEnergyConsumption.toFixed(2)} kWh</div>
-      </div>
-
-      <!-- Colonne 4: Labor costs + Liste des profils -->
-      <div class="bg-green-50 p-4 rounded-lg">
-        <div class="text-sm text-green-600 font-medium mb-2">${i18next.t('laborCosts')}</div>
-        <div class="text-xl font-bold text-green-800 mb-3">${costsData.totalLaborCost.toFixed(2)}€</div>
-        ${profilsDetails}
-      </div>
-
-      <!-- Colonne 5: Other costs + Consumables -->
-      <div class="bg-orange-50 p-4 rounded-lg">
-        <div class="text-sm text-orange-600 font-medium mb-2">${i18next.t('otherCosts')}</div>
-        <div class="text-xl font-bold text-orange-800 mb-3">${(costsData.totalConsumablesCost || 0).toFixed(2)}€</div>
-        <div class="text-xs text-orange-600 font-medium">${i18next.t('consumables')}</div>
-        <div class="text-sm font-semibold text-orange-800">${(costsData.totalConsumablesCost || 0).toFixed(2)}€</div>
-      </div>
-    </div>
+  // En-têtes de colonnes
+  let theadCells = `
+    <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('transfoName')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('toolName')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('time')}</th>
+  `;
+  profileNames.forEach(name => {
+    theadCells += `<th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700 bg-green-50">${(name || '').replace(/</g, '&lt;')}</th>`;
+  });
+  theadCells += `
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('totalProfils')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('equipmentCosts')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('energyConsumption')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('consumables')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('totalCost')}</th>
   `;
 
-  tableContainer.innerHTML = tableHTML;
+  let tableBody = '';
+  const sumTempsUtile = { value: 0 };
+  const sumProfilsTemps = {};
+  const sumProfilsCost = {};
+  const sumTotalProfilsTemps = { value: 0 };
+  const sumTotalProfilsCost = { value: 0 };
+  const sumEquipment = { value: 0 };
+  const sumEnergy = { value: 0 };
+  const sumEnergyCost = { value: 0 };
+  const sumConsumables = { value: 0 };
+  const sumTotalCost = { value: 0 };
+  profileNames.forEach(name => {
+    sumProfilsTemps[name] = 0;
+    sumProfilsCost[name] = 0;
+  });
+
+  rows.forEach(row => {
+    const displayNameEsc = (row.displayName || '').replace(/</g, '&lt;');
+    const tech = row.transformation?.tech;
+    const toolLabel = tech?.name
+      ? (
+          tech.name +
+          (tech.quantity != null && tech.quantity !== 1
+            ? ` (x${tech.quantity})`
+            : '')
+        ).replace(/</g, '&lt;')
+      : '-';
+    const tempsCell = row.costs ? formatTime(row.costs.temps_utile) : '-';
+    if (row.costs) {
+      sumTempsUtile.value += row.costs.temps_utile || 0;
+      sumEquipment.value += row.costs.cout_amortissement || 0;
+      sumEnergy.value += row.costs.consommation_totale || 0;
+      sumEnergyCost.value += row.costs.cout_energie || 0;
+      sumConsumables.value += row.costs.cout_consommables || 0;
+      sumTotalCost.value += row.costs.cout_total || 0;
+    }
+
+    let profilCells = '';
+    let totalProfilTemps = 0;
+    let totalProfilCost = 0;
+    profileNames.forEach(profilName => {
+      const breakdown = row.profilsBreakdown?.[profilName];
+      if (breakdown) {
+        const s =
+          formatTime(breakdown.temps) +
+          '<br>' +
+          breakdown.cost.toFixed(2) +
+          '€';
+        profilCells += `<td class="border border-gray-200 px-3 py-2 text-right text-sm bg-green-50">${s}</td>`;
+        sumProfilsTemps[profilName] += breakdown.temps;
+        sumProfilsCost[profilName] += breakdown.cost;
+        totalProfilTemps += breakdown.temps;
+        totalProfilCost += breakdown.cost;
+      } else {
+        profilCells += `<td class="border border-gray-200 px-3 py-2 text-right text-sm bg-green-50">-</td>`;
+      }
+    });
+    sumTotalProfilsTemps.value += totalProfilTemps;
+    sumTotalProfilsCost.value += totalProfilCost;
+
+    const totalProfilsCell =
+      row.costs &&
+      row.profilsBreakdown &&
+      Object.keys(row.profilsBreakdown).length > 0
+        ? formatTime(totalProfilTemps) +
+          '<br>' +
+          totalProfilCost.toFixed(2) +
+          '€'
+        : '-';
+    const equipmentCell =
+      row.costs?.cout_amortissement != null
+        ? (row.costs.cout_amortissement || 0).toFixed(2) + '€'
+        : '-';
+    const energyCell =
+      row.costs != null
+        ? (row.costs.consommation_totale ?? 0).toFixed(2) +
+          ' kWh<br>' +
+          (row.costs.cout_energie ?? 0).toFixed(2) +
+          '€'
+        : '-';
+    const consumablesCell =
+      row.costs?.cout_consommables != null
+        ? (row.costs.cout_consommables || 0).toFixed(2) + '€'
+        : '-';
+    const totalCell =
+      row.costs?.cout_total != null
+        ? (row.costs.cout_total || 0).toFixed(2) + '€'
+        : '-';
+
+    const transfoNodeId =
+      row.transformation && row.transformation._nodeId != null
+        ? String(row.transformation._nodeId).replace(/"/g, '&quot;')
+        : '';
+    const targetNodeIdAttr = (row.targetNodeId || '').replace(/"/g, '&quot;');
+    const transfoNameCell =
+      transfoNodeId !== ''
+        ? `<td class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-blue-50 hover:underline text-blue-600" data-transfo-node-id="${transfoNodeId}" data-target-node-id="${targetNodeIdAttr}">${displayNameEsc}</td>`
+        : `<td class="border border-gray-200 px-3 py-2">${displayNameEsc}</td>`;
+
+    tableBody += `<tr>
+      ${transfoNameCell}
+      <td class="border border-gray-200 px-3 py-2">${toolLabel}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${tempsCell}</td>
+      ${profilCells}
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${totalProfilsCell}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${equipmentCell}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${energyCell}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${consumablesCell}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${totalCell}</td>
+    </tr>`;
+  });
+
+  // Ligne Total (tfoot)
+  let tfootProfilCells = '';
+  profileNames.forEach(profilName => {
+    const t = sumProfilsTemps[profilName] ?? 0;
+    const c = sumProfilsCost[profilName] ?? 0;
+    tfootProfilCells += `<td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700 bg-green-50">${formatTime(t)}<br>${c.toFixed(2)}€</td>`;
+  });
+  const tfootTotalProfils =
+    formatTime(sumTotalProfilsTemps.value) +
+    '<br>' +
+    sumTotalProfilsCost.value.toFixed(2) +
+    '€';
+  const tfootHtml = `
+    <tfoot>
+      <tr class="bg-gray-50">
+        <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('total')}</td>
+        <td class="border border-gray-200 px-3 py-2"></td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${formatTime(sumTempsUtile.value)}</td>
+        ${tfootProfilCells}
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${tfootTotalProfils}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${sumEquipment.value.toFixed(2)}€</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${sumEnergy.value.toFixed(2)} kWh<br>${sumEnergyCost.value.toFixed(2)}€</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${sumConsumables.value.toFixed(2)}€</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${sumTotalCost.value.toFixed(2)}€</td>
+      </tr>
+    </tfoot>
+  `;
+
+  const tableContainer = document.createElement('div');
+  tableContainer.id = 'costs-table';
+  tableContainer.className = 'bg-white';
+  tableContainer.style.marginTop = '0';
+
+  const tableHtml = `
+    ${headerHtml}
+    <table class="w-full border-collapse border border-gray-200" id="costs-table-el">
+      <thead>
+        <tr class="bg-gray-50">${theadCells}</tr>
+      </thead>
+      <tbody>${tableBody}</tbody>
+      ${tfootHtml}
+    </table>
+  `;
+  tableContainer.innerHTML = tableHtml;
   panel.appendChild(tableContainer);
+
+  // Clic sur le nom d'une transfo : ouvrir le dropdown correspondant sur le Sankey
+  if (panel._costsTableTransfoClickHandler) {
+    panel.removeEventListener('click', panel._costsTableTransfoClickHandler);
+  }
+  panel._costsTableTransfoClickHandler = function (e) {
+    const cell = e.target.closest('[data-transfo-node-id]');
+    if (!cell || !cell.getAttribute('data-transfo-node-id')) return;
+    const nodeId = cell.getAttribute('data-transfo-node-id');
+    const targetNodeId = cell.getAttribute('data-target-node-id') || '';
+    const transfoLabel = (cell.textContent || '').trim();
+    console.log('[Coûts] Clic sur transfo:', {
+      transfoNodeId: nodeId,
+      targetNodeId,
+      transfoLabel,
+    });
+    const links = window._sankeyLinksWithDropdown;
+    if (!links || !Array.isArray(links)) {
+      console.warn(
+        '[Coûts] Pas de liens Sankey disponibles (window._sankeyLinksWithDropdown):',
+        !!links,
+        Array.isArray(links) ? links.length : 'N/A'
+      );
+      return;
+    }
+    const link = links.find(
+      l =>
+        l.transformation &&
+        String(l.transformation._nodeId) === String(nodeId) &&
+        (targetNodeId === '' ||
+          String(l.target?.id ?? l.target) === String(targetNodeId))
+    );
+    if (!link) {
+      const linkInfos = links
+        .filter(l => l.transformation)
+        .map(l => ({
+          _nodeId: l.transformation._nodeId,
+          targetId: l.target?.id ?? l.target,
+        }));
+      console.warn(
+        '[Coûts] Aucun lien trouvé pour transfoNodeId:',
+        nodeId,
+        'targetNodeId:',
+        targetNodeId,
+        '| Liens (IDs):',
+        linkInfos
+      );
+      return;
+    }
+    if (!link.dropdownTrigger) {
+      console.warn(
+        '[Coûts] Lien trouvé mais sans dropdownTrigger pour transfoNodeId:',
+        nodeId,
+        'targetId:',
+        link.target?.id ?? link.target
+      );
+      return;
+    }
+    console.log('[Coûts] Ouverture du dropdown pour _nodeId:', nodeId);
+    link.dropdownTrigger.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    setTimeout(function () {
+      link.dropdownTrigger.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true })
+      );
+    }, 300);
+  };
+  panel.addEventListener('click', panel._costsTableTransfoClickHandler);
 }
 
 // Données valorisation à partir des nœuds cibles (sans appel API)
