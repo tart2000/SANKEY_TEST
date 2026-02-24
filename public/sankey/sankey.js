@@ -6634,8 +6634,8 @@ function displayValorisationTable(valorisationData) {
       return '–';
     const costRounded = Math.round(cost);
     const costPerKg = weightKg > 0 ? cost / weightKg : 0;
-    const costPerKgRounded = Math.round(costPerKg);
-    return `${costRounded} € (${costPerKgRounded} €/kg)`;
+    const costPerKgRounded = Math.round(costPerKg * 100) / 100;
+    return `${costRounded} € (${costPerKgRounded.toFixed(2)} €/kg)`;
   };
 
   let tableBody = '';
@@ -6657,7 +6657,7 @@ function displayValorisationTable(valorisationData) {
     !Number.isNaN(totalCost);
   const footerCostStr =
     sumKg > 0 && sumCost > 0
-      ? `${Math.round(sumCost)} € (${Math.round(sumCost / sumKg)} €/kg)`
+      ? `${Math.round(sumCost)} € (${(Math.round((sumCost / sumKg) * 100) / 100).toFixed(2)} €/kg)`
       : sumCost > 0
         ? `${Math.round(sumCost)} €`
         : '–';
