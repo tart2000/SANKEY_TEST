@@ -3080,10 +3080,9 @@ function updateSankey(dimension) {
     sankeyNodes.length > 0
       ? Math.max(...sankeyNodes.map(n => n.y1 || 0))
       : height;
-  const requiredHeight = Math.max(
-    400,
-    Math.min(maxY + margin.bottom + 40, 1000)
-  );
+  // Plus de plafond artificiel à 1000px : la hauteur du Sankey
+  // s'adapte entièrement à son contenu, avec un minimum de 400px.
+  const requiredHeight = Math.max(400, maxY + margin.bottom + 40);
 
   // Mettre à jour la hauteur du SVG et du container
   const svgElement = d3.select('#sankey-container svg');
