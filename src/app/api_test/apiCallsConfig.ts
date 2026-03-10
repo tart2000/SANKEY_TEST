@@ -299,6 +299,20 @@ export const bubbleApiCalls = [
     ],
   },
   {
+    name: 'Get transfos with info',
+    endpoint: 'transfos_info',
+    method: 'GET',
+    examplePath: '../api/bubble/examples/transfos-info-response.json',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
+  {
     name: 'Get 1 transfo',
     endpoint: 'transfo?id={id}',
     method: 'POST',

@@ -1,0 +1,28 @@
+{
+  "Délissage de produits complexes": {
+    "en_gb": "Complex stuff thing ",
+    "fr_fr": "Délissage de produits complexes",
+    "bubble_id": "1756802894015x376315578893467650",
+    "step": "preparation",
+    "version": 42,
+    "inputs": [
+      "1751459729422x197483193410519040",
+      "1751457278848x979760538551320600",
+      "1751463269878x483372285977952260"
+    ],
+    "target": "1756825856501x400683770434551800"
+  },
+  "Effilochage fin": {
+    "en_gb": "Light thing thing ",
+    "fr_fr": "Effilochage fin",
+    "bubble_id": "1756818350195x963851048233205800",
+    "step": "preparation",
+    "version": 16,
+    "inputs": [
+      "1751457764929x125732767948865540",
+      "1751458445724x379977643476910100",
+      "1751458871948x225527464850620400"
+    ],
+    "target": "1756825856501x400683770434551800"
+  }
+}
