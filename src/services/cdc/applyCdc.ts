@@ -64,8 +64,15 @@ type TranslationRule = {
   outputId: string;
 };
 
+type DynamicRule = {
+  inputTypeIds: string[];
+  outputTypeId: string;
+  outputFormatId: string;
+};
+
 type ApplyCdcOptions = {
   translationRules?: TranslationRule[];
+  dynamicRules?: DynamicRule[];
 };
 
 function hasThresholdContent(hasThreshold: unknown): boolean {
@@ -285,6 +292,34 @@ function canBeSatisfiedByTranslation(
   return dimensionExistsInLot(lot, dimKey, hierarchy);
 }
 
+function canBeSatisfiedByDynamicTransfo(
+  dimKey: string,
+  itemBubbleId: string,
+  lot: Lot,
+  hierarchy: DimensionHierarchy,
+  dynamicRules?: DynamicRule[]
+): boolean {
+  if (!dynamicRules || dynamicRules.length === 0) return false;
+
+  const normalizedDimKey = normalizeDimensionKey(dimKey, hierarchy);
+
+  if (normalizedDimKey !== 'types' && normalizedDimKey !== 'formats') {
+    return false;
+  }
+
+  const rule = dynamicRules.find(rule =>
+    normalizedDimKey === 'types'
+      ? rule.outputTypeId === itemBubbleId
+      : rule.outputFormatId === itemBubbleId
+  );
+
+  if (!rule) return false;
+
+  return rule.inputTypeIds.some(inputTypeId =>
+    itemExistsInLot(lot, 'types', inputTypeId, hierarchy)
+  );
+}
+
 export function applyCdc(
   lot: Lot,
   cdc: Cdc,
@@ -292,7 +327,7 @@ export function applyCdc(
   processingOrder: string[],
   options: ApplyCdcOptions = {}
 ): CompareResult {
-  const { translationRules } = options;
+  const { translationRules, dynamicRules } = options;
   const constraints = cdc.constraints ?? [];
   const totalLot = (lot.total as number) || 0;
 
@@ -353,11 +388,18 @@ export function applyCdc(
         hierarchy,
         translationRules
       );
+      const canViaDynamic = canBeSatisfiedByDynamicTransfo(
+        dimKey,
+        constraint.item,
+        initialLot,
+        hierarchy,
+        dynamicRules
+      );
       let constraintAnalysis: 'green' | 'orange' | 'red';
       if (include) {
         if (dimensionPresent && itemInCurrentLot) {
           constraintAnalysis = 'green';
-        } else if (canViaTranslation) {
+        } else if (canViaTranslation || canViaDynamic) {
           constraintAnalysis = 'green';
         } else if (hasPriority) {
           if (itemInInitialLot) {

@@ -1,10 +1,15 @@
 import type { NextRequest } from 'next/server';
 
-import { fetchCdc, fetchBubbleLot } from '@/lib/bubbleClient';
+import {
+  fetchCdc,
+  fetchBubbleLot,
+  fetchTransfosInfo,
+} from '@/lib/bubbleClient';
 import {
   getDimensionHierarchy,
   getDimensionProcessingOrder,
 } from '@/lib/dimensions';
+import { buildDynamicRules, type DynamicRule } from '@/lib/dynamicTransfos';
 import { getTranslationTypes } from '@/lib/translationsConfig';
 import { applyCdc, type Cdc } from '@/services/cdc/applyCdc';
 
@@ -41,12 +46,23 @@ export async function POST(request: NextRequest) {
     outputId: isLive ? def.output_id_live : def.output_id_test,
   }));
 
+  let dynamicRules: DynamicRule[] = [];
+  try {
+    const transfosInfo = await fetchTransfosInfo({ isLive });
+    dynamicRules = buildDynamicRules(transfosInfo);
+  } catch (error) {
+    console.error(
+      '[compare] Erreur lors du chargement de transfos_info, fallback sans règles dynamiques',
+      error
+    );
+  }
+
   const result = applyCdc(
     lot as Record<string, unknown>,
     cdc as Cdc,
     hierarchy,
     processingOrder,
-    { translationRules }
+    { translationRules, dynamicRules }
   );
 
   return buildResponse(result, 200);

@@ -220,3 +220,38 @@ export async function fetchCdc({
 
   return data;
 }
+
+export async function fetchTransfosInfo({
+  isLive,
+}: {
+  isLive: boolean;
+}): Promise<Record<string, unknown>> {
+  const { status, data } = await callBubble({
+    endpoint: 'transfos_info',
+    params: { isLive },
+    method: 'GET',
+  });
+
+  if (!isSuccessStatus(status)) {
+    throw new BubbleClientError(
+      'Impossible de récupérer les informations de transformations dynamiques via Bubble',
+      status,
+      data
+    );
+  }
+
+  if (!isRecord(data)) {
+    throw new BubbleClientError(
+      'Format de transfos_info renvoyé par Bubble inattendu',
+      502,
+      {
+        error: 'transfos_info invalide',
+        details:
+          'Bubble doit renvoyer un objet JSON (clé → objet) décrivant les transformations dynamiques.',
+        bubbleResponse: data,
+      }
+    );
+  }
+
+  return data;
+}
