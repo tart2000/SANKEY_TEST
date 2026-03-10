@@ -56,6 +56,7 @@ export type CompareResult = {
     bubble_id: string;
     analysis: 'green' | 'orange' | 'red';
     dimension: string;
+    reasonCode: number;
   }>;
 };
 
@@ -347,6 +348,7 @@ export function applyCdc(
   const groups = groupConstraintsByDimension(sortedForCalculation, hierarchy);
 
   const analysisByIndex: Record<number, 'green' | 'orange' | 'red'> = {};
+  const reasonCodeByIndex: Record<number, number> = {};
   const initialLot: Lot = JSON.parse(JSON.stringify(lot));
   let currentLot: Lot = JSON.parse(JSON.stringify(lot));
   let priorityPresentElsewhere = false;
@@ -399,25 +401,36 @@ export function applyCdc(
       if (include) {
         if (dimensionPresent && itemInCurrentLot) {
           constraintAnalysis = 'green';
+          reasonCodeByIndex[i] = 100; // include_present_in_current_lot
         } else if (canViaTranslation || canViaDynamic) {
           constraintAnalysis = 'green';
+          // Distinguer translation vs dynamique si possible
+          reasonCodeByIndex[i] = canViaTranslation ? 110 : 120;
         } else if (hasPriority) {
           if (itemInInitialLot) {
             constraintAnalysis = 'orange';
             priorityPresentElsewhere = true;
+            reasonCodeByIndex[i] = 130; // include_priority_present_elsewhere
           } else {
             constraintAnalysis = 'red';
+            reasonCodeByIndex[i] = 140; // include_priority_missing_unreachable
           }
         } else {
           constraintAnalysis = 'orange';
+          // Dimension non prioritaire, item ni présent ni atteignable
+          reasonCodeByIndex[i] = 150; // include_non_priority_missing
         }
       } else {
-        constraintAnalysis =
-          dimensionPresent && itemInCurrentLot
-            ? 'orange'
-            : dimensionPresent && dimensionPresentInLot
-              ? 'green'
-              : 'orange';
+        if (dimensionPresent && itemInCurrentLot) {
+          constraintAnalysis = 'orange';
+          reasonCodeByIndex[i] = 200; // exclude_item_still_present
+        } else if (dimensionPresent && dimensionPresentInLot) {
+          constraintAnalysis = 'green';
+          reasonCodeByIndex[i] = 210; // exclude_item_successfully_removed
+        } else {
+          constraintAnalysis = 'orange';
+          reasonCodeByIndex[i] = 220; // exclude_dimension_absent_or_empty
+        }
       }
       analysisByIndex[i] = constraintAnalysis;
     }
@@ -448,6 +461,7 @@ export function applyCdc(
     bubble_id: c.bubble_id,
     analysis: analysisByIndex[i] ?? 'orange',
     dimension: c.dimension,
+    reasonCode: reasonCodeByIndex[i] ?? 0,
   }));
 
   return {
