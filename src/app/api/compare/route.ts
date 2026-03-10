@@ -5,6 +5,7 @@ import {
   getDimensionHierarchy,
   getDimensionProcessingOrder,
 } from '@/lib/dimensions';
+import { getTranslationTypes } from '@/lib/translationsConfig';
 import { applyCdc, type Cdc } from '@/services/cdc/applyCdc';
 
 const JSON_HEADERS = {
@@ -34,11 +35,18 @@ export async function POST(request: NextRequest) {
   const hierarchy = getDimensionHierarchy();
   const processingOrder = getDimensionProcessingOrder();
 
+  const translationTypes = getTranslationTypes();
+  const translationRules = Object.values(translationTypes).map(def => ({
+    dimension: def.dimension,
+    outputId: isLive ? def.output_id_live : def.output_id_test,
+  }));
+
   const result = applyCdc(
     lot as Record<string, unknown>,
     cdc as Cdc,
     hierarchy,
-    processingOrder
+    processingOrder,
+    { translationRules }
   );
 
   return buildResponse(result, 200);

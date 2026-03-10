@@ -59,6 +59,15 @@ export type CompareResult = {
   }>;
 };
 
+type TranslationRule = {
+  dimension: string;
+  outputId: string;
+};
+
+type ApplyCdcOptions = {
+  translationRules?: TranslationRule[];
+};
+
 function hasThresholdContent(hasThreshold: unknown): boolean {
   if (!hasThreshold || typeof hasThreshold !== 'object') return false;
   return Object.keys(hasThreshold as object).length > 0;
@@ -257,12 +266,33 @@ function groupConstraintsByDimension(
   return groups;
 }
 
+function canBeSatisfiedByTranslation(
+  dimKey: string,
+  itemBubbleId: string,
+  lot: Lot,
+  hierarchy: DimensionHierarchy,
+  translationRules?: TranslationRule[]
+): boolean {
+  if (!translationRules || translationRules.length === 0) return false;
+
+  const rule = translationRules.find(rule => {
+    const ruleDimKey = normalizeDimensionKey(rule.dimension, hierarchy);
+    return ruleDimKey === dimKey && rule.outputId === itemBubbleId;
+  });
+
+  if (!rule) return false;
+
+  return dimensionExistsInLot(lot, dimKey, hierarchy);
+}
+
 export function applyCdc(
   lot: Lot,
   cdc: Cdc,
   hierarchy: DimensionHierarchy,
-  processingOrder: string[]
+  processingOrder: string[],
+  options: ApplyCdcOptions = {}
 ): CompareResult {
+  const { translationRules } = options;
   const constraints = cdc.constraints ?? [];
   const totalLot = (lot.total as number) || 0;
 
@@ -316,9 +346,18 @@ export function applyCdc(
         constraint.item,
         hierarchy
       );
+      const canViaTranslation = canBeSatisfiedByTranslation(
+        dimKey,
+        constraint.item,
+        initialLot,
+        hierarchy,
+        translationRules
+      );
       let constraintAnalysis: 'green' | 'orange' | 'red';
       if (include) {
         if (dimensionPresent && itemInCurrentLot) {
+          constraintAnalysis = 'green';
+        } else if (canViaTranslation) {
           constraintAnalysis = 'green';
         } else if (hasPriority) {
           if (itemInInitialLot) {
