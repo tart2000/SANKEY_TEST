@@ -437,6 +437,36 @@ export function applyCdc(
     currentLot = nextLot;
   }
 
+  // Propagation : rétrograde un parent green en orange si un descendant est orange/red
+  const getAllDescendants = (dimKey: string): string[] => {
+    const children = hierarchy[dimKey]?.children ?? [];
+    const all = [...children];
+    for (const child of children) {
+      all.push(...getAllDescendants(child));
+    }
+    return all;
+  };
+
+  for (let i = 0; i < constraints.length; i++) {
+    if (analysisByIndex[i] !== 'green') continue;
+
+    const dimKey = normalizeDimensionKey(constraints[i].dimension, hierarchy);
+    const descendants = getAllDescendants(dimKey);
+    if (descendants.length === 0) continue;
+
+    const hasFailedDescendant = constraints.some((c, j) => {
+      if (j === i) return false;
+      const otherDimKey = normalizeDimensionKey(c.dimension, hierarchy);
+      if (!descendants.includes(otherDimKey)) return false;
+      return analysisByIndex[j] === 'orange' || analysisByIndex[j] === 'red';
+    });
+
+    if (hasFailedDescendant) {
+      analysisByIndex[i] = 'orange';
+      reasonCodeByIndex[i] = 160; // green_downgraded_child_dimension_failed
+    }
+  }
+
   const target = (currentLot.total as number) ?? 0;
   const target_pct = totalLot > 0 ? (target / totalLot) * 100 : 0;
 

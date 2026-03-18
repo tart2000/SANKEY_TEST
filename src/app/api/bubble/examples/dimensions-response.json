@@ -1,34 +1,42 @@
 {
   "formats": {
     "fr_fr": "Format",
-    "en_gb": "Format"
+    "en_gb": "Format",
+    "display": "Format"
   },
   "types": {
     "fr_fr": "Type",
-    "en_gb": "Type"
+    "en_gb": "Type",
+    "display": "Type"
   },
   "matieres": {
     "fr_fr": "Matières",
-    "en_gb": "Materials"
+    "en_gb": "Materials",
+    "display": "Matiere"
   },
   "fibres": {
     "fr_fr": "Fibre",
-    "en_gb": "Fibre"
+    "en_gb": "Fibre",
+    "display": "Fibre"
   },
   "couleurs": {
     "fr_fr": "Couleur",
-    "en_gb": "Color"
+    "en_gb": "Color",
+    "display": "Couleur"
   },
   "perturbateurs": {
     "fr_fr": "Degré de perturbation",
-    "en_gb": "Disruption level"
+    "en_gb": "Disruption level",
+    "display": "Perturbateur"
   },
   "proprete": {
     "fr_fr": "Propreté",
-    "en_gb": "Cleanliness"
+    "en_gb": "Cleanliness",
+    "display": "Proprete"
   },
   "qualite": {
-    "fr_fr": "Qualité",
-    "en_gb": "Quality"
+    "fr_fr": "Intégrité",
+    "en_gb": "Textile integrity",
+    "display": "Qualite"
   }
 }
