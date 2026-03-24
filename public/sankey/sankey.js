@@ -917,6 +917,7 @@ function handleValoriseClick(node) {
         });
       }
       if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+      syncScenarioCdc('add', selectedCdc.bubble_id);
     };
     if (typeof window.CdcAssociatePopup === 'function') {
       const popup = new window.CdcAssociatePopup();
@@ -963,6 +964,7 @@ function handleValoriseClick(node) {
       runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
     }
     if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+    syncScenarioCdc('add', selectedCdc.bubble_id);
   };
   if (typeof window.CdcAssociatePopup === 'function') {
     const popup = new window.CdcAssociatePopup();
@@ -1014,6 +1016,7 @@ function handleDetachCdcClick(node) {
       scenario,
       pathToCoproduct
     );
+    const cdcId = coproductScenario.target;
     delete coproductScenario.target;
     delete coproductScenario.title;
     if (coproductScenario.valorised !== undefined) {
@@ -1026,6 +1029,7 @@ function handleDetachCdcClick(node) {
       runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
     }
     if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+    syncScenarioCdc('remove', cdcId);
     return;
   }
 
@@ -1050,6 +1054,7 @@ function handleDetachCdcClick(node) {
     return;
   }
   const transfo = nodeInfo.transformation;
+  const cdcId = transfo?.scenario?.target;
   if (transfo.scenario) {
     delete transfo.scenario.target;
     delete transfo.scenario.title;
@@ -1068,6 +1073,7 @@ function handleDetachCdcClick(node) {
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
   }
   if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
+  syncScenarioCdc('remove', cdcId);
 }
 
 // Gestionnaire pour le clic sur "edit" d'une transformation
@@ -1111,6 +1117,35 @@ function getUrlParams() {
     // scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
     lang: (urlParams.get('lang') || 'fr').toLowerCase(),
   };
+}
+
+function syncScenarioCdc(action, cdcId) {
+  const params = getUrlParams();
+  const scenarioId = params.scenarioId;
+  const isLive = params.isLive;
+
+  if (!scenarioId || !cdcId) return Promise.resolve(null);
+
+  const endpoint = action === 'add' ? 'add_cdc' : 'remove_cdc';
+
+  return fetch('/api/bubble', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      endpoint,
+      method: 'POST',
+      params: {
+        scenario: scenarioId,
+        cdc: cdcId,
+        isLive,
+      },
+    }),
+  }).catch(err => {
+    console.error(
+      `[Sankey] Echec sync CDC (${endpoint}) scenario=${scenarioId} cdc=${cdcId}`,
+      err
+    );
+  });
 }
 // Charger/cacher les steps depuis notre API interne
 async function loadStepsMeta(isLive) {
