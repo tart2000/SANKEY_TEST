@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { bubbleApiCalls } from './apiCallsConfig';
 import {
   Select,
@@ -22,6 +22,7 @@ export default function ApiTestPage() {
   const [formValues, setFormValues] = useState<FormValues>({ isLive: true });
   const [result, setResult] = useState<unknown>(null);
   const [showModal, setShowModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const selectedApi = bubbleApiCalls[selectedApiIdx];
 
@@ -88,6 +89,30 @@ export default function ApiTestPage() {
     setResult(data);
     setShowModal(true);
   };
+
+  const handleCopy = async () => {
+    const rawResult =
+      typeof result === 'object'
+        ? JSON.stringify(result, null, 2)
+        : String(result);
+    await navigator.clipboard.writeText(rawResult);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  // Charger le CSS Phosphor pour que <i className="ph ph-..."> fonctionne.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (!document.querySelector('link[href*="phosphor-icons"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href =
+        'https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css';
+      document.head.appendChild(link);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-100/60 to-white font-sans">
@@ -177,7 +202,25 @@ export default function ApiTestPage() {
             className="bg-white p-6 rounded-xl shadow-xl min-w-[300px] max-w-2xl max-h-[80vh] overflow-auto relative"
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold mb-2">Résultat brut</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold">Résultat brut</h2>
+              <div className="flex items-center gap-2">
+                {copied && <span className="text-sm text-green-600">Done</span>}
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="p-1 rounded hover:bg-gray-100 transition text-gray-700"
+                  aria-label="Copier le JSON"
+                  title="Copier le JSON"
+                >
+                  <i
+                    className={`ph ${
+                      copied ? 'ph-check' : 'ph-copy'
+                    } text-base`}
+                  />
+                </button>
+              </div>
+            </div>
             <pre className="bg-gray-100 rounded p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all">
               {typeof result === 'object'
                 ? JSON.stringify(result, null, 2)
