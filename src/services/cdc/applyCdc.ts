@@ -403,12 +403,12 @@ export function applyCdc(
           constraintAnalysis = 'green';
           reasonCodeByIndex[i] = 100; // include_present_in_current_lot
         } else if (canViaTranslation || canViaDynamic) {
-          constraintAnalysis = 'green';
+          constraintAnalysis = 'orange';
           // Distinguer translation vs dynamique si possible
           reasonCodeByIndex[i] = canViaTranslation ? 110 : 120;
         } else if (hasPriority) {
           if (itemInInitialLot) {
-            constraintAnalysis = 'orange';
+            constraintAnalysis = 'red';
             priorityPresentElsewhere = true;
             reasonCodeByIndex[i] = 130; // include_priority_present_elsewhere
           } else {
