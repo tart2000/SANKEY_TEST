@@ -51,10 +51,10 @@ export type CompareResult = {
   target: number;
   target_pct: number;
   isFlagged: boolean;
-  analysis: 'green' | 'orange' | 'red';
+  analysis: 'green' | 'yellow' | 'orange' | 'red';
   constraints: Array<{
     bubble_id: string;
-    analysis: 'green' | 'orange' | 'red';
+    analysis: 'green' | 'yellow' | 'orange' | 'red';
     dimension: string;
     reasonCode: number;
   }>;
@@ -347,7 +347,8 @@ export function applyCdc(
 
   const groups = groupConstraintsByDimension(sortedForCalculation, hierarchy);
 
-  const analysisByIndex: Record<number, 'green' | 'orange' | 'red'> = {};
+  const analysisByIndex: Record<number, 'green' | 'yellow' | 'orange' | 'red'> =
+    {};
   const reasonCodeByIndex: Record<number, number> = {};
   const initialLot: Lot = JSON.parse(JSON.stringify(lot));
   let currentLot: Lot = JSON.parse(JSON.stringify(lot));
@@ -397,13 +398,13 @@ export function applyCdc(
         hierarchy,
         dynamicRules
       );
-      let constraintAnalysis: 'green' | 'orange' | 'red';
+      let constraintAnalysis: 'green' | 'yellow' | 'orange' | 'red';
       if (include) {
         if (dimensionPresent && itemInCurrentLot) {
           constraintAnalysis = 'green';
           reasonCodeByIndex[i] = 100; // include_present_in_current_lot
         } else if (canViaTranslation || canViaDynamic) {
-          constraintAnalysis = 'orange';
+          constraintAnalysis = 'yellow';
           // Distinguer translation vs dynamique si possible
           reasonCodeByIndex[i] = canViaTranslation ? 110 : 120;
         } else if (hasPriority) {
@@ -481,9 +482,10 @@ export function applyCdc(
 
   const hasRed = Object.values(analysisByIndex).some(a => a === 'red');
   const hasOrange = Object.values(analysisByIndex).some(a => a === 'orange');
-  const analysis: 'green' | 'orange' | 'red' = hasRed
+  const hasYellow = Object.values(analysisByIndex).some(a => a === 'yellow');
+  const analysis: 'green' | 'yellow' | 'orange' | 'red' = hasRed
     ? 'red'
-    : hasOrange || isFlagged
+    : hasOrange || hasYellow || isFlagged
       ? 'orange'
       : 'green';
 
