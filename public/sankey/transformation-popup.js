@@ -1708,7 +1708,8 @@ class TransformationPopup {
   }
 
   // Fonction pour extraire les données du tableau à partir des détails de transformation
-  async extractTableDataFromTransfo(transfoDetails) {
+  // referenceLot : lot en amont du lien (toujours fourni quand la popup est ouverte depuis le Sankey)
+  async extractTableDataFromTransfo(transfoDetails, referenceLot) {
     // Extraire les informations générales (yield, step, loss_percent)
     const generalInfo = {
       yield: transfoDetails.yield !== undefined ? transfoDetails.yield : null,
@@ -1716,18 +1717,31 @@ class TransformationPopup {
       lossPercent: transfoDetails.loss_percent || 0,
     };
 
-    // Extraire les filtres (types depuis select)
+    // Extraire les filtres (types depuis select) + présence dans le lot de référence
     const filterTypes = [];
     if (transfoDetails.select) {
       for (const [key, item] of Object.entries(transfoDetails.select)) {
         if (item && item.bubble_id) {
-          const elementMini = await this.recupererElementMini(item.bubble_id);
-          if (elementMini) {
-            const nomReel = this.getTitreAffiche(key, elementMini);
-            filterTypes.push(nomReel);
-          } else {
-            filterTypes.push(key);
+          let presentInLot = false;
+          if (
+            referenceLot &&
+            typeof referenceLot === 'object' &&
+            window.processes &&
+            typeof window.processes.selectByType === 'function'
+          ) {
+            const { targetLot } = window.processes.selectByType(referenceLot, [
+              item.bubble_id,
+            ]);
+            presentInLot =
+              targetLot &&
+              typeof targetLot.total === 'number' &&
+              targetLot.total > 0;
           }
+          const elementMini = await this.recupererElementMini(item.bubble_id);
+          const label = elementMini
+            ? this.getTitreAffiche(key, elementMini)
+            : key;
+          filterTypes.push({ label, presentInLot });
         }
       }
     }
@@ -1783,7 +1797,7 @@ class TransformationPopup {
 
     return {
       generalInfo,
-      filterTypes: filterTypes.join(', ') || '-',
+      filterTypes,
       targetType,
       coproductType,
       lossType,
@@ -1849,7 +1863,10 @@ class TransformationPopup {
       };
 
       // Extraire les données pour le tableau
-      const tableData = await this.extractTableDataFromTransfo(transfoDetails);
+      const tableData = await this.extractTableDataFromTransfo(
+        transfoDetails,
+        this.currentRef?.lot
+      );
 
       // Supprimer le spinner
       const spinner = this.modal.querySelector('#transfo-loading-spinner');
@@ -1937,7 +1954,31 @@ class TransformationPopup {
 
     // Vérifier si on a des données
     const generalInfo = data.generalInfo || null;
-    const filterTypes = data.filterTypes || '-';
+    const filterTypesList = Array.isArray(data.filterTypes)
+      ? data.filterTypes
+      : [];
+    const escapeHtml = text =>
+      String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    const filterPillsHtml = filterTypesList
+      .map(entry => {
+        const label =
+          typeof entry === 'object' && entry !== null && 'label' in entry
+            ? entry.label
+            : entry;
+        const presentInLot =
+          typeof entry === 'object' && entry !== null && 'presentInLot' in entry
+            ? entry.presentInLot
+            : true;
+        const pillClass = presentInLot
+          ? 'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm'
+          : 'inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm';
+        return `<span class="${pillClass}">${escapeHtml(label)}</span>`;
+      })
+      .join('');
     const targetType = data.targetType || '-';
     const coproductType = data.coproductType || '-';
     const lossType = data.lossType || '-';
@@ -1968,7 +2009,10 @@ class TransformationPopup {
               ${generalInfo.yield !== null ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('yield')}</span><span class="text-gray-900">${generalInfo.yield}%</span></div>` : ''}
               ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${generalInfo.lossPercent}%</span></div>` : ''}
               ${generalInfo.step ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('step')}</span><span class="text-gray-900">${generalInfo.step}</span></div>` : ''}
-              <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('filters')}</span><span class="text-gray-900">${filterTypes}</span></div>
+              <div class="w-full">
+                <div class="font-medium text-gray-700 mb-1">${i18next.t('filters')}</div>
+                <div class="flex flex-wrap gap-2 w-full">${filterPillsHtml}</div>
+              </div>
               <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('target')}</span><span class="text-gray-900">${targetType}</span></div>
               <div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('coproduct')}</span><span class="text-gray-900">${coproductType}</span></div>
               ${generalInfo.lossPercent > 0 ? `<div class="flex justify-between"><span class="font-medium text-gray-700">${i18next.t('loss')}</span><span class="text-gray-900">${lossType}</span></div>` : ''}
