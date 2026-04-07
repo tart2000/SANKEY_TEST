@@ -11,7 +11,7 @@ window.TRANSLATION_TYPES = {
     dimension: 'proprete',
     output_id_test: '1751363332290x936743758301757400',
     output_id_live: '1751363332290x936743758301757400',
-    step: 'preparation',
+    step: 'washing',
   },
   decoloration: {
     label: 'Décoloration',
