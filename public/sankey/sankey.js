@@ -3917,6 +3917,9 @@ function updateSankey(dimension) {
                 nodeName: link.target.name,
                 lotData: lotJson,
                 timestamp: new Date().toISOString(),
+                ...(link.target?.lot?.target
+                  ? { cdcId: link.target.lot.target }
+                  : {}),
               },
             },
             '*'
@@ -4171,6 +4174,7 @@ function updateSankey(dimension) {
                     nodeId: d.id,
                     nodeName: d.name,
                     lotData: lotJson,
+                    ...(d?.lot?.target ? { cdcId: d.lot.target } : {}),
                   },
                 },
                 '*'
@@ -4204,6 +4208,7 @@ function updateSankey(dimension) {
                 nodeId: d.id,
                 nodeName: d.name,
                 lotData: lotJson,
+                ...(d?.lot?.target ? { cdcId: d.lot.target } : {}),
               },
             },
             '*'
@@ -4283,6 +4288,7 @@ function updateSankey(dimension) {
                     nodeId: d.id,
                     nodeName: d.name,
                     lotData: lotJson,
+                    ...(d?.lot?.target ? { cdcId: d.lot.target } : {}),
                   },
                 },
                 '*'
@@ -4316,6 +4322,7 @@ function updateSankey(dimension) {
                 nodeId: d.id,
                 nodeName: d.name,
                 lotData: lotJson,
+                ...(d?.lot?.target ? { cdcId: d.lot.target } : {}),
               },
             },
             '*'
@@ -4361,6 +4368,7 @@ function updateSankey(dimension) {
                     nodeId: d.id,
                     nodeName: d.name,
                     lotData: lotJson,
+                    ...(d?.lot?.target ? { cdcId: d.lot.target } : {}),
                   },
                 },
                 '*'
@@ -6744,7 +6752,12 @@ function displayValorisationTable(valorisationData) {
       {
         id: 'sankey-lot-visualization',
         type: 'showLotDetails',
-        payload: { nodeId, nodeName, lotData: lotJson },
+        payload: {
+          nodeId,
+          nodeName,
+          lotData: lotJson,
+          ...(lot?.target ? { cdcId: lot.target } : {}),
+        },
       },
       '*'
     );
