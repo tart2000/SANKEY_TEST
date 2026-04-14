@@ -273,6 +273,93 @@
         }
       }
 
+      function collectCdcIdsFromScenario(scenario) {
+        const cdcIds = new Set();
+
+        function visit(node) {
+          if (!node || typeof node !== 'object') return;
+
+          if (Array.isArray(node)) {
+            node.forEach(visit);
+            return;
+          }
+
+          // Cas transformation classique: transformation.scenario.target
+          if (
+            node.scenario &&
+            typeof node.scenario === 'object' &&
+            typeof node.scenario.target === 'string' &&
+            node.scenario.target.trim() !== ''
+          ) {
+            cdcIds.add(node.scenario.target.trim());
+          }
+
+          // Cas coproduct_scenario: target + title au même niveau
+          if (
+            typeof node.target === 'string' &&
+            node.target.trim() !== '' &&
+            typeof node.title === 'string'
+          ) {
+            cdcIds.add(node.target.trim());
+          }
+
+          Object.keys(node).forEach(key => {
+            visit(node[key]);
+          });
+        }
+
+        visit(scenario);
+        return cdcIds;
+      }
+
+      function setSavedScenarioCdcIds(idsSet) {
+        window._savedScenarioCdcIds = Array.from(idsSet || []);
+      }
+
+      function getSavedScenarioCdcIds() {
+        const saved = Array.isArray(window._savedScenarioCdcIds)
+          ? window._savedScenarioCdcIds
+          : [];
+        return new Set(saved);
+      }
+
+      async function syncScenarioCdcDiffAfterSave(currentScenario) {
+        if (!currentScenario || typeof currentScenario !== 'object') return;
+
+        const savedIds = getSavedScenarioCdcIds();
+        const currentIds = collectCdcIdsFromScenario(currentScenario);
+
+        const toAdd = Array.from(currentIds).filter(id => !savedIds.has(id));
+        const toRemove = Array.from(savedIds).filter(id => !currentIds.has(id));
+
+        if (typeof syncScenarioCdc !== 'function') {
+          console.warn(
+            '[HTML] syncScenarioCdc indisponible, skip sync CDC post-save',
+            { toAdd, toRemove }
+          );
+          setSavedScenarioCdcIds(currentIds);
+          return;
+        }
+
+        for (const cdcId of toRemove) {
+          try {
+            await syncScenarioCdc('remove', cdcId);
+          } catch (err) {
+            console.error('[HTML] remove_cdc échoué', { cdcId, err });
+          }
+        }
+
+        for (const cdcId of toAdd) {
+          try {
+            await syncScenarioCdc('add', cdcId);
+          } catch (err) {
+            console.error('[HTML] add_cdc échoué', { cdcId, err });
+          }
+        }
+
+        setSavedScenarioCdcIds(currentIds);
+      }
+
       // Fonction pour lancer le Sankey avec une dimension spécifique
       async function launchSankeyFromUrl(lot, scenario, dimension = null) {
         const params = getUrlParams();
@@ -476,6 +563,9 @@
                 });
                 if (!response.ok)
                   throw new Error('Erreur API: ' + response.status);
+
+                await syncScenarioCdcDiffAfterSave(currentScenario.scenario);
+
                 saveBtn.textContent = 'Enregistré !';
                 if (typeof setScenarioModifie === 'function') {
                   setScenarioModifie(false);
@@ -553,6 +643,7 @@
                       },
                     ];
                     window.currentScenarioIdx = 0;
+                    setSavedScenarioCdcIds(collectCdcIdsFromScenario(scenario));
 
                     await launchSankeyFromUrl(lot, scenario, currentDimension);
                   })
@@ -594,6 +685,9 @@
                           },
                         ];
                         window.currentScenarioIdx = 0;
+                        setSavedScenarioCdcIds(
+                          collectCdcIdsFromScenario(scenario)
+                        );
 
                         await launchSankeyFromUrl(
                           lot,
@@ -638,6 +732,7 @@
                       },
                     ];
                     window.currentScenarioIdx = 0;
+                    setSavedScenarioCdcIds(collectCdcIdsFromScenario(scenario));
 
                     await launchSankeyFromUrl(lot, scenario, currentDimension);
                   })

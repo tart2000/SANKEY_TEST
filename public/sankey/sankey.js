@@ -917,7 +917,6 @@ function handleValoriseClick(node) {
         });
       }
       if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
-      syncScenarioCdc('add', selectedCdc.bubble_id);
     };
     if (typeof window.CdcAssociatePopup === 'function') {
       const popup = new window.CdcAssociatePopup();
@@ -964,7 +963,6 @@ function handleValoriseClick(node) {
       runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
     }
     if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
-    syncScenarioCdc('add', selectedCdc.bubble_id);
   };
   if (typeof window.CdcAssociatePopup === 'function') {
     const popup = new window.CdcAssociatePopup();
@@ -1029,7 +1027,6 @@ function handleDetachCdcClick(node) {
       runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
     }
     if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
-    syncScenarioCdc('remove', cdcId);
     return;
   }
 
@@ -1073,7 +1070,6 @@ function handleDetachCdcClick(node) {
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
   }
   if (typeof setScenarioModifie === 'function') setScenarioModifie(true);
-  syncScenarioCdc('remove', cdcId);
 }
 
 // Gestionnaire pour le clic sur "edit" d'une transformation
