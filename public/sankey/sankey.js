@@ -4344,9 +4344,31 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center text-green-600'
       );
       fo.node().appendChild(div);
-      // Sur les feuilles valorisées (pas le nœud synthétique), dropdown "Détacher le CDC" en mode éditable
+      // Sur les feuilles valorisées (pas le nœud synthétique), dropdown "Voir le lot" + "Détacher le CDC" en mode éditable
       if (!d.isTarget && d.lot && d.lot.target && window.isEditable) {
         const detachOptions = [
+          {
+            icon: 'eye',
+            label: i18next.t('viewLot'),
+            onClick: () => {
+              const lotToShow = d.lot;
+              const lotJson = JSON.stringify(lotToShow, null, 2);
+              window.parent.postMessage(
+                {
+                  id: 'sankey-lot-visualization',
+                  type: 'showLotDetails',
+                  payload: {
+                    nodeId: d.id,
+                    nodeName: d.name,
+                    lotData: lotJson,
+                  },
+                },
+                '*'
+              );
+              const groupedData = generateGroupedLotData(d.lot, d.name);
+              console.log('📊 [Données groupées]', groupedData);
+            },
+          },
           {
             icon: 'sign-out',
             label: i18next.t('detachCdc'),
