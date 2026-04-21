@@ -796,6 +796,18 @@ class TechPopup {
       </tr>`;
     }
 
+    // Rendement (yield) - l'API peut renvoyer une valeur en ratio (0.9) ou déjà en pourcentage (90)
+    if (techDetails.yield !== undefined && techDetails.yield !== null) {
+      const rawYield = Number(techDetails.yield);
+      if (!Number.isNaN(rawYield)) {
+        const yieldPercent = rawYield <= 1 ? rawYield * 100 : rawYield;
+        tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">${i18next.t('yield')}</td>
+        <td class="py-2 text-gray-600">${yieldPercent.toFixed(1)}%</td>
+      </tr>`;
+      }
+    }
+
     // Consommation électrique
     if (techDetails.conso !== undefined) {
       tableRows += `<tr class="border-b border-gray-200">
