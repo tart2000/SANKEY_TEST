@@ -661,6 +661,23 @@ function validateScenarioStructure(scenario) {
   };
 }
 
+function getEffectiveYieldPercent(transfo, fallback = 100) {
+  const toolYield =
+    transfo?.tech?.details?.yield !== undefined &&
+    transfo?.tech?.details?.yield !== null
+      ? transfo.tech.details.yield
+      : transfo?.tech?.yield;
+  const sourceYield =
+    toolYield !== undefined && toolYield !== null ? toolYield : transfo?.yield;
+  const parsedYield = Number(sourceYield);
+
+  if (Number.isNaN(parsedYield)) {
+    return fallback;
+  }
+
+  return parsedYield <= 1 ? parsedYield * 100 : parsedYield;
+}
+
 // Fonction pour calculer les coûts d'un scénario complet
 function calculateScenarioCosts(scenario, lotType) {
   let totalCost = 0;
@@ -693,12 +710,13 @@ function calculateScenarioCosts(scenario, lotType) {
     if (scenario.transformations) {
       scenario.transformations.forEach(transfo => {
         processTransformation(transfo, inputVolume);
+        const effectiveYieldPercent = getEffectiveYieldPercent(transfo);
 
         // Traiter les sous-scénarios
         if (transfo.scenario) {
           traverseScenario(
             transfo.scenario,
-            (inputVolume * (transfo.yield || 100)) / 100
+            (inputVolume * effectiveYieldPercent) / 100
           );
         }
 
@@ -706,7 +724,7 @@ function calculateScenarioCosts(scenario, lotType) {
         if (scenario.coproduct_scenario) {
           traverseScenario(
             scenario.coproduct_scenario,
-            (inputVolume * (100 - (transfo.yield || 100))) / 100
+            (inputVolume * (100 - effectiveYieldPercent)) / 100
           );
         }
       });
@@ -3589,9 +3607,10 @@ function updateSankey(dimension) {
           const stepLabel = getStepLabel(stepId);
           tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepLabel}</span></td></tr>`;
 
-          // Ajouter la rate (débit) de la transformation
-          if (transfo.yield !== undefined) {
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
+          // Ajouter le rendement effectivement applique (outil prioritaire)
+          const effectiveYieldPercent = getEffectiveYieldPercent(transfo, null);
+          if (effectiveYieldPercent !== null) {
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${effectiveYieldPercent.toFixed(1)}%</span></td></tr>`;
           }
 
           // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
@@ -5163,10 +5182,16 @@ function applyScenario(
             window.preloadColorsForTransfo(transfoDetails).catch(console.warn);
           }
 
+          // Appliquer un yield effectif (outil prioritaire) sans changer la formule metier
+          const effectiveTransfoDetails = {
+            ...transfoDetails,
+            yield: getEffectiveYieldPercent(transfo),
+          };
+
           // Appeler la fonction de transformation dynamique (synchrone)
           result = window.processes['executeDynamicTransfo'](
             resteLot,
-            transfoDetails
+            effectiveTransfoDetails
           );
         } catch (error) {
           console.error(
@@ -5995,7 +6020,16 @@ function exportCostsToExcel(costsData) {
   });
 
   // En-têtes
-  const headerRow = [t('transfoName'), t('toolName'), t('time') + ' (h)'];
+  const yieldLabelForExport = t('yield');
+  const yieldHeaderLabel = yieldLabelForExport.endsWith(':')
+    ? yieldLabelForExport.slice(0, -1).trim()
+    : yieldLabelForExport;
+  const headerRow = [
+    t('transfoName'),
+    t('toolName'),
+    t('time') + ' (h)',
+    yieldHeaderLabel + ' (%)',
+  ];
   profileNames.forEach(name => {
     headerRow.push((name || '') + ' (h)', (name || '') + ' (€)');
   });
@@ -6078,10 +6112,13 @@ function exportCostsToExcel(costsData) {
       row.costs?.cout_consommables != null ? row.costs.cout_consommables : '';
     const totalCell = row.costs?.cout_total != null ? row.costs.cout_total : '';
 
+    const effectiveYieldCell = getEffectiveYieldPercent(row.transformation);
+
     const dataRow = [
       displayName,
       toolLabel,
       tempsCell,
+      effectiveYieldCell,
       ...profilCells,
       totalProfilsH,
       totalProfilsE,
@@ -6095,7 +6132,7 @@ function exportCostsToExcel(costsData) {
   });
 
   // Ligne Total
-  const totalRow = [t('total'), '', sumTempsUtile.value];
+  const totalRow = [t('total'), '', sumTempsUtile.value, ''];
   profileNames.forEach(name => {
     totalRow.push(sumProfilsTemps[name] ?? 0, sumProfilsCost[name] ?? 0);
   });
@@ -6158,10 +6195,15 @@ function displayCostsTable(costsData) {
   }
 
   // En-têtes de colonnes
+  const yieldLabelForTable = t('yield');
+  const yieldHeaderLabel = yieldLabelForTable.endsWith(':')
+    ? yieldLabelForTable.slice(0, -1).trim()
+    : yieldLabelForTable;
   let theadCells = `
     <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('transfoName')}</th>
     <th class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('toolName')}</th>
     <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('time')}</th>
+    <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${yieldHeaderLabel}</th>
   `;
   profileNames.forEach(name => {
     theadCells += `<th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700 bg-green-50">${(name || '').replace(/</g, '&lt;')}</th>`;
@@ -6202,6 +6244,8 @@ function displayCostsTable(costsData) {
         ).replace(/</g, '&lt;')
       : '-';
     const tempsCell = row.costs ? formatTime(row.costs.temps_utile) : '-';
+    const effectiveYield = getEffectiveYieldPercent(row.transformation);
+    const yieldCell = `${effectiveYield.toFixed(1)}%`;
     if (row.costs) {
       sumTempsUtile.value += row.costs.temps_utile || 0;
       sumEquipment.value += row.costs.cout_amortissement || 0;
@@ -6277,6 +6321,7 @@ function displayCostsTable(costsData) {
       ${transfoNameCell}
       <td class="border border-gray-200 px-3 py-2">${toolLabel}</td>
       <td class="border border-gray-200 px-3 py-2 text-right text-sm">${tempsCell}</td>
+      <td class="border border-gray-200 px-3 py-2 text-right text-sm">${yieldCell}</td>
       ${profilCells}
       <td class="border border-gray-200 px-3 py-2 text-right text-sm">${totalProfilsCell}</td>
       <td class="border border-gray-200 px-3 py-2 text-right text-sm">${equipmentCell}</td>
@@ -6304,6 +6349,7 @@ function displayCostsTable(costsData) {
         <td class="border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700">${t('total')}</td>
         <td class="border border-gray-200 px-3 py-2"></td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${formatTime(sumTempsUtile.value)}</td>
+        <td class="border border-gray-200 px-3 py-2"></td>
         ${tfootProfilCells}
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${tfootTotalProfils}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${sumEquipment.value.toFixed(2)}€</td>
