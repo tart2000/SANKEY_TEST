@@ -5982,6 +5982,31 @@ function ensureTabsContainer() {
       } else {
         if (costsPanel) costsPanel.style.display = 'none';
         if (valorisationPanel) valorisationPanel.style.display = '';
+
+        // Au 1er clic sur l'onglet Valorisation, fetcher les prix CDC depuis Bubble
+        // et re-render la table avec recettes/marge hydratées.
+        if (!window._cdcPricesLoadedOnce) {
+          window._cdcPricesLoadedOnce = true;
+          const rows = window._valorisationTableRows || [];
+          const bubbleIds = rows
+            .map(r => (r.nodeId != null ? String(r.nodeId) : ''))
+            .map(id => id.replace(/^target_/, ''))
+            .filter(Boolean);
+          const isLive =
+            typeof getUrlParams === 'function' ? getUrlParams().isLive : false;
+          loadCdcPricesForTargets(bubbleIds, isLive)
+            .then(() => {
+              if (window._lastValorisationData) {
+                displayValorisationTable(window._lastValorisationData);
+              }
+            })
+            .catch(err => {
+              console.warn(
+                '[Valorisation] Erreur lors du chargement des prix CDC',
+                err
+              );
+            });
+        }
       }
     });
   });
@@ -6601,6 +6626,56 @@ function getCostPerTarget(nodeCosts, downstreamFlow) {
   return costPerTarget;
 }
 
+// Cache des prix CDC (€/kg) chargés depuis Bubble. Vit le temps de la session iframe.
+// Pas de persistance dans le scénario : la donnée est toujours fetched à chaque chargement de page.
+window._cdcPriceCache = window._cdcPriceCache || {};
+window._cdcPricesLoadedOnce = false;
+
+/**
+ * Charge en parallèle les prix (€/kg) des CDCs depuis Bubble pour les bubble_ids fournis.
+ * Stocke les résultats dans window._cdcPriceCache (number ou null si absent / non parseable).
+ * Les bubble_ids déjà en cache ne sont pas re-fetchés.
+ */
+async function loadCdcPricesForTargets(bubbleIds, isLive) {
+  const toLoad = (bubbleIds || []).filter(
+    id => id && id !== '__valorised__' && !(id in window._cdcPriceCache)
+  );
+  if (toLoad.length === 0) return;
+
+  await Promise.all(
+    toLoad.map(async id => {
+      try {
+        const response = await fetch('/api/bubble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoint: 'cdc',
+            method: 'GET',
+            params: { id, isLive },
+          }),
+        });
+        if (!response.ok) {
+          console.warn(
+            '[Valorisation] Echec fetch prix CDC',
+            id,
+            response.status
+          );
+          window._cdcPriceCache[id] = null;
+          return;
+        }
+        const data = await response.json();
+        const raw = data && data.price;
+        const parsed =
+          raw == null || raw === '' ? NaN : parseFloat(String(raw));
+        window._cdcPriceCache[id] = Number.isFinite(parsed) ? parsed : null;
+      } catch (err) {
+        console.warn('[Valorisation] Erreur fetch prix CDC', id, err);
+        window._cdcPriceCache[id] = null;
+      }
+    })
+  );
+}
+
 // Données valorisation à partir des nœuds cibles (sans appel API)
 // links : optionnel, utilisé pour identifier les nœuds de fin non valorisés (reste)
 function getValorisationData(nodes, initialTotal, links) {
@@ -6663,19 +6738,58 @@ function exportValorisationToExcel(valorisationData) {
   const restPct = Math.max(0, 100 - sumPct);
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
 
-  const headerRow = [t('cdcName'), t('pctLot'), t('weightKg'), t('cost')];
+  const priceCache = window._cdcPriceCache || {};
+  const getRowPrice = row => {
+    const bubbleId = (row.nodeId != null ? String(row.nodeId) : '').replace(
+      /^target_/,
+      ''
+    );
+    if (!bubbleId || bubbleId === '__valorised__') return null;
+    const v = priceCache[bubbleId];
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+
+  const headerRow = [
+    t('cdcName'),
+    t('pctLot'),
+    t('weightKg'),
+    t('cost'),
+    t('revenue'),
+    t('margin'),
+  ];
   const grid = [headerRow];
+
+  let sumRevenue = 0;
+  let hasAnyRevenue = false;
+  let sumMargin = 0;
+  let hasAnyMargin = false;
 
   cdcRows.forEach(row => {
     const costCell =
       row.cost != null && typeof row.cost === 'number'
         ? Math.round(row.cost)
         : '';
+    const price = getRowPrice(row);
+    const weightKg = row.weightKg ?? 0;
+    const revenue = price != null ? price * weightKg : null;
+    if (revenue != null) {
+      sumRevenue += revenue;
+      hasAnyRevenue = true;
+    }
+    const cost =
+      row.cost != null && typeof row.cost === 'number' ? row.cost : null;
+    const margin = revenue != null && cost != null ? revenue - cost : null;
+    if (margin != null) {
+      sumMargin += margin;
+      hasAnyMargin = true;
+    }
     grid.push([
       row.name != null ? String(row.name) : '',
       row.pct != null ? Math.round(row.pct * 100) / 100 : '',
       row.weightKg != null ? Math.round(row.weightKg * 100) / 100 : '',
       costCell,
+      revenue != null ? Math.round(revenue) : '',
+      margin != null ? Math.round(margin) : '',
     ]);
   });
 
@@ -6684,12 +6798,16 @@ function exportValorisationToExcel(valorisationData) {
     Math.round(sumPct * 100) / 100,
     Math.round(sumKg * 100) / 100,
     sumCost > 0 ? Math.round(sumCost) : '',
+    hasAnyRevenue ? Math.round(sumRevenue) : '',
+    hasAnyMargin ? Math.round(sumMargin) : '',
   ]);
   grid.push([
     t('reste'),
     Math.round(restPct * 100) / 100,
     Math.round(restKg * 100) / 100,
     restCostVal != null ? Math.round(restCostVal) : '',
+    '',
+    '',
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(grid);
@@ -6733,6 +6851,7 @@ function displayValorisationTable(valorisationData) {
   }));
   window._valorisationMergedLot = valorisationData?.mergedLot ?? null;
   window._valorisationRestLot = valorisationData?.restLot ?? null;
+  window._lastValorisationData = valorisationData;
   const initialTotal = valorisationData?.initialTotal ?? 0;
 
   const formatCostCell = (cost, weightKg) => {
@@ -6744,13 +6863,67 @@ function displayValorisationTable(valorisationData) {
     return `${costRounded} € (${costPerKgRounded.toFixed(2)} €/kg)`;
   };
 
+  // Recettes : tiret simple ASCII si prix absent / non parseable.
+  const formatRevenueCell = (price, weightKg) => {
+    if (price == null || typeof price !== 'number' || Number.isNaN(price))
+      return '-';
+    const revenue = price * (weightKg || 0);
+    return `${Math.round(revenue)} € (${price.toFixed(2)} €/kg)`;
+  };
+
+  // Marge : tiret simple ASCII si recettes ou coût manquant.
+  const formatMarginCell = (revenue, cost) => {
+    if (
+      revenue == null ||
+      typeof revenue !== 'number' ||
+      Number.isNaN(revenue) ||
+      cost == null ||
+      typeof cost !== 'number' ||
+      Number.isNaN(cost)
+    )
+      return '-';
+    const m = revenue - cost;
+    const rounded = Math.round(m);
+    return `${rounded >= 0 ? '+' : ''}${rounded} €`;
+  };
+
+  const priceCache = window._cdcPriceCache || {};
+  const getRowPrice = row => {
+    const bubbleId = (row.nodeId != null ? String(row.nodeId) : '').replace(
+      /^target_/,
+      ''
+    );
+    if (!bubbleId || bubbleId === '__valorised__') return null;
+    const v = priceCache[bubbleId];
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+
   let tableBody = '';
+  let sumRevenue = 0;
+  let hasAnyRevenue = false;
+  let sumMargin = 0;
+  let hasAnyMargin = false;
   cdcRows.forEach((row, idx) => {
     const costCell =
       row.cost != null && typeof row.cost === 'number'
         ? formatCostCell(row.cost, row.weightKg ?? 0)
         : '–';
-    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right">${costCell}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
+    const price = getRowPrice(row);
+    const weightKg = row.weightKg ?? 0;
+    const revenue = price != null ? price * weightKg : null;
+    if (revenue != null) {
+      sumRevenue += revenue;
+      hasAnyRevenue = true;
+    }
+    const cost =
+      row.cost != null && typeof row.cost === 'number' ? row.cost : null;
+    if (revenue != null && cost != null) {
+      sumMargin += revenue - cost;
+      hasAnyMargin = true;
+    }
+    const revenueCell = formatRevenueCell(price, weightKg);
+    const marginCell = formatMarginCell(revenue, cost);
+    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right">${costCell}</td><td class="border border-gray-200 px-3 py-2 text-right">${revenueCell}</td><td class="border border-gray-200 px-3 py-2 text-right">${marginCell}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
   });
 
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
@@ -6772,6 +6945,10 @@ function displayValorisationTable(valorisationData) {
     restCostVal != null ? `${Math.round(restCostVal)} €` : '–';
   const restPct = Math.max(0, 100 - sumPct);
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
+  const footerRevenueStr = hasAnyRevenue ? `${Math.round(sumRevenue)} €` : '-';
+  const footerMarginStr = hasAnyMargin
+    ? `${Math.round(sumMargin) >= 0 ? '+' : ''}${Math.round(sumMargin)} €`
+    : '-';
   const tfootHtml = `
     <tfoot>
       <tr class="bg-gray-50">
@@ -6779,6 +6956,8 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerCostStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerRevenueStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerMarginStr}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
       <tr class="bg-gray-50 border-t-2 border-gray-300">
@@ -6786,6 +6965,8 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${restCostStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">-</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">-</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-rest" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
     </tfoot>
@@ -6821,6 +7002,8 @@ function displayValorisationTable(valorisationData) {
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('pctLot')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('weightKg')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('cost')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('revenue')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('margin')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('viewLot')}</th>
         </tr>
       </thead>

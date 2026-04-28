@@ -1,6 +1,7 @@
 {
   "Title": "Recherche 27/01/26",
   "bubble_id": "1769529442173x933158719172902900",
+  "price": "5.2",
   "constraints": [
     {
       "bubble_id": "1769529444431x924502841110340900",
@@ -9,10 +10,7 @@
       "fr_fr": "100% Coton",
       "en_gb": "100% Cotton",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529444941x299505671932187800",
@@ -21,10 +19,7 @@
       "fr_fr": "100% Laine",
       "en_gb": "100% Whool",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529445304x544474076212207360",
@@ -33,10 +28,7 @@
       "fr_fr": "Contaminé",
       "en_gb": "Contaminated",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529445738x593768424324845300",
@@ -45,10 +37,7 @@
       "fr_fr": "Bon état",
       "en_gb": "Good condition",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529446195x428626803637167200",
@@ -57,10 +46,7 @@
       "fr_fr": "Baskets",
       "en_gb": "Baskets",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529446396x888817621046364800",
@@ -69,10 +55,7 @@
       "fr_fr": "Bibelots et ustentiles",
       "en_gb": "Ornaments and utensils",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529446834x667652613291625000",
@@ -81,10 +64,7 @@
       "fr_fr": "Bottes et bottines",
       "en_gb": "Boots",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769529447260x250165420962550560",
@@ -93,10 +73,7 @@
       "fr_fr": "DEEE",
       "en_gb": "WEEE",
       "include": true,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     },
     {
       "bubble_id": "1769589497488x263443215588786180",
@@ -105,10 +82,7 @@
       "fr_fr": "Élasthanne",
       "en_gb": "Spandex",
       "include": false,
-      "hasThreshold": {
-        "value": 42,
-        "threshold": "over"
-      }
+      "hasThreshold": {}
     }
   ]
 }

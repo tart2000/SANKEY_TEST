@@ -58,6 +58,8 @@ window.i18nConfig = {
         pctLot: '% du lot',
         weightKg: 'Poids (kg)',
         cost: 'Coût',
+        revenue: 'Recettes',
+        margin: 'Marge',
         valorisedPercentLabel: 'du lot valorisé',
         noCdcAssociated:
           'Aucun cahier des charges associé. Ajoutez-en un pour visualiser les résultats.',
@@ -202,6 +204,8 @@ window.i18nConfig = {
         pctLot: '% of lot',
         weightKg: 'Weight (kg)',
         cost: 'Cost',
+        revenue: 'Revenue',
+        margin: 'Margin',
         valorisedPercentLabel: 'of lot valorised',
         noCdcAssociated:
           'No specifications associated. Add one to see the results.',
@@ -343,6 +347,8 @@ window.i18nConfig = {
         pctLot: '% del lote',
         weightKg: 'Peso (kg)',
         cost: 'Coste',
+        revenue: 'Ingresos',
+        margin: 'Margen',
         valorisedPercentLabel: 'del lote valorizado',
         noCdcAssociated:
           'Ningún pliego de condiciones asociado. Añade uno para ver los resultados.',
@@ -487,6 +493,8 @@ window.i18nConfig = {
         pctLot: '% der Charge',
         weightKg: 'Gewicht (kg)',
         cost: 'Kosten',
+        revenue: 'Erlöse',
+        margin: 'Marge',
         valorisedPercentLabel: 'der Charge valorisiert',
         noCdcAssociated:
           'Kein Lastenheft zugeordnet. Fügen Sie eines hinzu, um die Ergebnisse zu sehen.',
