@@ -6626,6 +6626,35 @@ function getCostPerTarget(nodeCosts, downstreamFlow) {
   return costPerTarget;
 }
 
+// Retourne une référence vers le 1er objet scenario/coproduct_scenario du scénario
+// dont la clé `target` vaut bubbleId. Parcours en profondeur. null si introuvable.
+function findFirstScenarioNodeWithTarget(scenario, bubbleId) {
+  if (!scenario || !bubbleId) return null;
+  const visit = node => {
+    if (!node || typeof node !== 'object') return null;
+    if (node.target === bubbleId) return node;
+    if (Array.isArray(node.transformations)) {
+      for (const t of node.transformations) {
+        if (!t || typeof t !== 'object') continue;
+        if (t.scenario) {
+          const found = visit(t.scenario);
+          if (found) return found;
+        }
+        if (t.coproduct_scenario) {
+          const found = visit(t.coproduct_scenario);
+          if (found) return found;
+        }
+      }
+    }
+    if (node.coproduct_scenario) {
+      const found = visit(node.coproduct_scenario);
+      if (found) return found;
+    }
+    return null;
+  };
+  return visit(scenario);
+}
+
 // Cache des prix CDC (€/kg) chargés depuis Bubble. Vit le temps de la session iframe.
 // Pas de persistance dans le scénario : la donnée est toujours fetched à chaque chargement de page.
 window._cdcPriceCache = window._cdcPriceCache || {};
@@ -6739,13 +6768,21 @@ function exportValorisationToExcel(valorisationData) {
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
 
   const priceCache = window._cdcPriceCache || {};
+  const scenarioCurrent =
+    window.scenarios?.[window.currentScenarioIdx]?.scenario || null;
+  const getRowBubbleId = row =>
+    (row.nodeId != null ? String(row.nodeId) : '').replace(/^target_/, '');
   const getRowPrice = row => {
-    const bubbleId = (row.nodeId != null ? String(row.nodeId) : '').replace(
-      /^target_/,
-      ''
-    );
+    const bubbleId = getRowBubbleId(row);
     if (!bubbleId || bubbleId === '__valorised__') return null;
     const v = priceCache[bubbleId];
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+  const getRowAdditionalRevenue = row => {
+    const bubbleId = getRowBubbleId(row);
+    if (!bubbleId || bubbleId === '__valorised__') return null;
+    const node = findFirstScenarioNodeWithTarget(scenarioCurrent, bubbleId);
+    const v = node?.additionalRevenue;
     return typeof v === 'number' && Number.isFinite(v) ? v : null;
   };
 
@@ -6755,12 +6792,15 @@ function exportValorisationToExcel(valorisationData) {
     t('weightKg'),
     t('cost'),
     t('revenue'),
+    t('additionalRevenue'),
     t('margin'),
   ];
   const grid = [headerRow];
 
   let sumRevenue = 0;
   let hasAnyRevenue = false;
+  let sumAdditional = 0;
+  let hasAnyAdditional = false;
   let sumMargin = 0;
   let hasAnyMargin = false;
 
@@ -6776,9 +6816,17 @@ function exportValorisationToExcel(valorisationData) {
       sumRevenue += revenue;
       hasAnyRevenue = true;
     }
+    const additional = getRowAdditionalRevenue(row);
+    if (additional != null) {
+      sumAdditional += additional;
+      hasAnyAdditional = true;
+    }
     const cost =
       row.cost != null && typeof row.cost === 'number' ? row.cost : null;
-    const margin = revenue != null && cost != null ? revenue - cost : null;
+    const margin =
+      cost != null && (revenue != null || additional != null)
+        ? (revenue ?? 0) + (additional ?? 0) - cost
+        : null;
     if (margin != null) {
       sumMargin += margin;
       hasAnyMargin = true;
@@ -6789,6 +6837,7 @@ function exportValorisationToExcel(valorisationData) {
       row.weightKg != null ? Math.round(row.weightKg * 100) / 100 : '',
       costCell,
       revenue != null ? Math.round(revenue) : '',
+      additional != null ? Math.round(additional) : '',
       margin != null ? Math.round(margin) : '',
     ]);
   });
@@ -6799,6 +6848,7 @@ function exportValorisationToExcel(valorisationData) {
     Math.round(sumKg * 100) / 100,
     sumCost > 0 ? Math.round(sumCost) : '',
     hasAnyRevenue ? Math.round(sumRevenue) : '',
+    hasAnyAdditional ? Math.round(sumAdditional) : '',
     hasAnyMargin ? Math.round(sumMargin) : '',
   ]);
   grid.push([
@@ -6806,6 +6856,7 @@ function exportValorisationToExcel(valorisationData) {
     Math.round(restPct * 100) / 100,
     Math.round(restKg * 100) / 100,
     restCostVal != null ? Math.round(restCostVal) : '',
+    '',
     '',
     '',
   ]);
@@ -6854,6 +6905,12 @@ function displayValorisationTable(valorisationData) {
   window._lastValorisationData = valorisationData;
   const initialTotal = valorisationData?.initialTotal ?? 0;
 
+  // Scénario courant : on y stocke `additionalRevenue` (number) sur le 1er nœud
+  // qui porte le `target` correspondant au CDC de la ligne.
+  const scenarioCurrent =
+    window.scenarios?.[window.currentScenarioIdx]?.scenario || null;
+  const isEditable = !!window.isEditable;
+
   const formatCostCell = (cost, weightKg) => {
     if (cost == null || typeof cost !== 'number' || Number.isNaN(cost))
       return '–';
@@ -6871,39 +6928,58 @@ function displayValorisationTable(valorisationData) {
     return `${Math.round(revenue)} € (${price.toFixed(2)} €/kg)`;
   };
 
-  // Marge : tiret simple ASCII si recettes ou coût manquant.
-  const formatMarginCell = (revenue, cost) => {
+  // Marge = (recettes ?? 0) + (autresRecettes ?? 0) - cost.
+  // Tiret simple si cost manquant ou si recettes ET autresRecettes manquent.
+  const formatMarginCell = (revenue, additional, cost) => {
     if (
-      revenue == null ||
-      typeof revenue !== 'number' ||
-      Number.isNaN(revenue) ||
       cost == null ||
       typeof cost !== 'number' ||
-      Number.isNaN(cost)
+      Number.isNaN(cost) ||
+      ((revenue == null ||
+        typeof revenue !== 'number' ||
+        Number.isNaN(revenue)) &&
+        (additional == null ||
+          typeof additional !== 'number' ||
+          Number.isNaN(additional)))
     )
       return '-';
-    const m = revenue - cost;
+    const r =
+      typeof revenue === 'number' && !Number.isNaN(revenue) ? revenue : 0;
+    const a =
+      typeof additional === 'number' && !Number.isNaN(additional)
+        ? additional
+        : 0;
+    const m = r + a - cost;
     const rounded = Math.round(m);
     return `${rounded >= 0 ? '+' : ''}${rounded} €`;
   };
 
   const priceCache = window._cdcPriceCache || {};
+  const getRowBubbleId = row =>
+    (row.nodeId != null ? String(row.nodeId) : '').replace(/^target_/, '');
   const getRowPrice = row => {
-    const bubbleId = (row.nodeId != null ? String(row.nodeId) : '').replace(
-      /^target_/,
-      ''
-    );
+    const bubbleId = getRowBubbleId(row);
     if (!bubbleId || bubbleId === '__valorised__') return null;
     const v = priceCache[bubbleId];
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+  const getRowAdditionalRevenue = row => {
+    const bubbleId = getRowBubbleId(row);
+    if (!bubbleId || bubbleId === '__valorised__') return null;
+    const node = findFirstScenarioNodeWithTarget(scenarioCurrent, bubbleId);
+    const v = node?.additionalRevenue;
     return typeof v === 'number' && Number.isFinite(v) ? v : null;
   };
 
   let tableBody = '';
   let sumRevenue = 0;
   let hasAnyRevenue = false;
+  let sumAdditional = 0;
+  let hasAnyAdditional = false;
   let sumMargin = 0;
   let hasAnyMargin = false;
   cdcRows.forEach((row, idx) => {
+    const bubbleId = getRowBubbleId(row);
     const costCell =
       row.cost != null && typeof row.cost === 'number'
         ? formatCostCell(row.cost, row.weightKg ?? 0)
@@ -6915,15 +6991,39 @@ function displayValorisationTable(valorisationData) {
       sumRevenue += revenue;
       hasAnyRevenue = true;
     }
+    const additional = getRowAdditionalRevenue(row);
+    if (additional != null) {
+      sumAdditional += additional;
+      hasAnyAdditional = true;
+    }
     const cost =
       row.cost != null && typeof row.cost === 'number' ? row.cost : null;
-    if (revenue != null && cost != null) {
-      sumMargin += revenue - cost;
+    if (cost != null && (revenue != null || additional != null)) {
+      sumMargin += (revenue ?? 0) + (additional ?? 0) - cost;
       hasAnyMargin = true;
     }
     const revenueCell = formatRevenueCell(price, weightKg);
-    const marginCell = formatMarginCell(revenue, cost);
-    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right">${costCell}</td><td class="border border-gray-200 px-3 py-2 text-right">${revenueCell}</td><td class="border border-gray-200 px-3 py-2 text-right">${marginCell}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
+    const marginCell = formatMarginCell(revenue, additional, cost);
+
+    // Cellule "Autres recettes" : input éditable si possible, sinon texte/tiret.
+    const targetNode = bubbleId
+      ? findFirstScenarioNodeWithTarget(scenarioCurrent, bubbleId)
+      : null;
+    let additionalCell;
+    let additionalTdClass = 'border border-gray-200 px-3 py-2 text-right';
+    if (isEditable && targetNode) {
+      const safeBubbleId = String(bubbleId).replace(/"/g, '&quot;');
+      const valueAttr = additional != null ? String(additional) : '';
+      additionalCell = `<input type="number" min="0" step="1" size="6" class="autres-recettes-input w-full h-full block text-right border-0 bg-transparent focus:outline-none px-3 py-2" data-bubble-id="${safeBubbleId}" value="${valueAttr}" placeholder="0" />`;
+      additionalTdClass =
+        'border border-gray-200 text-right p-0 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-inset';
+    } else if (additional != null) {
+      additionalCell = `${Math.round(additional)} €`;
+    } else {
+      additionalCell = '-';
+    }
+
+    tableBody += `<tr><td class="border border-gray-200 px-3 py-2">${(row.name || '').replace(/</g, '&lt;')}</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.pct)}%</td><td class="border border-gray-200 px-3 py-2 text-right">${Math.round(row.weightKg)}</td><td class="border border-gray-200 px-3 py-2 text-right">${costCell}</td><td class="border border-gray-200 px-3 py-2 text-right">${revenueCell}</td><td class="${additionalTdClass}">${additionalCell}</td><td class="border border-gray-200 px-3 py-2 text-right" data-margin-row="${bubbleId}">${marginCell}</td><td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-row-index="${idx}" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td></tr>`;
   });
 
   const sumPct = cdcRows.reduce((acc, r) => acc + r.pct, 0);
@@ -6946,6 +7046,9 @@ function displayValorisationTable(valorisationData) {
   const restPct = Math.max(0, 100 - sumPct);
   const restKg = Math.max(0, (initialTotal || 0) - sumKg);
   const footerRevenueStr = hasAnyRevenue ? `${Math.round(sumRevenue)} €` : '-';
+  const footerAdditionalStr = hasAnyAdditional
+    ? `${Math.round(sumAdditional)} €`
+    : '-';
   const footerMarginStr = hasAnyMargin
     ? `${Math.round(sumMargin) >= 0 ? '+' : ''}${Math.round(sumMargin)} €`
     : '-';
@@ -6957,7 +7060,8 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(sumKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerCostStr}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerRevenueStr}</td>
-        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${footerMarginStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700" id="valorisation-total-additional">${footerAdditionalStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700" id="valorisation-total-margin">${footerMarginStr}</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-merged" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
       </tr>
       <tr class="bg-gray-50 border-t-2 border-gray-300">
@@ -6965,6 +7069,7 @@ function displayValorisationTable(valorisationData) {
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restPct)}%</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${Math.round(restKg)}</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${restCostStr}</td>
+        <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">-</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">-</td>
         <td class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">-</td>
         <td class="border border-gray-200 px-3 py-2 text-right"><button type="button" data-action="view-rest" class="text-blue-600 hover:text-blue-800 text-sm font-medium underline">${t('viewLot')}</button></td>
@@ -7003,6 +7108,7 @@ function displayValorisationTable(valorisationData) {
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('weightKg')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('cost')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('revenue')}</th>
+          <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('additionalRevenue')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('margin')}</th>
           <th class="border border-gray-200 px-3 py-2 text-right text-sm font-medium text-gray-700">${t('viewLot')}</th>
         </tr>
@@ -7049,6 +7155,81 @@ function displayValorisationTable(valorisationData) {
         if (rest) sendLotToParent('reste', t('reste'), rest);
       }
     };
+
+    // Wiring des inputs "Autres recettes" : MAJ scenario + DOM ciblé (marge ligne + totaux).
+    panel.querySelectorAll('.autres-recettes-input').forEach(inputEl => {
+      const bubbleId = inputEl.getAttribute('data-bubble-id');
+      if (!bubbleId) return;
+      inputEl.addEventListener('input', function () {
+        const node = findFirstScenarioNodeWithTarget(scenarioCurrent, bubbleId);
+        if (!node) return;
+        const raw = this.value;
+        const parsed =
+          raw == null || raw === '' ? NaN : parseFloat(String(raw));
+        if (Number.isFinite(parsed) && parsed > 0) {
+          node.additionalRevenue = parsed;
+        } else {
+          delete node.additionalRevenue;
+        }
+
+        // Recalcul des sommes et de la cellule marge de la ligne courante.
+        let newSumAdditional = 0;
+        let newHasAnyAdditional = false;
+        let newSumMargin = 0;
+        let newHasAnyMargin = false;
+        cdcRows.forEach(row => {
+          const rowBubbleId = getRowBubbleId(row);
+          const rowPrice = getRowPrice(row);
+          const rowWeight = row.weightKg ?? 0;
+          const rowRevenue = rowPrice != null ? rowPrice * rowWeight : null;
+          const rowAdditional = getRowAdditionalRevenue(row);
+          if (rowAdditional != null) {
+            newSumAdditional += rowAdditional;
+            newHasAnyAdditional = true;
+          }
+          const rowCost =
+            row.cost != null && typeof row.cost === 'number' ? row.cost : null;
+          if (
+            rowCost != null &&
+            (rowRevenue != null || rowAdditional != null)
+          ) {
+            newSumMargin += (rowRevenue ?? 0) + (rowAdditional ?? 0) - rowCost;
+            newHasAnyMargin = true;
+          }
+          if (rowBubbleId === bubbleId) {
+            const marginCellEl = panel.querySelector(
+              `[data-margin-row="${rowBubbleId}"]`
+            );
+            if (marginCellEl) {
+              marginCellEl.textContent = formatMarginCell(
+                rowRevenue,
+                rowAdditional,
+                rowCost
+              );
+            }
+          }
+        });
+
+        const totalAdditionalEl = panel.querySelector(
+          '#valorisation-total-additional'
+        );
+        if (totalAdditionalEl) {
+          totalAdditionalEl.textContent = newHasAnyAdditional
+            ? `${Math.round(newSumAdditional)} €`
+            : '-';
+        }
+        const totalMarginEl = panel.querySelector('#valorisation-total-margin');
+        if (totalMarginEl) {
+          totalMarginEl.textContent = newHasAnyMargin
+            ? `${Math.round(newSumMargin) >= 0 ? '+' : ''}${Math.round(newSumMargin)} €`
+            : '-';
+        }
+
+        if (typeof window.setScenarioModifie === 'function') {
+          window.setScenarioModifie(true);
+        }
+      });
+    });
     panel.addEventListener('click', panel._valorisationClickHandler);
   }
 }

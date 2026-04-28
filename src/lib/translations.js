@@ -62,6 +62,7 @@ export const translations = {
       weightKg: 'Poids (kg)',
       cost: 'Coût',
       revenue: 'Recettes',
+      additionalRevenue: 'Autres recettes',
       margin: 'Marge',
       valorisedPercentLabel: 'du lot valorisé',
       noCdcAssociated:
@@ -240,6 +241,7 @@ export const translations = {
       weightKg: 'Weight (kg)',
       cost: 'Cost',
       revenue: 'Revenue',
+      additionalRevenue: 'Other revenue',
       margin: 'Margin',
       valorisedPercentLabel: 'of lot valorised',
       noCdcAssociated:
@@ -413,6 +415,7 @@ export const translations = {
       weightKg: 'Peso (kg)',
       cost: 'Coste',
       revenue: 'Ingresos',
+      additionalRevenue: 'Otros ingresos',
       margin: 'Margen',
       valorisedPercentLabel: 'del lote valorizado',
       noCdcAssociated:
@@ -590,6 +593,7 @@ export const translations = {
       weightKg: 'Gewicht (kg)',
       cost: 'Kosten',
       revenue: 'Erlöse',
+      additionalRevenue: 'Sonstige Erlöse',
       margin: 'Marge',
       valorisedPercentLabel: 'der Charge valorisiert',
       noCdcAssociated:

@@ -59,6 +59,7 @@ window.i18nConfig = {
         weightKg: 'Poids (kg)',
         cost: 'Coût',
         revenue: 'Recettes',
+        additionalRevenue: 'Autres recettes',
         margin: 'Marge',
         valorisedPercentLabel: 'du lot valorisé',
         noCdcAssociated:
@@ -205,6 +206,7 @@ window.i18nConfig = {
         weightKg: 'Weight (kg)',
         cost: 'Cost',
         revenue: 'Revenue',
+        additionalRevenue: 'Other revenue',
         margin: 'Margin',
         valorisedPercentLabel: 'of lot valorised',
         noCdcAssociated:
@@ -348,6 +350,7 @@ window.i18nConfig = {
         weightKg: 'Peso (kg)',
         cost: 'Coste',
         revenue: 'Ingresos',
+        additionalRevenue: 'Otros ingresos',
         margin: 'Margen',
         valorisedPercentLabel: 'del lote valorizado',
         noCdcAssociated:
@@ -494,6 +497,7 @@ window.i18nConfig = {
         weightKg: 'Gewicht (kg)',
         cost: 'Kosten',
         revenue: 'Erlöse',
+        additionalRevenue: 'Sonstige Erlöse',
         margin: 'Marge',
         valorisedPercentLabel: 'der Charge valorisiert',
         noCdcAssociated:
