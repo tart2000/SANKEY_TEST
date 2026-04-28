@@ -476,18 +476,30 @@ export function applyCdc(
       constraints.map(c => normalizeDimensionKey(c.dimension, hierarchy))
     ),
   ];
-  const isFlagged =
-    getSiblingDimensions(uniqueDimensionKeys, hierarchy) ||
-    priorityPresentElsewhere;
+  const requiresSortBy = getSiblingDimensions(uniqueDimensionKeys, hierarchy);
+  const hasHardFlag = priorityPresentElsewhere;
+
+  if (requiresSortBy) {
+    for (let i = 0; i < constraints.length; i++) {
+      if (reasonCodeByIndex[i] === 100) {
+        reasonCodeByIndex[i] = 105; // include_present_but_requires_sort
+        analysisByIndex[i] = 'yellow';
+      }
+    }
+  }
+
+  const isFlagged = requiresSortBy || hasHardFlag;
 
   const hasRed = Object.values(analysisByIndex).some(a => a === 'red');
   const hasOrange = Object.values(analysisByIndex).some(a => a === 'orange');
   const hasYellow = Object.values(analysisByIndex).some(a => a === 'yellow');
   const analysis: 'green' | 'yellow' | 'orange' | 'red' = hasRed
     ? 'red'
-    : hasOrange || hasYellow || isFlagged
+    : hasOrange || hasHardFlag
       ? 'orange'
-      : 'green';
+      : hasYellow
+        ? 'yellow'
+        : 'green';
 
   const constraintsOut = constraints.map((c, i) => ({
     bubble_id: c.bubble_id,
