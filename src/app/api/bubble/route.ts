@@ -25,7 +25,10 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log('API Bubble - Erreur fetch:', err);
+    console.error(
+      '[bubble:route] unexpected_error',
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    );
     return new Response(
       JSON.stringify({
         error: 'Erreur lors du fetch',

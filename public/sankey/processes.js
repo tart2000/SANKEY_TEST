@@ -1919,6 +1919,30 @@ window.ensureDimensionColorsLoadedSync = ensureDimensionColorsLoadedSync;
 window.dynamicTransfosCache = dynamicTransfosCache;
 window.dynamicTransfosLoaded = dynamicTransfosLoaded;
 
+// Hydrate le cache des transformations dynamiques depuis un payload externe
+// (utilisé par /api/sankey/bootstrap pour éviter un appel /transfos séparé).
+window.hydrateDynamicTransfos = function (transfosObj, isLive) {
+  if (!transfosObj || typeof transfosObj !== 'object') return;
+  dynamicTransfosCache.clear();
+  Object.entries(transfosObj).forEach(([title, transfo]) => {
+    if (!transfo || !transfo.bubble_id) return;
+    const titleEn =
+      transfo.en_gb ||
+      transfo.title_en ||
+      (transfo.translations && transfo.translations.en_gb) ||
+      title;
+    dynamicTransfosCache.set(transfo.bubble_id, {
+      ...transfo,
+      title,
+      en_gb: titleEn,
+    });
+  });
+  dynamicTransfosLoaded = true;
+  lastLoadedIsLive = !!isLive;
+  // Maintenir la cohérence avec le miroir window.* exposé pour le debug
+  window.dynamicTransfosLoaded = true;
+};
+
 const mergeLots = window.mergeLots;
 if (typeof mergeLots !== 'function') {
   console.error(

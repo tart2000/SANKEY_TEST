@@ -20,6 +20,19 @@ type BubbleCallResult = {
   data: unknown;
 };
 
+function logBubble(
+  stage: 'req' | 'ok' | 'err',
+  endpoint: string,
+  method: string,
+  isLive: boolean,
+  extra?: string
+): void {
+  const env = isLive ? 'live' : 'test';
+  const msg = `[bubble:${stage}] ${method} ${endpoint} (${env})${extra ? ' ' + extra : ''}`;
+  if (stage === 'err') console.error(msg);
+  else console.log(msg);
+}
+
 export async function callBubble({
   endpoint,
   params = {},
@@ -91,9 +104,7 @@ export async function callBubble({
     fetchOptions.body = JSON.stringify(paramsSansIsLive);
   }
 
-  console.log('API Bubble - URL:', url);
-  console.log('API Bubble - Options:', fetchOptions);
-  console.log('API Bubble - Body envoyé:', fetchOptions.body);
+  logBubble('req', endpointNorm, method, isLive);
 
   try {
     const response = await fetch(url, fetchOptions);
@@ -101,39 +112,61 @@ export async function callBubble({
 
     try {
       const data = JSON.parse(text);
-      console.log('API Bubble - Réponse JSON:', data);
+      logBubble(
+        'ok',
+        endpointNorm,
+        method,
+        isLive,
+        `status=${response.status}`
+      );
       return { status: response.status, data };
     } catch {
-      console.log('API Bubble - Réponse non-JSON (probablement JS):', text);
       try {
         const jsData = new Function('return ' + text)() as unknown;
-        console.log(
-          'API Bubble - Réponse parsée et convertie en JSON:',
-          jsData
+        logBubble(
+          'ok',
+          endpointNorm,
+          method,
+          isLive,
+          `status=${response.status} (non-json parsed)`
         );
         return { status: response.status, data: jsData };
-      } catch (parseError) {
-        console.log('API Bubble - Erreur lors du parsing JS:', parseError);
+      } catch {
+        const preview = text.slice(0, 200);
+        logBubble(
+          'err',
+          endpointNorm,
+          method,
+          isLive,
+          `parse_failed status=${response.status} preview=${JSON.stringify(preview)}`
+        );
         throw new BubbleClientError(
           'Impossible de parser la réponse de Bubble',
           500,
           {
             error: 'Impossible de parser la réponse de Bubble',
             status: response.status,
-            raw: text,
+            preview,
           }
         );
       }
     }
   } catch (err) {
-    console.log('API Bubble - Erreur fetch:', err);
+    if (err instanceof BubbleClientError) {
+      throw err;
+    }
 
     if (err instanceof Error && err.name === 'AbortError') {
+      logBubble('err', endpointNorm, method, isLive, 'timeout');
       throw new BubbleClientError('Timeout de la requête vers Bubble', 504, {
         error: 'Timeout de la requête vers Bubble',
         message: 'La requête a pris plus de 30 secondes',
       });
     }
+
+    const errMsg =
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    logBubble('err', endpointNorm, method, isLive, errMsg);
 
     throw new BubbleClientError('Erreur lors du fetch', 500, {
       error: 'Erreur lors du fetch',

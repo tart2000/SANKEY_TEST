@@ -1276,6 +1276,11 @@ function hideTooltip() {
 
 // Fonction pour charger les données de la team
 function loadTeamData() {
+  // Idempotent : si l'hydratation bootstrap a déjà rempli window.teamData,
+  // on évite un appel /api/bubble redondant.
+  if (window.teamData) {
+    return Promise.resolve(window.teamData);
+  }
   const teamId = getUrlParams().teamId;
   console.log('loadTeamData appelée avec teamId:', teamId);
   if (teamId) {

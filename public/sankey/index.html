@@ -148,71 +148,66 @@
         { value: 'proprete', label: 'Propreté' },
       ];
 
-      // Fonction pour charger les dimensions depuis Bubble
-      async function loadDimensionsFromBubble(isLive) {
-        try {
-          console.log(
-            '[HTML] Chargement des dimensions depuis Bubble, isLive:',
-            isLive
-          );
+      // Hydrate l'état global depuis le payload renvoyé par /api/sankey/bootstrap.
+      // Cette fonction remplace les anciens chargements séparés
+      // (loadDimensionsFromBubble, loadScenarioFromAPI, loadTeamData,
+      //  loadStepsMeta, loadDynamicTransformations).
+      function hydrateFromBootstrap(payload, params) {
+        if (!payload || typeof payload !== 'object') return;
 
-          const response = await fetch('/api/bubble', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endpoint: 'dimensions',
-              params: { isLive },
-              method: 'GET',
-            }),
-          });
+        // Lot
+        if (payload.lot) {
+          window.lotType = payload.lot;
+        }
 
-          if (!response.ok) {
-            throw new Error(`Erreur API: ${response.status}`);
-          }
+        // Team (consommé par sankey.js loadTeamData et tech-popup)
+        if (payload.team) {
+          window.teamData = payload.team;
+        }
 
-          const bubbleDimensions = await response.json();
-          console.log(
-            '[HTML] Dimensions récupérées depuis Bubble:',
-            bubbleDimensions
-          );
+        // Steps (consommé par sankey.js loadStepsMeta)
+        window.stepsMeta = payload.steps || {};
 
-          // Transformer les données Bubble en format attendu
-          if (bubbleDimensions && typeof bubbleDimensions === 'object') {
-            // Si c'est un objet, convertir en array
-            if (Array.isArray(bubbleDimensions)) {
-              dimensions = bubbleDimensions.map(dim => ({
-                value: dim.value || dim.name || dim.id,
-                label: dim.label || dim.title || dim.name || dim.id,
-              }));
-            } else {
-              // Si c'est un objet avec des clés, convertir en array
-              const params = getUrlParams();
-              const lang = params.lang || 'fr_fr';
-              dimensions = Object.keys(bubbleDimensions).map(key => ({
-                value: key,
-                label:
-                  bubbleDimensions[key][lang] ||
-                  bubbleDimensions[key].fr_fr ||
-                  key, // Utiliser la traduction selon la langue
-              }));
-            }
-
-            console.log('[HTML] Dimensions transformées:', dimensions);
+        // Dimensions (utilisé par updateDimensionDropdown)
+        if (payload.dimensions && typeof payload.dimensions === 'object') {
+          if (Array.isArray(payload.dimensions)) {
+            dimensions = payload.dimensions.map(dim => ({
+              value: dim.value || dim.name || dim.id,
+              label: dim.label || dim.title || dim.name || dim.id,
+            }));
           } else {
-            console.log(
-              '[HTML] Aucune dimension reçue de Bubble, utilisation des dimensions par défaut'
-            );
+            const lang = params.lang || 'fr_fr';
+            dimensions = Object.keys(payload.dimensions).map(key => ({
+              value: key,
+              label:
+                payload.dimensions[key][lang] ||
+                payload.dimensions[key].fr_fr ||
+                key,
+            }));
           }
-        } catch (error) {
-          console.error(
-            '[HTML] Erreur lors du chargement des dimensions:',
-            error
-          );
-          console.log('[HTML] Utilisation des dimensions par défaut');
-          // Garder les dimensions par défaut en cas d'erreur
-        } finally {
-          // Toujours mettre à jour le dropdown, même en cas d'erreur
-          updateDimensionDropdown();
+        }
+        updateDimensionDropdown();
+
+        // Transfos dynamiques : déléguer à processes.js si la fonction est exposée
+        if (
+          payload.transfos &&
+          typeof window.hydrateDynamicTransfos === 'function'
+        ) {
+          window.hydrateDynamicTransfos(payload.transfos, params.isLive);
+        }
+
+        // Scenario : structure window.scenarios attendue par le code Sankey
+        if (payload.scenario) {
+          window.scenarios = [
+            {
+              scenario: payload.scenario,
+              title: payload.scenario.nom || 'Scénario',
+              bubbleId: params.scenarioId,
+              isLive: params.isLive,
+            },
+          ];
+          window.currentScenarioIdx = 0;
+          setSavedScenarioCdcIds(collectCdcIdsFromScenario(payload.scenario));
         }
       }
 
@@ -433,45 +428,6 @@
         }
       }
 
-      // Fonction pour charger un scénario depuis l'API Bubble
-      function loadScenarioFromAPI(scenarioId, isLive) {
-        console.log("[HTML] Chargement du scénario depuis l'API Bubble:", {
-          scenarioId,
-          isLive,
-        });
-
-        return fetch('/api/bubble', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            endpoint: 'scenario',
-            params: {
-              id: scenarioId,
-              isLive: isLive,
-            },
-            method: 'POST',
-          }),
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Erreur API: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then(scenario => {
-            console.log('[HTML] Scénario chargé depuis API Bubble:', scenario);
-            return scenario;
-          })
-          .catch(error => {
-            console.error(
-              '[HTML] Erreur lors du chargement du scénario depuis API:',
-              error
-            );
-            // Pas de fallback vers scenario-data.js car supprimé
-            throw new Error("Impossible de charger le scénario depuis l'API");
-          });
-      }
-
       document.addEventListener('DOMContentLoaded', function () {
         const params = getUrlParams();
 
@@ -511,9 +467,6 @@
             }
           });
         }
-
-        // Charger les dimensions depuis Bubble
-        loadDimensionsFromBubble(params.isLive);
 
         // Initialiser l'état du bouton Enregistrer
         setScenarioModifie(false);
@@ -590,173 +543,58 @@
           });
         }
 
-        // Si on a un lotId, charger les données depuis l'API Bubble
-        if (params.lotId) {
-          console.log("[HTML] Chargement du lot depuis l'API Bubble:", params);
+        // Bootstrap unique : un seul appel /api/sankey/bootstrap qui agrège
+        // lot, scenario, team, transfos, steps, dimensions en parallèle.
+        (async function bootstrapSankey() {
+          if (!params.scenarioId) {
+            console.error('[HTML] Pas de scenarioId fourni');
+            return;
+          }
 
-          // Appel API Bubble comme sur la page /lots
-          fetch('/api/bubble', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endpoint: 'lot',
-              params: {
-                id: params.lotId,
-                isLive: params.isLive,
-              },
+          try {
+            const res = await fetch('/api/sankey/bootstrap', {
               method: 'POST',
-            }),
-          })
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`Erreur API: ${response.status}`);
-              }
-              return response.json();
-            })
-            .then(lot => {
-              console.log('[HTML] Lot chargé depuis API Bubble:', lot);
-              window.lotType = lot; // pour compatibilité temporaire
-
-              // Maintenant charger le scénario depuis l'API
-              // On utilise le scenarioId directement au lieu de l'index
-              const scenarioId = params.scenarioId;
-              // const scenarioIsLive = params.scenarioIsLive;
-
-              // Charger le scénario depuis l'API Bubble
-              if (scenarioId) {
-                console.log(
-                  '[HTML] Chargement du scénario avec ID:',
-                  scenarioId
-                );
-
-                loadScenarioFromAPI(scenarioId, params.isLive)
-                  .then(async scenario => {
-                    console.log('[HTML] Scénario chargé, lancement du Sankey');
-
-                    // Créer la structure window.scenarios attendue par le code
-                    window.scenarios = [
-                      {
-                        scenario: scenario,
-                        title: scenario.nom || 'Scénario',
-                        bubbleId: scenarioId,
-                        isLive: params.isLive,
-                      },
-                    ];
-                    window.currentScenarioIdx = 0;
-                    setSavedScenarioCdcIds(collectCdcIdsFromScenario(scenario));
-
-                    await launchSankeyFromUrl(lot, scenario, currentDimension);
-                  })
-                  .catch(error => {
-                    console.error(
-                      '[HTML] Erreur lors du chargement du scénario:',
-                      error
-                    );
-                    // Pas de fallback vers scenario-data.js car supprimé
-                    console.error('[HTML] Impossible de charger le scénario');
-                  });
-              } else {
-                console.error('[HTML] Pas de scenarioId fourni');
-              }
-            })
-            .catch(error => {
-              console.error(
-                '[HTML] Erreur lors du chargement du lot depuis API:',
-                error
-              );
-              // Fallback vers le lot_type.json si l'API échoue
-              fetch('../data/lot_type.json')
-                .then(r => r.json())
-                .then(lot => {
-                  window.lotType = lot;
-                  console.log('[HTML] Fallback vers lot_type.json:', lot);
-
-                  // Charger le scénario depuis l'API
-                  if (params.scenarioId) {
-                    loadScenarioFromAPI(params.scenarioId, params.isLive)
-                      .then(async scenario => {
-                        // Créer la structure window.scenarios attendue par le code
-                        window.scenarios = [
-                          {
-                            scenario: scenario,
-                            title: scenario.nom || 'Scénario',
-                            bubbleId: params.scenarioId,
-                            isLive: params.isLive,
-                          },
-                        ];
-                        window.currentScenarioIdx = 0;
-                        setSavedScenarioCdcIds(
-                          collectCdcIdsFromScenario(scenario)
-                        );
-
-                        await launchSankeyFromUrl(
-                          lot,
-                          scenario,
-                          currentDimension
-                        );
-                      })
-                      .catch(error => {
-                        console.error(
-                          '[HTML] Erreur lors du chargement du scénario:',
-                          error
-                        );
-                        // Pas de fallback vers scenario-data.js car supprimé
-                        console.error(
-                          '[HTML] Impossible de charger le scénario'
-                        );
-                      });
-                  } else {
-                    console.error('[HTML] Pas de scenarioId fourni');
-                  }
-                });
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lotId: params.lotId,
+                scenarioId: params.scenarioId,
+                teamId: params.teamId,
+                isLive: params.isLive,
+              }),
             });
-        } else {
-          // Fallback vers le lot_type.json si pas de lotId
-          fetch('../data/lot_type.json')
-            .then(r => r.json())
-            .then(lot => {
-              window.lotType = lot;
-              console.log('[HTML] Lot chargé depuis lot_type.json:', lot);
 
-              // Charger le scénario depuis l'API
-              if (params.scenarioId) {
-                loadScenarioFromAPI(params.scenarioId, params.isLive)
-                  .then(async scenario => {
-                    // Créer la structure window.scenarios attendue par le code
-                    window.scenarios = [
-                      {
-                        scenario: scenario,
-                        title: scenario.nom || 'Scénario',
-                        bubbleId: params.scenarioId,
-                        isLive: params.isLive,
-                      },
-                    ];
-                    window.currentScenarioIdx = 0;
-                    setSavedScenarioCdcIds(collectCdcIdsFromScenario(scenario));
+            if (!res.ok) {
+              throw new Error(`bootstrap status ${res.status}`);
+            }
 
-                    await launchSankeyFromUrl(lot, scenario, currentDimension);
-                  })
-                  .catch(error => {
-                    console.error(
-                      '[HTML] Erreur lors du chargement du scénario:',
-                      error
-                    );
-                    // Pas de fallback vers scenario-data.js car supprimé
-                    console.error('[HTML] Impossible de charger le scénario');
-                  });
-              } else {
-                console.error('[HTML] Pas de scenarioId fourni');
-              }
-            })
-            .catch(error => {
-              console.error('[HTML] Erreur lors du chargement du lot:', error);
-            });
-        }
+            const payload = await res.json();
+            if (payload && payload._errors) {
+              console.warn('[HTML] bootstrap partial errors', payload._errors);
+            }
+            if (!payload || !payload.scenario) {
+              throw new Error('scenario manquant dans le payload bootstrap');
+            }
+            if (!payload.lot) {
+              throw new Error('lot manquant dans le payload bootstrap');
+            }
 
-        // Fonction utilitaire pour charger un JSON
-        function fetchJSON(path) {
-          return fetch(path).then(r => r.json());
-        }
+            hydrateFromBootstrap(payload, params);
+            await launchSankeyFromUrl(
+              payload.lot,
+              payload.scenario,
+              window.currentDimension
+            );
+          } catch (err) {
+            console.error('[HTML] bootstrap failed', err);
+            const loader = document.getElementById('loader');
+            if (loader) {
+              loader.innerHTML =
+                '<div style="padding:20px;color:#c00;text-align:center;">' +
+                'Erreur de chargement. Recharger la page.' +
+                '</div>';
+            }
+          }
+        })();
 
         // Fonction pour envoyer la hauteur au parent (mesure directe des éléments visibles)
         let lastReportedHeight = 0;
