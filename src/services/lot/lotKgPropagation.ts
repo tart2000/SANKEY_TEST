@@ -55,34 +55,38 @@ export function calculerMassesParents(
 }
 
 /**
- * Après l'insertion locale d'un nouvel élément (via ajouterElementEtRepartir) et la
- * mise à jour de lot.total = G_old + delta, recalcule les pourcentages des frères
- * à chaque niveau ancestral pour conserver les masses absolues hors-chemin et faire
- * absorber +delta uniquement par la branche on-path.
+ * Après l'insertion ou la suppression locale d'un nœud, recalcule les pourcentages
+ * des frères à chaque niveau ancestral pour conserver les masses absolues hors-chemin
+ * et faire absorber +delta (ou -delta pour une suppression) uniquement par la branche
+ * on-path.
  *
- * Pour chaque niveau i de modalNiveau-1 à 0 :
+ * `niveauCible` est l'index du nœud où la mutation a eu lieu :
+ *   - pour un AJOUT, c'est `modalNiveau` (la dimension où on insère),
+ *   - pour une SUPPRESSION, c'est `niveau - 1` (le parent direct du nœud supprimé).
+ *
+ * Pour chaque niveau i de niveauCible-1 à 0 :
  *   - branche = chemin[i].valeur
- *   - S_avant = S[i] (masse du parent du niveau i avant ajout)
+ *   - S_avant = S[i] (masse du parent du niveau i avant mutation)
  *   - S_apres = S_avant + delta
  *   - pour la branche : nouveau pct = (S_avant × ancienPct/100 + delta) / S_apres × 100
  *   - pour chaque frère hors-chemin : nouveau pct = ancienPct × S_avant / S_apres
  *
- * Ces formules garantissent :
+ * Ces formules garantissent (pour delta de signe quelconque) :
  *   - somme des nouveaux pcts = 100 (à l'epsilon flottant près)
  *   - masse du frère hors-chemin = S_apres × nouveauPct/100 = S_avant × ancienPct/100
  *     (donc inchangée en kg, ce qui est le comportement attendu)
  *   - masse de la branche = S_apres × nouveauPct/100 = S_avant × ancienPct/100 + delta
  */
-export function propagerAjoutKgVersAncetres(
+export function propagerDeltaKgVersAncetres(
   lot: Lot,
   chemin: CheminSelection,
-  modalNiveau: number,
+  niveauCible: number,
   S: number[],
   delta: number
 ): void {
-  if (delta <= 0 || !Number.isFinite(delta)) return;
+  if (delta === 0 || !Number.isFinite(delta)) return;
 
-  for (let i = modalNiveau - 1; i >= 0; i--) {
+  for (let i = niveauCible - 1; i >= 0; i--) {
     const branche = chemin[i]?.valeur;
     const dim = chemin[i]?.dimension;
     if (!branche || !dim) continue;
@@ -118,3 +122,9 @@ export function propagerAjoutKgVersAncetres(
     }
   }
 }
+
+/**
+ * Alias historique pour les ajouts (delta > 0). Identique à
+ * propagerDeltaKgVersAncetres, conservé pour ne pas casser l'API existante.
+ */
+export const propagerAjoutKgVersAncetres = propagerDeltaKgVersAncetres;

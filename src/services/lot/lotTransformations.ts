@@ -11,6 +11,10 @@ import {
   calculerPoidsNiveau,
 } from './lotUtils';
 import { deepCopy } from './lotUtils';
+import {
+  calculerMassesParents,
+  propagerDeltaKgVersAncetres,
+} from './lotKgPropagation';
 
 /**
  * Ajoute un élément à une dimension et répartit les pourcentages
@@ -151,13 +155,22 @@ export function ajouterElementEtRepartir(
 }
 
 /**
- * Supprime un nœud et réajuste la distribution
- * Retourne un nouveau lot (immutable) et le nouveau chemin
+ * Supprime un nœud et réajuste la distribution.
+ *
+ * Mode 'weight' (par défaut) : retire la masse du nœud du total du lot et
+ * propage aux ancêtres (miroir de l'ajout en kg) ; les frères hors-chemin
+ * gardent leur masse en kg inchangée.
+ *
+ * Mode 'percentage' : suppression purement locale ; total et ancêtres figés ;
+ * les frères directs absorbent le 100 % via normaliserDistribution.
+ *
+ * Retourne un nouveau lot (immutable) et le nouveau chemin.
  */
 export function supprimerNoeudEtRepartir(
   lot: Lot,
   cheminSelection: CheminSelection,
-  niveau: number
+  niveau: number,
+  mode: 'percentage' | 'weight' = 'weight'
 ): { lot: Lot; newChemin: CheminSelection } {
   // Vérifier que le niveau est valide
   if (niveau <= 0) {
@@ -240,18 +253,41 @@ export function supprimerNoeudEtRepartir(
     return { lot: newLot, newChemin: cheminSelection };
   }
 
-  // Calculer la masse du sous-arbre supprimé avant le delete (sur le lot original)
-  // pour pouvoir décrémenter lot.total et garder la cohérence total/pourcentages.
-  const masseSupprimee = calculerPoidsNiveau(lot, cheminSelection, niveau);
+  if (mode === 'weight') {
+    // Calculer la masse du sous-arbre supprimé sur le lot ORIGINAL avant delete
+    const masseSupprimee = calculerPoidsNiveau(lot, cheminSelection, niveau);
 
-  // Supprimer la clé
-  delete liste[keyToDelete];
+    // Pré-calcul des masses parents avec les pcts originaux du lot
+    const S = calculerMassesParents(
+      lot,
+      cheminSelection,
+      niveau - 1,
+      lot.total || 0
+    );
 
-  // Réajuster les pourcentages des frères restants pour qu'ils somment à 100
-  normaliserDistribution(liste);
+    // Supprimer la clé
+    delete liste[keyToDelete];
 
-  // Décrémenter le total du lot de la masse réellement retirée
-  newLot.total = Math.max(0, (newLot.total || 0) - masseSupprimee);
+    // Renormaliser localement : les frères directs gardent leurs masses en kg
+    // car (S - masseSupprimee) × pct_normalisé/100 = ancienne masse_frère.
+    normaliserDistribution(liste);
+
+    // Décrémenter le total du lot de la masse réellement retirée
+    newLot.total = Math.max(0, (newLot.total || 0) - masseSupprimee);
+
+    // Propager aux ancêtres (delta négatif) pour conserver les masses hors-chemin
+    propagerDeltaKgVersAncetres(
+      newLot,
+      cheminSelection,
+      niveau - 1,
+      S,
+      -masseSupprimee
+    );
+  } else {
+    // Mode 'percentage' : suppression purement locale, total et ancêtres figés
+    delete liste[keyToDelete];
+    normaliserDistribution(liste);
+  }
 
   // Tronquer le chemin jusqu'au niveau parent (niveau - 1)
   // et mettre la valeur à null à ce niveau

@@ -11,6 +11,14 @@ if (!i18next.isInitialized) {
     defaultNS: 'translation',
     ns: ['translation'],
   });
+} else {
+  // En HMR, le singleton i18next persiste : on réinjecte les ressources à chaque
+  // ré-exécution du module pour que les nouvelles clés soient prises en compte
+  // sans avoir à recharger la page.
+  for (const [lng, bundle] of Object.entries(translations)) {
+    const ns = (bundle as { translation: Record<string, string> }).translation;
+    i18next.addResourceBundle(lng, 'translation', ns, true, true);
+  }
 }
 
 export function useTranslation(lang: string = 'fr_fr') {

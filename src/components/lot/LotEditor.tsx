@@ -34,6 +34,7 @@ import {
 import { StackbarHeader } from './StackbarHeader';
 import { Stackbar } from './Stackbar';
 import { AddItemModal } from './AddItemModal';
+import { DeleteItemModal } from './DeleteItemModal';
 import { SaveButton } from './SaveButton';
 import { AggregatedView } from './AggregatedView';
 
@@ -83,6 +84,8 @@ export function LotEditor({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalNiveau, setModalNiveau] = useState(0);
   const [modalDimension, setModalDimension] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteNiveau, setDeleteNiveau] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'detailed' | 'aggregated'>(
     'detailed'
   );
@@ -710,19 +713,29 @@ export function LotEditor({
     setChemin(newChemin);
   };
 
-  // Gérer la suppression
+  // Gérer la suppression : ouvrir la modale de confirmation
   const handleDelete = (niveau: number) => {
     if (!lot) return;
+    setDeleteNiveau(niveau);
+    setDeleteModalOpen(true);
+  };
+
+  // Confirmation effective de la suppression depuis la modale
+  const handleConfirmDelete = (mode: 'percentage' | 'weight') => {
+    if (!lot || deleteNiveau === null) return;
 
     const { lot: newLot, newChemin } = supprimerNoeudEtRepartir(
       lot,
       cheminSelection,
-      niveau
+      deleteNiveau,
+      mode
     );
 
-    userActionRef.current = true; // Marquer comme action utilisateur
+    userActionRef.current = true;
     setLot(newLot);
     setChemin(newChemin);
+    setDeleteModalOpen(false);
+    setDeleteNiveau(null);
   };
 
   // Gérer le changement de dimension
@@ -1232,6 +1245,66 @@ export function LotEditor({
           })()}
         />
       )}
+
+      {/* Modal de suppression */}
+      {deleteModalOpen &&
+        deleteNiveau !== null &&
+        lot &&
+        (() => {
+          const parentEntry = cheminSelection[deleteNiveau - 1];
+          if (!parentEntry || !parentEntry.valeur) return null;
+          const cle = parentEntry.valeur;
+          const dimDeleted = parentEntry.dimension;
+
+          const grandParentNode = getNodeAtPath(
+            lot,
+            cheminSelection.slice(0, deleteNiveau - 1)
+          );
+          let itemForTitle: DimensionValue | null = null;
+          if (
+            grandParentNode &&
+            typeof grandParentNode === 'object' &&
+            !Array.isArray(grandParentNode)
+          ) {
+            const gpObj = grandParentNode as Record<string, unknown>;
+            const dimVal = gpObj[dimDeleted];
+            if (
+              dimVal &&
+              typeof dimVal === 'object' &&
+              !Array.isArray(dimVal)
+            ) {
+              const node = (dimVal as Record<string, unknown>)[cle];
+              if (node && typeof node === 'object' && !Array.isArray(node)) {
+                itemForTitle = node as DimensionValue;
+              }
+            }
+          }
+          const nomElement = getTitreAffiche(cle, itemForTitle, lang);
+          const poidsElement = calculerPoidsNiveau(
+            lot,
+            cheminSelection,
+            deleteNiveau
+          );
+
+          return (
+            <DeleteItemModal
+              isOpen={deleteModalOpen}
+              onClose={() => {
+                setDeleteModalOpen(false);
+                setDeleteNiveau(null);
+              }}
+              onConfirm={handleConfirmDelete}
+              nomElement={nomElement}
+              dimensionLabel={getDimensionLabel(
+                dimDeleted,
+                dimensionsLabels,
+                lang
+              )}
+              poidsElement={poidsElement}
+              t={t}
+            />
+          );
+        })()}
 
       {/* Bouton Enregistrer */}
       <SaveButton
