@@ -4,7 +4,12 @@ import type {
   BaseDataItem,
   Dimension,
 } from '@/types/lot';
-import { normaliserDistribution, getPercent, setPercent } from './lotUtils';
+import {
+  normaliserDistribution,
+  getPercent,
+  setPercent,
+  calculerPoidsNiveau,
+} from './lotUtils';
 import { deepCopy } from './lotUtils';
 
 /**
@@ -235,11 +240,18 @@ export function supprimerNoeudEtRepartir(
     return { lot: newLot, newChemin: cheminSelection };
   }
 
+  // Calculer la masse du sous-arbre supprimé avant le delete (sur le lot original)
+  // pour pouvoir décrémenter lot.total et garder la cohérence total/pourcentages.
+  const masseSupprimee = calculerPoidsNiveau(lot, cheminSelection, niveau);
+
   // Supprimer la clé
   delete liste[keyToDelete];
 
-  // Réajuster les pourcentages
+  // Réajuster les pourcentages des frères restants pour qu'ils somment à 100
   normaliserDistribution(liste);
+
+  // Décrémenter le total du lot de la masse réellement retirée
+  newLot.total = Math.max(0, (newLot.total || 0) - masseSupprimee);
 
   // Tronquer le chemin jusqu'au niveau parent (niveau - 1)
   // et mettre la valeur à null à ce niveau

@@ -61,16 +61,17 @@ export function normaliserDistribution(liste: Dimension): void {
 
   if (total === 0) return;
 
-  // Normaliser chaque valeur proportionnellement
+  // Normaliser chaque valeur proportionnellement, en pleine précision flottante.
+  // L'arrondi à 0,1 % se fait uniquement à l'affichage (toFixed(1) côté UI).
   let cumul = 0;
   valeurs.forEach((entry, index) => {
     let pct = (entry.pct * 100) / total;
     if (index < valeurs.length - 1) {
-      pct = Math.round(pct * 10) / 10;
       cumul += pct;
     } else {
       // Dernier élément : ajuster pour que la somme fasse exactement 100
-      pct = Math.round((100 - cumul) * 10) / 10;
+      // (absorbe l'erreur résiduelle de précision flottante)
+      pct = 100 - cumul;
     }
 
     const item = liste[entry.key];

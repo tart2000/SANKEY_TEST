@@ -174,6 +174,9 @@ export function useStackbar(
       // Clamp pour que chaque segment ait au moins 1%
       const total = startPercentLeft + startPercentRight;
       newPctLeft = clampPercent(newPctLeft, 1, total - 1);
+      // Snap à 0,1 % à l'entrée du drag : la poignée saute par paliers visibles,
+      // évitant des valeurs avec une précision inutilement fine côté affichage.
+      newPctLeft = Math.round(newPctLeft * 10) / 10;
       newPctRight = total - newPctLeft;
 
       // Mettre à jour les deux segments en même temps
@@ -209,15 +212,16 @@ export function useStackbar(
           percent: total > 0 ? (seg.percent * 100) / total : seg.percent,
         }));
 
-        // Ajuster le dernier pour que la somme fasse exactement 100
+        // Ajuster le dernier pour que la somme fasse exactement 100.
+        // Les valeurs entrantes sont déjà à 0,1 % grâce au snap dans handleDragMove,
+        // donc plus aucun arrondi explicite ici : on absorbe juste l'epsilon flottant.
         if (normalizedSegments.length > 0) {
           const lastIdx = normalizedSegments.length - 1;
           const sum = normalizedSegments.reduce((s, seg, idx) => {
             if (idx === lastIdx) return s;
-            return s + Math.round(seg.percent * 10) / 10;
+            return s + seg.percent;
           }, 0);
-          normalizedSegments[lastIdx].percent =
-            Math.round((100 - sum) * 10) / 10;
+          normalizedSegments[lastIdx].percent = 100 - sum;
         }
 
         // Mettre à jour le lot (les segments seront mis à jour via le useEffect)

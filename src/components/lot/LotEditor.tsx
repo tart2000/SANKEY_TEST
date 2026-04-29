@@ -27,6 +27,10 @@ import {
   ajouterElementEtRepartir,
   supprimerNoeudEtRepartir,
 } from '@/services/lot/lotTransformations';
+import {
+  calculerMassesParents,
+  propagerAjoutKgVersAncetres,
+} from '@/services/lot/lotKgPropagation';
 import { StackbarHeader } from './StackbarHeader';
 import { Stackbar } from './Stackbar';
 import { AddItemModal } from './AddItemModal';
@@ -624,33 +628,49 @@ export function LotEditor({
     // 2. Calculer le pourcentage par rapport au poids du niveau
     // 3. Normaliser les pourcentages
     if (poidsKg !== undefined && poidsKg > 0) {
-      // Calculer le poids du niveau avant ajout
-      const poidsNiveauAvant = calculerPoidsNiveau(
+      const G_old = workingLot.total || 0;
+      const G_new = G_old + poidsKg;
+
+      // 1) Pré-calcul des masses parents à partir des % ORIGINAUX du lot
+      //    (avant toute mutation : ni total, ni %).
+      const S = calculerMassesParents(
         workingLot,
         cheminSelection,
-        modalNiveau
+        modalNiveau,
+        G_old
       );
 
-      // Ajouter le poids au total du lot
-      const nouveauTotal = (workingLot.total || 0) + poidsKg;
-      const lotAvecNouveauTotal = { ...workingLot, total: nouveauTotal };
-
-      // Calculer le nouveau poids du niveau
-      const nouveauPoidsNiveau = poidsNiveauAvant + poidsKg;
-
-      // Calculer le nouveau pourcentage
+      // 2) % du nouvel élément dans la dimension cible :
+      //    nouveauPourcentage = delta / (poidsNiveauAvant + delta) × 100
+      const poidsNiveauAvant = S[modalNiveau];
       const nouveauPourcentage =
-        nouveauPoidsNiveau > 0 ? (poidsKg / nouveauPoidsNiveau) * 100 : 100;
+        poidsNiveauAvant + poidsKg > 0
+          ? (poidsKg / (poidsNiveauAvant + poidsKg)) * 100
+          : 100;
 
-      // Ajouter l'élément avec le nouveau pourcentage
+      // 3) Insertion locale (logique inchangée par rapport au mode pourcentage)
       newLot = ajouterElementEtRepartir(
-        lotAvecNouveauTotal,
+        workingLot,
         cheminSelection,
         modalNiveau,
         modalDimension,
         nomLisible,
         nouveauPourcentage,
         donneesBase
+      );
+
+      // 4) Total = total + poids (direct)
+      newLot.total = G_new;
+
+      // 5) Propagation ancestrale : recalculer les % des frères à chaque niveau
+      //    parent (de modalNiveau-1 vers 0) pour conserver les masses hors-chemin
+      //    et faire absorber +delta uniquement par la branche on-path.
+      propagerAjoutKgVersAncetres(
+        newLot,
+        cheminSelection,
+        modalNiveau,
+        S,
+        poidsKg
       );
     } else {
       // Comportement normal en pourcentage
