@@ -28,7 +28,7 @@ export const translations = {
       deleteModeWeight: 'En poids (kg)',
       aboutToRemoveWeight: 'Vous allez retirer {{weight}} kg du lot.',
       aboutToRemovePercentage:
-        'Le poids total du lot ne change pas. Les frères se redistribueront le 100 %.',
+        'Le poids total du lot ne change pas. Les éléments du même niveau se redistribueront le 100 %.',
       errorSavingScenario: 'Erreur lors de la sauvegarde du scénario :',
       language: 'Langue',
       selectLanguage: 'Sélectionner une langue',
